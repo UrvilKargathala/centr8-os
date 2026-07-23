@@ -40,7 +40,8 @@ export type ResourceType =
   | "deal"
   | "activity"
   | "forecast"
-  | "campaign";
+  | "campaign"
+  | "integration";
 
 export type PermissionAction =
   | "create"

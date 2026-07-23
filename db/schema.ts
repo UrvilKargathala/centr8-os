@@ -491,6 +491,14 @@ export const resourceTypeEnum = pgEnum("resource_type", [
   // Phase 6.
   "forecast",
   "campaign",
+  // Phase 7 (Communication, CLAUDE.md §11a) — connector framework.
+  // "integration", action "configure", rather than the prompt's literal
+  // suggested permission name "org:configure_integrations" — a
+  // resource-specific action string would break the whole point of a
+  // shared resourceType x action matrix (same reasoning as "sso" for
+  // Prompt 3.3). Owner/admin only, same tightness as sso/api_key/portal:
+  // integration credentials are org-wide, not per-user.
+  "integration",
 ]);
 export const permissionActionEnum = pgEnum("permission_action", [
   "create",
@@ -787,6 +795,8 @@ export const dealStageEnum = pgEnum("deal_stage", ["prospecting", "proposal", "n
 export const activityRelatedTypeEnum = pgEnum("activity_related_type", ["lead", "contact", "account", "deal"]);
 export const activityTypeEnum = pgEnum("activity_type", ["call", "meeting", "task", "note"]);
 export const campaignStatusEnum = pgEnum("campaign_status", ["planned", "active", "completed", "cancelled"]);
+export const integrationProviderEnum = pgEnum("integration_provider", ["slack", "gmail", "zoom"]);
+export const integrationStatusEnum = pgEnum("integration_status", ["connected", "disconnected", "error"]);
 
 export const employmentStatusEnum = pgEnum("employment_status", ["active", "onboarding", "terminated"]);
 export const onboardingStatusEnum = pgEnum("onboarding_status", ["not_started", "in_progress", "complete"]);
@@ -1439,6 +1449,36 @@ export const forecasts = pgTable(
   },
   () => [
     pgPolicy("forecasts_isolation", {
+      for: "all",
+      to: authenticatedRole,
+      using: inUserOrgs,
+      withCheck: inUserOrgs,
+    }),
+  ],
+).enableRLS();
+
+// Phase 7 (Communication pillar, CLAUDE.md §11a) — connector framework.
+// One row per org+provider. config holds provider-specific OAuth tokens
+// and metadata (e.g. Slack's access_token/team_id/team_name/bot_user_id)
+// — never returned to the client as-is; GET /api/integrations strips
+// secrets before responding (lib/api/integrations.ts). connectedByUserId
+// is a bare uuid, no FK, same as every other "who did this" field in this
+// app (leads.ownerId, tasks.assigneeId, ...).
+export const integrations = pgTable(
+  "integrations",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    orgId: uuid("org_id")
+      .notNull()
+      .references(() => organizations.id, { onDelete: "cascade" }),
+    provider: integrationProviderEnum("provider").notNull(),
+    config: jsonb("config").notNull().default({}),
+    connectedByUserId: uuid("connected_by_user_id"),
+    connectedAt: timestamp("connected_at", { withTimezone: true }),
+    status: integrationStatusEnum("status").notNull().default("disconnected"),
+  },
+  () => [
+    pgPolicy("integrations_isolation", {
       for: "all",
       to: authenticatedRole,
       using: inUserOrgs,

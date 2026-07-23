@@ -15,6 +15,7 @@ import { Card, CardButton } from "@/components/ui/Card";
 import { Input, Select, Field } from "@/components/ui/Input";
 import { SprintBoard } from "@/components/SprintBoard";
 import { CapacityPanel } from "@/components/CapacityPanel";
+import { SendViaSlackButton } from "@/components/SendViaSlackButton";
 import { TaskDetailModal } from "@/components/TaskDetailModal";
 import type { Task } from "@/components/TaskCard";
 import { PROJECT_STATUSES, TASK_STATUSES, TASK_STATUS_LABELS, TASK_PRIORITIES } from "@/lib/constants";
@@ -98,7 +99,12 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
             {project.startDate ?? "No start date"} – {project.endDate ?? "No end date"}
           </p>
         </div>
-        <ProjectStatusBadge status={project.status} />
+        <div className="flex items-center gap-2">
+          {selectedOrgId && (
+            <SendViaSlackButton orgId={selectedOrgId} defaultText={`Update on ${project.name}: `} />
+          )}
+          <ProjectStatusBadge status={project.status} />
+        </div>
       </div>
 
       <div className="flex gap-1 overflow-x-auto border-b border-neutral-300">

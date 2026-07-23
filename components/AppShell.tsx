@@ -135,7 +135,7 @@ const NAV_SECTIONS: NavSection[] = [
       { href: "/admin/automations", label: "Automations", icon: ICON.robot, comingSoon: true },
       { href: "/profile", label: "API Keys", icon: ICON.key },
       { href: "/admin/audit-log", label: "Audit Log", icon: ICON.clipboard, comingSoon: true },
-      { href: "/admin/integrations", label: "Integrations", icon: ICON.plug, comingSoon: true },
+      { href: "/admin/integrations", label: "Integrations", icon: ICON.plug },
     ],
   },
 ];

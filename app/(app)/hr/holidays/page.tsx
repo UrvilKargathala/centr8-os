@@ -103,18 +103,20 @@ export default function HolidaysPage() {
             {sorted.map((h) => {
               const upcoming = h.date >= today;
               return (
-                <div key={h.id} className="grid grid-cols-3 gap-4 py-3 pl-3 pr-4">
-                  <div className={`border-l-2 pl-3 text-body ${upcoming ? "border-primary-600" : "border-neutral-200"}`}>
+                <div key={h.id} className="flex flex-col gap-1 py-3 pl-3 pr-4 sm:flex-row sm:items-center sm:gap-4">
+                  <div
+                    className={`shrink-0 border-l-2 pl-3 text-body sm:w-40 ${upcoming ? "border-primary-600" : "border-neutral-200"}`}
+                  >
                     {new Date(h.date + "T00:00:00").toLocaleDateString(undefined, {
                       month: "long",
                       day: "2-digit",
                       year: "numeric",
                     })}
                   </div>
-                  <div className="text-body text-neutral-600">
+                  <div className="pl-3 text-small text-neutral-600 sm:w-24 sm:pl-0 sm:text-body">
                     {new Date(h.date + "T00:00:00").toLocaleDateString(undefined, { weekday: "long" })}
                   </div>
-                  <div className="text-body text-neutral-950">{h.name}</div>
+                  <div className="pl-3 text-body text-neutral-950 sm:flex-1 sm:pl-0">{h.name}</div>
                 </div>
               );
             })}

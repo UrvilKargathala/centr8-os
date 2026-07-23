@@ -7,6 +7,19 @@
       "runtimeArgs": ["run", "dev"],
       "port": 3000,
       "autoPort": true
+    },
+    {
+      "name": "worker",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "worker"],
+      "port": 0
+    },
+    {
+      "name": "db-studio",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "db:studio"],
+      "port": 4983,
+      "autoPort": true
     }
   ]
 }
