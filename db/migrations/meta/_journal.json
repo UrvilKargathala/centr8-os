@@ -1,405 +1,426 @@
 {
-  "version": "7",
-  "dialect": "postgresql",
-  "entries": [
-    {
-      "idx": 0,
-      "version": "7",
-      "when": 1784479294011,
-      "tag": "0000_auth_compat",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "7",
-      "when": 1784479319393,
-      "tag": "0001_multi_tenant_core",
-      "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "7",
-      "when": 1784479370334,
-      "tag": "0002_force_rls",
-      "breakpoints": true
-    },
-    {
-      "idx": 3,
-      "version": "7",
-      "when": 1784480135628,
-      "tag": "0003_work_hierarchy",
-      "breakpoints": true
-    },
-    {
-      "idx": 4,
-      "version": "7",
-      "when": 1784480142077,
-      "tag": "0004_force_rls_work_hierarchy",
-      "breakpoints": true
-    },
-    {
-      "idx": 5,
-      "version": "7",
-      "when": 1784481050117,
-      "tag": "0005_role_grants",
-      "breakpoints": true
-    },
-    {
-      "idx": 6,
-      "version": "7",
-      "when": 1784482863835,
-      "tag": "0006_permissions",
-      "breakpoints": true
-    },
-    {
-      "idx": 7,
-      "version": "7",
-      "when": 1784482873761,
-      "tag": "0007_force_rls_permissions",
-      "breakpoints": true
-    },
-    {
-      "idx": 8,
-      "version": "7",
-      "when": 1784482885209,
-      "tag": "0008_seed_default_permissions",
-      "breakpoints": true
-    },
-    {
-      "idx": 9,
-      "version": "7",
-      "when": 1784483717094,
-      "tag": "0009_goal_permissions",
-      "breakpoints": true
-    },
-    {
-      "idx": 10,
-      "version": "7",
-      "when": 1784483734537,
-      "tag": "0010_seed_goal_permissions",
-      "breakpoints": true
-    },
-    {
-      "idx": 11,
-      "version": "7",
-      "when": 1784484656756,
-      "tag": "0011_project_health_snapshots",
-      "breakpoints": true
-    },
-    {
-      "idx": 12,
-      "version": "7",
-      "when": 1784484664229,
-      "tag": "0012_force_rls_project_health_snapshots",
-      "breakpoints": true
-    },
-    {
-      "idx": 13,
-      "version": "7",
-      "when": 1784484664609,
-      "tag": "0013_seed_project_health_permissions",
-      "breakpoints": true
-    },
-    {
-      "idx": 14,
-      "version": "7",
-      "when": 1784665242772,
-      "tag": "0014_far_lifeguard",
-      "breakpoints": true
-    },
-    {
-      "idx": 15,
-      "version": "7",
-      "when": 1784665273064,
-      "tag": "0015_force_rls_agent_jobs",
-      "breakpoints": true
-    },
-    {
-      "idx": 16,
-      "version": "7",
-      "when": 1784670958416,
-      "tag": "0016_jazzy_aaron_stack",
-      "breakpoints": true
-    },
-    {
-      "idx": 17,
-      "version": "7",
-      "when": 1784670970586,
-      "tag": "0017_force_rls_capacity_api_keys",
-      "breakpoints": true
-    },
-    {
-      "idx": 18,
-      "version": "7",
-      "when": 1784670989670,
-      "tag": "0018_seed_budgeting_permissions",
-      "breakpoints": true
-    },
-    {
-      "idx": 19,
-      "version": "7",
-      "when": 1784672770063,
-      "tag": "0019_happy_vanisher",
-      "breakpoints": true
-    },
-    {
-      "idx": 20,
-      "version": "7",
-      "when": 1784672781483,
-      "tag": "0020_force_rls_client_portal_access",
-      "breakpoints": true
-    },
-    {
-      "idx": 21,
-      "version": "7",
-      "when": 1784672799766,
-      "tag": "0021_seed_portal_and_milestone_approve_permissions",
-      "breakpoints": true
-    },
-    {
-      "idx": 22,
-      "version": "7",
-      "when": 1784678292329,
-      "tag": "0022_magical_omega_sentinel",
-      "breakpoints": true
-    },
-    {
-      "idx": 23,
-      "version": "7",
-      "when": 1784678307123,
-      "tag": "0023_force_rls_sso_configurations",
-      "breakpoints": true
-    },
-    {
-      "idx": 24,
-      "version": "7",
-      "when": 1784678307501,
-      "tag": "0024_exclude_deactivated_from_user_org_ids",
-      "breakpoints": true
-    },
-    {
-      "idx": 25,
-      "version": "7",
-      "when": 1784678307880,
-      "tag": "0025_seed_sso_permissions",
-      "breakpoints": true
-    },
-    {
-      "idx": 26,
-      "version": "7",
-      "when": 1784745727697,
-      "tag": "0026_tired_kang",
-      "breakpoints": true
-    },
-    {
-      "idx": 27,
-      "version": "7",
-      "when": 1784745762647,
-      "tag": "0027_force_rls_employees",
-      "breakpoints": true
-    },
-    {
-      "idx": 28,
-      "version": "7",
-      "when": 1784745773046,
-      "tag": "0028_seed_employee_permissions",
-      "breakpoints": true
-    },
-    {
-      "idx": 29,
-      "version": "7",
-      "when": 1784779886718,
-      "tag": "0029_sleepy_captain_midlands",
-      "breakpoints": true
-    },
-    {
-      "idx": 30,
-      "version": "7",
-      "when": 1784779899636,
-      "tag": "0030_force_rls_attendance_leave",
-      "breakpoints": true
-    },
-    {
-      "idx": 31,
-      "version": "7",
-      "when": 1784779916424,
-      "tag": "0031_seed_attendance_leave_permissions",
-      "breakpoints": true
-    },
-    {
-      "idx": 32,
-      "version": "7",
-      "when": 1784789504585,
-      "tag": "0032_young_firedrake",
-      "breakpoints": true
-    },
-    {
-      "idx": 33,
-      "version": "7",
-      "when": 1784789516355,
-      "tag": "0033_force_rls_compensation",
-      "breakpoints": true
-    },
-    {
-      "idx": 34,
-      "version": "7",
-      "when": 1784789522525,
-      "tag": "0034_seed_compensation_permissions",
-      "breakpoints": true
-    },
-    {
-      "idx": 35,
-      "version": "7",
-      "when": 1784791062230,
-      "tag": "0035_restrict_hr_self_service_to_admin",
-      "breakpoints": true
-    },
-    {
-      "idx": 36,
-      "version": "7",
-      "when": 1784792260360,
-      "tag": "0036_purple_synch",
-      "breakpoints": true
-    },
-    {
-      "idx": 37,
-      "version": "7",
-      "when": 1784793603729,
-      "tag": "0037_lyrical_blue_shield",
-      "breakpoints": true
-    },
-    {
-      "idx": 38,
-      "version": "7",
-      "when": 1784793622343,
-      "tag": "0038_force_rls_hr_phase4",
-      "breakpoints": true
-    },
-    {
-      "idx": 39,
-      "version": "7",
-      "when": 1784793630203,
-      "tag": "0039_seed_hr_phase4_permissions",
-      "breakpoints": true
-    },
-    {
-      "idx": 40,
-      "version": "7",
-      "when": 1784801405244,
-      "tag": "0040_faithful_captain_britain",
-      "breakpoints": true
-    },
-    {
-      "idx": 41,
-      "version": "7",
-      "when": 1784801405245,
-      "tag": "0041_force_rls_holidays",
-      "breakpoints": true
-    },
-    {
-      "idx": 42,
-      "version": "7",
-      "when": 1784801405246,
-      "tag": "0042_seed_holiday_permissions",
-      "breakpoints": true
-    },
-    {
-      "idx": 43,
-      "version": "7",
-      "when": 1784802011999,
-      "tag": "0043_brown_miss_america",
-      "breakpoints": true
-    },
-    {
-      "idx": 44,
-      "version": "7",
-      "when": 1784802012000,
-      "tag": "0044_force_rls_crm",
-      "breakpoints": true
-    },
-    {
-      "idx": 45,
-      "version": "7",
-      "when": 1784802012001,
-      "tag": "0045_seed_crm_permissions",
-      "breakpoints": true
-    },
-    {
-      "idx": 46,
-      "version": "7",
-      "when": 1784802833841,
-      "tag": "0046_luxuriant_ronan",
-      "breakpoints": true
-    },
-    {
-      "idx": 47,
-      "version": "7",
-      "when": 1784802833842,
-      "tag": "0047_force_rls_deals_activities",
-      "breakpoints": true
-    },
-    {
-      "idx": 48,
-      "version": "7",
-      "when": 1784802833843,
-      "tag": "0048_seed_deal_activity_permissions",
-      "breakpoints": true
-    },
-    {
-      "idx": 49,
-      "version": "7",
-      "when": 1784803630078,
-      "tag": "0049_thin_penance",
-      "breakpoints": true
-    },
-    {
-      "idx": 50,
-      "version": "7",
-      "when": 1784803630079,
-      "tag": "0050_force_rls_forecasts_campaigns",
-      "breakpoints": true
-    },
-    {
-      "idx": 51,
-      "version": "7",
-      "when": 1784803630080,
-      "tag": "0051_seed_forecast_campaign_permissions",
-      "breakpoints": true
-    },
-    {
-      "idx": 52,
-      "version": "7",
-      "when": 1784807265955,
-      "tag": "0052_striped_vanisher",
-      "breakpoints": true
-    },
-    {
-      "idx": 53,
-      "version": "7",
-      "when": 1784807265956,
-      "tag": "0053_force_rls_integrations",
-      "breakpoints": true
-    },
-    {
-      "idx": 54,
-      "version": "7",
-      "when": 1784807265957,
-      "tag": "0054_seed_integration_permissions",
-      "breakpoints": true
-    },
-    {
-      "idx": 55,
-      "version": "7",
-      "when": 1784876800830,
-      "tag": "0055_bent_ego",
-      "breakpoints": true
-    },
-    {
-      "idx": 56,
-      "version": "7",
-      "when": 1784876800831,
-      "tag": "0056_force_rls_task_attachments",
-      "breakpoints": true
-    }
-  ]
+	"version": "7",
+	"dialect": "postgresql",
+	"entries": [
+		{
+			"idx": 0,
+			"version": "7",
+			"when": 1784479294011,
+			"tag": "0000_auth_compat",
+			"breakpoints": true
+		},
+		{
+			"idx": 1,
+			"version": "7",
+			"when": 1784479319393,
+			"tag": "0001_multi_tenant_core",
+			"breakpoints": true
+		},
+		{
+			"idx": 2,
+			"version": "7",
+			"when": 1784479370334,
+			"tag": "0002_force_rls",
+			"breakpoints": true
+		},
+		{
+			"idx": 3,
+			"version": "7",
+			"when": 1784480135628,
+			"tag": "0003_work_hierarchy",
+			"breakpoints": true
+		},
+		{
+			"idx": 4,
+			"version": "7",
+			"when": 1784480142077,
+			"tag": "0004_force_rls_work_hierarchy",
+			"breakpoints": true
+		},
+		{
+			"idx": 5,
+			"version": "7",
+			"when": 1784481050117,
+			"tag": "0005_role_grants",
+			"breakpoints": true
+		},
+		{
+			"idx": 6,
+			"version": "7",
+			"when": 1784482863835,
+			"tag": "0006_permissions",
+			"breakpoints": true
+		},
+		{
+			"idx": 7,
+			"version": "7",
+			"when": 1784482873761,
+			"tag": "0007_force_rls_permissions",
+			"breakpoints": true
+		},
+		{
+			"idx": 8,
+			"version": "7",
+			"when": 1784482885209,
+			"tag": "0008_seed_default_permissions",
+			"breakpoints": true
+		},
+		{
+			"idx": 9,
+			"version": "7",
+			"when": 1784483717094,
+			"tag": "0009_goal_permissions",
+			"breakpoints": true
+		},
+		{
+			"idx": 10,
+			"version": "7",
+			"when": 1784483734537,
+			"tag": "0010_seed_goal_permissions",
+			"breakpoints": true
+		},
+		{
+			"idx": 11,
+			"version": "7",
+			"when": 1784484656756,
+			"tag": "0011_project_health_snapshots",
+			"breakpoints": true
+		},
+		{
+			"idx": 12,
+			"version": "7",
+			"when": 1784484664229,
+			"tag": "0012_force_rls_project_health_snapshots",
+			"breakpoints": true
+		},
+		{
+			"idx": 13,
+			"version": "7",
+			"when": 1784484664609,
+			"tag": "0013_seed_project_health_permissions",
+			"breakpoints": true
+		},
+		{
+			"idx": 14,
+			"version": "7",
+			"when": 1784665242772,
+			"tag": "0014_far_lifeguard",
+			"breakpoints": true
+		},
+		{
+			"idx": 15,
+			"version": "7",
+			"when": 1784665273064,
+			"tag": "0015_force_rls_agent_jobs",
+			"breakpoints": true
+		},
+		{
+			"idx": 16,
+			"version": "7",
+			"when": 1784670958416,
+			"tag": "0016_jazzy_aaron_stack",
+			"breakpoints": true
+		},
+		{
+			"idx": 17,
+			"version": "7",
+			"when": 1784670970586,
+			"tag": "0017_force_rls_capacity_api_keys",
+			"breakpoints": true
+		},
+		{
+			"idx": 18,
+			"version": "7",
+			"when": 1784670989670,
+			"tag": "0018_seed_budgeting_permissions",
+			"breakpoints": true
+		},
+		{
+			"idx": 19,
+			"version": "7",
+			"when": 1784672770063,
+			"tag": "0019_happy_vanisher",
+			"breakpoints": true
+		},
+		{
+			"idx": 20,
+			"version": "7",
+			"when": 1784672781483,
+			"tag": "0020_force_rls_client_portal_access",
+			"breakpoints": true
+		},
+		{
+			"idx": 21,
+			"version": "7",
+			"when": 1784672799766,
+			"tag": "0021_seed_portal_and_milestone_approve_permissions",
+			"breakpoints": true
+		},
+		{
+			"idx": 22,
+			"version": "7",
+			"when": 1784678292329,
+			"tag": "0022_magical_omega_sentinel",
+			"breakpoints": true
+		},
+		{
+			"idx": 23,
+			"version": "7",
+			"when": 1784678307123,
+			"tag": "0023_force_rls_sso_configurations",
+			"breakpoints": true
+		},
+		{
+			"idx": 24,
+			"version": "7",
+			"when": 1784678307501,
+			"tag": "0024_exclude_deactivated_from_user_org_ids",
+			"breakpoints": true
+		},
+		{
+			"idx": 25,
+			"version": "7",
+			"when": 1784678307880,
+			"tag": "0025_seed_sso_permissions",
+			"breakpoints": true
+		},
+		{
+			"idx": 26,
+			"version": "7",
+			"when": 1784745727697,
+			"tag": "0026_tired_kang",
+			"breakpoints": true
+		},
+		{
+			"idx": 27,
+			"version": "7",
+			"when": 1784745762647,
+			"tag": "0027_force_rls_employees",
+			"breakpoints": true
+		},
+		{
+			"idx": 28,
+			"version": "7",
+			"when": 1784745773046,
+			"tag": "0028_seed_employee_permissions",
+			"breakpoints": true
+		},
+		{
+			"idx": 29,
+			"version": "7",
+			"when": 1784779886718,
+			"tag": "0029_sleepy_captain_midlands",
+			"breakpoints": true
+		},
+		{
+			"idx": 30,
+			"version": "7",
+			"when": 1784779899636,
+			"tag": "0030_force_rls_attendance_leave",
+			"breakpoints": true
+		},
+		{
+			"idx": 31,
+			"version": "7",
+			"when": 1784779916424,
+			"tag": "0031_seed_attendance_leave_permissions",
+			"breakpoints": true
+		},
+		{
+			"idx": 32,
+			"version": "7",
+			"when": 1784789504585,
+			"tag": "0032_young_firedrake",
+			"breakpoints": true
+		},
+		{
+			"idx": 33,
+			"version": "7",
+			"when": 1784789516355,
+			"tag": "0033_force_rls_compensation",
+			"breakpoints": true
+		},
+		{
+			"idx": 34,
+			"version": "7",
+			"when": 1784789522525,
+			"tag": "0034_seed_compensation_permissions",
+			"breakpoints": true
+		},
+		{
+			"idx": 35,
+			"version": "7",
+			"when": 1784791062230,
+			"tag": "0035_restrict_hr_self_service_to_admin",
+			"breakpoints": true
+		},
+		{
+			"idx": 36,
+			"version": "7",
+			"when": 1784792260360,
+			"tag": "0036_purple_synch",
+			"breakpoints": true
+		},
+		{
+			"idx": 37,
+			"version": "7",
+			"when": 1784793603729,
+			"tag": "0037_lyrical_blue_shield",
+			"breakpoints": true
+		},
+		{
+			"idx": 38,
+			"version": "7",
+			"when": 1784793622343,
+			"tag": "0038_force_rls_hr_phase4",
+			"breakpoints": true
+		},
+		{
+			"idx": 39,
+			"version": "7",
+			"when": 1784793630203,
+			"tag": "0039_seed_hr_phase4_permissions",
+			"breakpoints": true
+		},
+		{
+			"idx": 40,
+			"version": "7",
+			"when": 1784801405244,
+			"tag": "0040_faithful_captain_britain",
+			"breakpoints": true
+		},
+		{
+			"idx": 41,
+			"version": "7",
+			"when": 1784801405245,
+			"tag": "0041_force_rls_holidays",
+			"breakpoints": true
+		},
+		{
+			"idx": 42,
+			"version": "7",
+			"when": 1784801405246,
+			"tag": "0042_seed_holiday_permissions",
+			"breakpoints": true
+		},
+		{
+			"idx": 43,
+			"version": "7",
+			"when": 1784802011999,
+			"tag": "0043_brown_miss_america",
+			"breakpoints": true
+		},
+		{
+			"idx": 44,
+			"version": "7",
+			"when": 1784802012000,
+			"tag": "0044_force_rls_crm",
+			"breakpoints": true
+		},
+		{
+			"idx": 45,
+			"version": "7",
+			"when": 1784802012001,
+			"tag": "0045_seed_crm_permissions",
+			"breakpoints": true
+		},
+		{
+			"idx": 46,
+			"version": "7",
+			"when": 1784802833841,
+			"tag": "0046_luxuriant_ronan",
+			"breakpoints": true
+		},
+		{
+			"idx": 47,
+			"version": "7",
+			"when": 1784802833842,
+			"tag": "0047_force_rls_deals_activities",
+			"breakpoints": true
+		},
+		{
+			"idx": 48,
+			"version": "7",
+			"when": 1784802833843,
+			"tag": "0048_seed_deal_activity_permissions",
+			"breakpoints": true
+		},
+		{
+			"idx": 49,
+			"version": "7",
+			"when": 1784803630078,
+			"tag": "0049_thin_penance",
+			"breakpoints": true
+		},
+		{
+			"idx": 50,
+			"version": "7",
+			"when": 1784803630079,
+			"tag": "0050_force_rls_forecasts_campaigns",
+			"breakpoints": true
+		},
+		{
+			"idx": 51,
+			"version": "7",
+			"when": 1784803630080,
+			"tag": "0051_seed_forecast_campaign_permissions",
+			"breakpoints": true
+		},
+		{
+			"idx": 52,
+			"version": "7",
+			"when": 1784807265955,
+			"tag": "0052_striped_vanisher",
+			"breakpoints": true
+		},
+		{
+			"idx": 53,
+			"version": "7",
+			"when": 1784807265956,
+			"tag": "0053_force_rls_integrations",
+			"breakpoints": true
+		},
+		{
+			"idx": 54,
+			"version": "7",
+			"when": 1784807265957,
+			"tag": "0054_seed_integration_permissions",
+			"breakpoints": true
+		},
+		{
+			"idx": 55,
+			"version": "7",
+			"when": 1784876800830,
+			"tag": "0055_bent_ego",
+			"breakpoints": true
+		},
+		{
+			"idx": 56,
+			"version": "7",
+			"when": 1784876800831,
+			"tag": "0056_force_rls_task_attachments",
+			"breakpoints": true
+		},
+		{
+			"idx": 57,
+			"version": "7",
+			"when": 1784897038965,
+			"tag": "0057_legal_venom",
+			"breakpoints": true
+		},
+		{
+			"idx": 58,
+			"version": "7",
+			"when": 1784897038966,
+			"tag": "0058_force_rls_people",
+			"breakpoints": true
+		},
+		{
+			"idx": 59,
+			"version": "7",
+			"when": 1784897038967,
+			"tag": "0059_seed_team_permissions",
+			"breakpoints": true
+		}
+	]
 }

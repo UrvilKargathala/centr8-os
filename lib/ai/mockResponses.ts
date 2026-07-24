@@ -125,6 +125,52 @@ Follow-ups:
       }
       return "Nothing jumps out as urgent — the portfolio is small enough that a quick scan of the Projects page will show you everything material. Ask me about a specific project, budget, or team member for a sharper read.";
     },
+    recommend_members_for_role: (ctx: MockContext) => {
+      const role = ((ctx.role as string) || "team member").toLowerCase();
+      const pool: Record<string, { name: string; reason: string }[]> = {
+        developer: [
+          { name: "Aditi Rao", reason: "Shipped 3 web apps this year; low current load." },
+          { name: "Marco Silva", reason: "React specialist; open capacity for 20 hrs/wk." },
+          { name: "Priya Nair", reason: "Just wrapped Q2 project; strong TypeScript track record." },
+        ],
+        designer: [
+          { name: "Jules Novak", reason: "Recent brand refresh; product design background." },
+          { name: "Chen Wu", reason: "Available half-time; strong at design systems." },
+          { name: "Hannah Ford", reason: "Prior work on similar client project." },
+        ],
+        "project manager": [
+          { name: "Ravi Kapoor", reason: "PM'd two active projects that finished on time." },
+          { name: "Sofía Lima", reason: "Client-facing PM with recent case-study wins." },
+          { name: "Naomi Fields", reason: "Delivery-focused PM; strong at unblocking." },
+        ],
+        qa: [
+          { name: "Devon Park", reason: "Automation-first QA; owns the current test harness." },
+          { name: "Larissa Meyer", reason: "Available full-time; specializes in regression suites." },
+          { name: "Omar Haddad", reason: "Manual + exploratory testing background." },
+        ],
+        devops: [
+          { name: "Kai Lin", reason: "Owns current CI/CD; already knows the stack." },
+          { name: "Elena Roth", reason: "Just certified in the target cloud." },
+          { name: "Yusuf Adebayo", reason: "K8s + Terraform specialist." },
+        ],
+        marketing: [
+          { name: "Riya Bhatt", reason: "Ran the last campaign that hit 2x targets." },
+          { name: "Alex Wren", reason: "Positioning + copy specialist." },
+          { name: "Jordan Lee", reason: "Available for content + community." },
+        ],
+        sales: [
+          { name: "Nadia Costa", reason: "Owns the enterprise book; strong closer." },
+          { name: "Ben Okafor", reason: "SMB pipeline; fast at qualifying leads." },
+          { name: "Sana Ali", reason: "Just moved off a wrapped account." },
+        ],
+      };
+      const list = pool[role] ?? [
+        { name: "Team member A", reason: "Available and generally strong." },
+        { name: "Team member B", reason: "Recent related work." },
+        { name: "Team member C", reason: "Open capacity right now." },
+      ];
+      return list;
+    },
     suggest_budget_breakdown: (ctx: MockContext) => {
       const total = Number(ctx.allocatedBudget) || 100000;
       return {
@@ -149,10 +195,10 @@ Follow-ups:
       };
     },
     suggest_team_composition: (_ctx: MockContext) => [
-      { role: "Project Lead", count: 1 },
-      { role: "Engineer", count: 2 },
+      { role: "Project Manager", count: 1 },
+      { role: "Developer", count: 2 },
       { role: "Designer", count: 1 },
-      { role: "PM / Analyst", count: 1 },
+      { role: "QA", count: 1 },
     ],
   },
 } as const;

@@ -60,6 +60,15 @@ export default function SprintsPage() {
 
   useEffect(loadAll, [selectedOrgId]);
 
+  async function handleSprintStatus(sprintId: string, status: "active" | "completed") {
+    const res = await fetch(`/api/sprints/${sprintId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status }),
+    });
+    if (res.ok) loadAll();
+  }
+
   async function handleStatusChange(taskId: string, status: string) {
     setTasks((prev) => prev.map((t) => (t.id === taskId ? { ...t, status } : t)));
     const res = await fetch(`/api/tasks/${taskId}`, {
@@ -90,6 +99,14 @@ export default function SprintsPage() {
             <span className="ml-2 text-small text-neutral-600">{projectName(openSprint.projectId)}</span>
           </div>
           <SprintStatusBadge status={openSprint.status} />
+          {can("sprint", "update") && openSprint.status === "planned" && (
+            <Button onClick={() => handleSprintStatus(openSprint.id, "active")}>Start sprint</Button>
+          )}
+          {can("sprint", "update") && openSprint.status === "active" && (
+            <Button variant="secondary" onClick={() => handleSprintStatus(openSprint.id, "completed")}>
+              Complete sprint
+            </Button>
+          )}
         </div>
         {selectedOrgId && <CapacityPanel sprintId={openSprint.id} orgId={selectedOrgId} />}
         <SprintBoard tasks={sprintTasks} canEdit={canEdit} onTaskClick={setOpenTaskId} onStatusChange={handleStatusChange} />

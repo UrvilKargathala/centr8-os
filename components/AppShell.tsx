@@ -51,6 +51,7 @@ const NAV_SECTIONS: NavSection[] = [
       { href: "/projects", label: "Projects", icon: ICON.folder },
       { href: "/sprints", label: "Sprints", icon: ICON.checklist },
       { href: "/tasks", label: "Tasks", icon: ICON.checklist },
+      { href: "/team", label: "Team", icon: ICON.users },
     ],
   },
   {

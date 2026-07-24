@@ -12,6 +12,7 @@ import {
   primaryKey,
   text,
   timestamp,
+  uniqueIndex,
   uuid,
 } from "drizzle-orm/pg-core";
 import { authenticatedRole } from "drizzle-orm/supabase";
@@ -1253,6 +1254,43 @@ export const holidays = pgTable(
   },
   () => [
     pgPolicy("holidays_isolation", {
+      for: "all",
+      to: authenticatedRole,
+      using: inUserOrgs,
+      withCheck: inUserOrgs,
+    }),
+  ],
+).enableRLS();
+
+// People directory — deliberately named "people" (not "team_members" or
+// "employees") because it's the shared source of truth that HR (Phase 5.1)
+// will extend later rather than duplicating. Kept minimal: HR-specific
+// fields (DOB, salary, employment type, manager, attendance links) belong on
+// a future `employees` extension, not here. isActive is a soft-delete flag —
+// people rows may be referenced by projects, so we don't hard-delete.
+export const people = pgTable(
+  "people",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    orgId: uuid("org_id").notNull().references(() => organizations.id, { onDelete: "cascade" }),
+    fullName: text("full_name").notNull(),
+    workEmail: text("work_email").notNull(),
+    jobTitle: text("job_title"),
+    avatarUrl: text("avatar_url"),
+    // Free-text for now; becomes an FK to a `departments` table when HR
+    // Phase 5.1 builds it.
+    department: text("department"),
+    availableHoursPerWeek: integer("available_hours_per_week").notNull().default(40),
+    roles: jsonb("roles").notNull().default([]),
+    skills: jsonb("skills").notNull().default([]),
+    isActive: boolean("is_active").notNull().default(true),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+    createdByUserId: uuid("created_by_user_id"),
+  },
+  (t) => [
+    uniqueIndex("people_org_email_unique").on(t.orgId, t.workEmail),
+    pgPolicy("people_isolation", {
       for: "all",
       to: authenticatedRole,
       using: inUserOrgs,

@@ -25,6 +25,7 @@ function LoginForm() {
   const searchParams = useSearchParams();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPw, setShowPw] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -67,25 +68,37 @@ function LoginForm() {
             </p>
           </div>
 
-          <div className="rounded-md border border-neutral-300 bg-neutral-50/90 p-4 shadow-sm backdrop-blur">
-            <div className="mb-3 flex items-center justify-between">
-              <div className="h-2.5 w-24 rounded-full bg-neutral-300" />
-              <div className="h-2.5 w-10 rounded-full bg-primary-600/40" />
-            </div>
-            <div className="grid grid-cols-3 gap-3">
-              {[0, 1, 2].map((i) => (
-                <div key={i} className="space-y-2 rounded-sm bg-neutral-100 p-3">
-                  <div className="h-2 w-10 rounded-full bg-neutral-300" />
-                  <div className="h-4 w-14 rounded-full bg-neutral-300" />
+          <ul className="space-y-4">
+            {[
+              {
+                title: "An AI project manager on the team",
+                sub: "Plans sprints, monitors risk, and drafts client updates — you approve the ones that ship.",
+                icon: "M12 3l1.9 5.6L19.5 10.5l-5.6 1.9L12 18l-1.9-5.6L4.5 10.5l5.6-1.9L12 3z",
+              },
+              {
+                title: "Projects, HR, and CRM in one place",
+                sub: "One source of truth for people, deals, and delivery — no more switching tabs to find context.",
+                icon: "M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z",
+              },
+              {
+                title: "Ship your first sprint in 15 minutes",
+                sub: "Templates, AI-drafted plans, and instant setup — you're running work the same day you sign in.",
+                icon: "M13 10V3L4 14h7v7l9-11h-7z",
+              },
+            ].map((f) => (
+              <li key={f.title} className="flex items-start gap-3 rounded-md border border-neutral-300 bg-neutral-50/80 p-4 shadow-sm backdrop-blur">
+                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-primary-100 text-primary-700">
+                  <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d={f.icon} />
+                  </svg>
+                </span>
+                <div className="min-w-0">
+                  <p className="text-body-medium font-semibold text-neutral-950">{f.title}</p>
+                  <p className="mt-0.5 text-small text-neutral-600">{f.sub}</p>
                 </div>
-              ))}
-            </div>
-            <div className="mt-3 flex items-end gap-1.5">
-              {[40, 65, 30, 80, 55, 70, 45].map((h, i) => (
-                <div key={i} className="w-full rounded-full bg-primary-600/40" style={{ height: `${h}px` }} />
-              ))}
-            </div>
-          </div>
+              </li>
+            ))}
+          </ul>
         </div>
       </div>
 
@@ -118,14 +131,33 @@ function LoginForm() {
 
               <Field data-invalid={!!error}>
                 <FieldLabel htmlFor="password">Password</FieldLabel>
-                <Input
-                  id="password"
-                  type="password"
-                  required
-                  className="w-full"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                />
+                <div className="relative">
+                  <Input
+                    id="password"
+                    type={showPw ? "text" : "password"}
+                    required
+                    className="w-full pr-10"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPw((v) => !v)}
+                    aria-label={showPw ? "Hide password" : "Show password"}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md p-1 text-neutral-500 hover:bg-neutral-200 hover:text-neutral-800"
+                  >
+                    {showPw ? (
+                      <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908A3 3 0 1115 12m6 0a10.05 10.05 0 01-1.876 3.11M6.28 6.28A9.965 9.965 0 0112 5c4.477 0 8.267 2.943 9.542 7a10.008 10.008 0 01-1.902 3.293M3 3l18 18" />
+                      </svg>
+                    ) : (
+                      <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                      </svg>
+                    )}
+                  </button>
+                </div>
               </Field>
 
               {error && <FieldError>{error}</FieldError>}
