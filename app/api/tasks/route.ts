@@ -49,6 +49,7 @@ export async function POST(req: NextRequest) {
           priority: body.priority ?? undefined,
           assigneeId: body.assignee_id ?? null,
           estimate: body.estimate ?? null,
+          dueDate: body.due_date ?? null,
         })
         .returning();
     });

@@ -2,20 +2,18 @@
 
 import { useEffect, useState, use } from "react";
 import { useOrg } from "@/lib/context/OrgContext";
-import {
-  Badge,
-  ProjectStatusBadge,
-  SprintStatusBadge,
-  TaskStatusBadge,
-  TaskPriorityBadge,
-  sprintStatusColor,
-} from "@/components/ui/Badge";
+import { Badge, ProjectStatusBadge, SprintStatusBadge, sprintStatusColor } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Card, CardButton } from "@/components/ui/Card";
 import { Input, Select, Field } from "@/components/ui/Input";
+import { Modal } from "@/components/ui/Modal";
 import { SprintBoard } from "@/components/SprintBoard";
+import { TaskListView } from "@/components/TaskListView";
+import { TaskCalendarView } from "@/components/TaskCalendarView";
+import { ProjectFilesView } from "@/components/ProjectFilesView";
 import { CapacityPanel } from "@/components/CapacityPanel";
 import { SendViaSlackButton } from "@/components/SendViaSlackButton";
+import { SendViaGmailButton } from "@/components/SendViaGmailButton";
 import { TaskDetailModal } from "@/components/TaskDetailModal";
 import type { Task } from "@/components/TaskCard";
 import { PROJECT_STATUSES, TASK_STATUSES, TASK_STATUS_LABELS, TASK_PRIORITIES } from "@/lib/constants";
@@ -101,7 +99,10 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
         </div>
         <div className="flex items-center gap-2">
           {selectedOrgId && (
-            <SendViaSlackButton orgId={selectedOrgId} defaultText={`Update on ${project.name}: `} />
+            <>
+              <SendViaSlackButton orgId={selectedOrgId} defaultText={`Update on ${project.name}: `} />
+              <SendViaGmailButton orgId={selectedOrgId} defaultSubject={`Update on ${project.name}`} />
+            </>
           )}
           <ProjectStatusBadge status={project.status} />
         </div>
@@ -125,7 +126,17 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
       {tab === "Sprints" && (
         <SprintsTab sprints={sprints} tasks={tasks} canEdit={canEditTasks} onTaskClick={setOpenTaskId} onStatusChange={handleStatusChange} />
       )}
-      {tab === "Tasks" && <TasksTab tasks={tasks} onTaskClick={setOpenTaskId} />}
+      {tab === "Tasks" && (
+        <TasksTab
+          projectId={id}
+          orgId={selectedOrgId}
+          tasks={tasks}
+          canEdit={canEditTasks}
+          onTaskClick={setOpenTaskId}
+          onStatusChange={handleStatusChange}
+          onTaskCreated={loadAll}
+        />
+      )}
       {tab === "Settings" && project && (
         <SettingsTab project={project} orgId={selectedOrgId} onSaved={loadAll} />
       )}
@@ -319,10 +330,32 @@ function SprintsTab({
   );
 }
 
-function TasksTab({ tasks, onTaskClick }: { tasks: Task[]; onTaskClick: (taskId: string) => void }) {
+const TASK_VIEWS = ["List", "Board", "Calendar", "Files"] as const;
+type TaskView = (typeof TASK_VIEWS)[number];
+
+function TasksTab({
+  projectId,
+  orgId,
+  tasks,
+  canEdit,
+  onTaskClick,
+  onStatusChange,
+  onTaskCreated,
+}: {
+  projectId: string;
+  orgId: string | null;
+  tasks: Task[];
+  canEdit: boolean;
+  onTaskClick: (taskId: string) => void;
+  onStatusChange: (taskId: string, status: string) => void;
+  onTaskCreated: () => void;
+}) {
+  const { can } = useOrg();
+  const [view, setView] = useState<TaskView>("List");
   const [statusFilter, setStatusFilter] = useState("all");
   const [priorityFilter, setPriorityFilter] = useState("all");
   const [assigneeFilter, setAssigneeFilter] = useState("");
+  const [showNew, setShowNew] = useState(false);
 
   const filtered = tasks.filter(
     (t) =>
@@ -333,57 +366,162 @@ function TasksTab({ tasks, onTaskClick }: { tasks: Task[]; onTaskClick: (taskId:
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap gap-2">
-        <Select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
-          <option value="all">All statuses</option>
-          {TASK_STATUSES.map((s) => (
-            <option key={s} value={s}>
-              {TASK_STATUS_LABELS[s]}
-            </option>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="flex gap-1 rounded-md border border-neutral-300 bg-neutral-50 p-0.5">
+          {TASK_VIEWS.map((v) => (
+            <button
+              key={v}
+              type="button"
+              onClick={() => setView(v)}
+              className={`rounded-sm px-3 py-1.5 text-body-medium font-medium transition-colors ${
+                view === v ? "bg-primary-100 text-primary-700" : "text-neutral-600 hover:bg-neutral-200"
+              }`}
+            >
+              {v}
+            </button>
           ))}
-        </Select>
-        <Select value={priorityFilter} onChange={(e) => setPriorityFilter(e.target.value)}>
-          <option value="all">All priorities</option>
-          {TASK_PRIORITIES.map((p) => (
-            <option key={p} value={p}>
-              {p}
-            </option>
-          ))}
-        </Select>
-        <Input placeholder="Filter by assignee ID" value={assigneeFilter} onChange={(e) => setAssigneeFilter(e.target.value)} />
+        </div>
+        {can("task", "create") && <Button onClick={() => setShowNew(true)}>+ New Task</Button>}
       </div>
 
-      {filtered.length === 0 ? (
-        <p className="text-body text-neutral-600">No tasks match.</p>
-      ) : (
-        <div className="overflow-x-auto rounded-md border border-neutral-300">
-          <table className="w-full min-w-[560px] text-body">
-            <thead className="bg-neutral-100">
-              <tr className="text-left text-caption font-medium uppercase tracking-wide text-neutral-600">
-                <th className="px-4 py-2">Title</th>
-                <th className="px-4 py-2">Priority</th>
-                <th className="px-4 py-2">Status</th>
-                <th className="px-4 py-2">Estimate</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-neutral-200 bg-neutral-50">
-              {filtered.map((t) => (
-                <tr key={t.id} onClick={() => onTaskClick(t.id)} className="cursor-pointer hover:bg-neutral-100">
-                  <td className="px-4 py-3 text-neutral-950">{t.title}</td>
-                  <td className="px-4 py-3">
-                    <TaskPriorityBadge priority={t.priority} />
-                  </td>
-                  <td className="px-4 py-3">
-                    <TaskStatusBadge status={t.status} />
-                  </td>
-                  <td className="px-4 py-3 text-neutral-600">{t.estimate ?? "—"}</td>
-                </tr>
+      {view === "List" && (
+        <>
+          <div className="flex flex-wrap gap-2">
+            <Select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
+              <option value="all">All statuses</option>
+              {TASK_STATUSES.map((s) => (
+                <option key={s} value={s}>
+                  {TASK_STATUS_LABELS[s]}
+                </option>
               ))}
-            </tbody>
-          </table>
-        </div>
+            </Select>
+            <Select value={priorityFilter} onChange={(e) => setPriorityFilter(e.target.value)}>
+              <option value="all">All priorities</option>
+              {TASK_PRIORITIES.map((p) => (
+                <option key={p} value={p}>
+                  {p}
+                </option>
+              ))}
+            </Select>
+            <Input placeholder="Filter by assignee ID" value={assigneeFilter} onChange={(e) => setAssigneeFilter(e.target.value)} />
+          </div>
+          {filtered.length === 0 ? (
+            <p className="text-body text-neutral-600">No tasks match.</p>
+          ) : (
+            <TaskListView tasks={filtered} onTaskClick={onTaskClick} />
+          )}
+        </>
+      )}
+
+      {view === "Board" &&
+        (tasks.length === 0 ? (
+          <p className="text-body text-neutral-600">No tasks yet.</p>
+        ) : (
+          <SprintBoard tasks={tasks} canEdit={canEdit} onTaskClick={onTaskClick} onStatusChange={onStatusChange} />
+        ))}
+
+      {view === "Calendar" && <TaskCalendarView tasks={tasks} onTaskClick={onTaskClick} />}
+
+      {view === "Files" && <ProjectFilesView tasks={tasks} />}
+
+      {showNew && orgId && (
+        <Modal onClose={() => setShowNew(false)}>
+          <NewTaskForm
+            orgId={orgId}
+            projectId={projectId}
+            onClose={() => setShowNew(false)}
+            onCreated={() => {
+              setShowNew(false);
+              onTaskCreated();
+            }}
+          />
+        </Modal>
       )}
     </div>
+  );
+}
+
+function NewTaskForm({
+  orgId,
+  projectId,
+  onClose,
+  onCreated,
+}: {
+  orgId: string;
+  projectId: string;
+  onClose: () => void;
+  onCreated: () => void;
+}) {
+  const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
+  const [priority, setPriority] = useState<(typeof TASK_PRIORITIES)[number]>("medium");
+  const [dueDate, setDueDate] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!title) return;
+    setSaving(true);
+    setError(null);
+
+    const res = await fetch("/api/tasks", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        org_id: orgId,
+        project_id: projectId,
+        title,
+        description: description || null,
+        priority,
+        due_date: dueDate || null,
+      }),
+    });
+    const body = await res.json();
+    setSaving(false);
+    if (!res.ok) {
+      setError(body.error ?? "Failed to create task");
+      return;
+    }
+    onCreated();
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <h2 className="text-h2 font-semibold text-neutral-950">New Task</h2>
+
+      {error && <p className="rounded-md bg-danger-100 p-3 text-body text-danger-600">{error}</p>}
+
+      <Field label="Title">
+        <Input className="w-full" value={title} onChange={(e) => setTitle(e.target.value)} autoFocus />
+      </Field>
+      <Field label="Description">
+        <Input className="w-full" value={description} onChange={(e) => setDescription(e.target.value)} />
+      </Field>
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <Field label="Priority">
+          <Select className="w-full" value={priority} onChange={(e) => setPriority(e.target.value as (typeof TASK_PRIORITIES)[number])}>
+            {TASK_PRIORITIES.map((p) => (
+              <option key={p} value={p}>
+                {p}
+              </option>
+            ))}
+          </Select>
+        </Field>
+        <Field label="Due date">
+          <Input type="date" className="w-full" value={dueDate} onChange={(e) => setDueDate(e.target.value)} />
+        </Field>
+      </div>
+
+      <div className="flex justify-end gap-3 border-t border-neutral-200 pt-4">
+        <Button type="button" variant="secondary" onClick={onClose}>
+          Cancel
+        </Button>
+        <Button type="submit" disabled={saving || !title}>
+          {saving ? "Creating…" : "Create Task"}
+        </Button>
+      </div>
+    </form>
   );
 }
 

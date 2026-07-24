@@ -313,6 +313,7 @@ export const tasks = pgTable(
     priority: taskPriorityEnum("priority").notNull().default("medium"),
     assigneeId: uuid("assignee_id"),
     estimate: integer("estimate"),
+    dueDate: date("due_date"),
   },
   () => [
     pgPolicy("tasks_isolation", {
@@ -1479,6 +1480,39 @@ export const integrations = pgTable(
   },
   () => [
     pgPolicy("integrations_isolation", {
+      for: "all",
+      to: authenticatedRole,
+      using: inUserOrgs,
+      withCheck: inUserOrgs,
+    }),
+  ],
+).enableRLS();
+
+// Project detail Tasks tab redesign — Files view. Metadata only; the actual
+// bytes live in Supabase Storage (private bucket, service-role access only
+// — see lib/api/storage.ts). No new resourceType/permission: attachment
+// create/delete rides on the existing task:update grant, list on
+// task:read, same "rides along" pattern as attendance/leave reads on
+// employee reads.
+export const taskAttachments = pgTable(
+  "task_attachments",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    orgId: uuid("org_id")
+      .notNull()
+      .references(() => organizations.id, { onDelete: "cascade" }),
+    taskId: uuid("task_id")
+      .notNull()
+      .references(() => tasks.id, { onDelete: "cascade" }),
+    fileName: text("file_name").notNull(),
+    filePath: text("file_path").notNull(),
+    fileSize: integer("file_size").notNull(),
+    mimeType: text("mime_type"),
+    uploadedByUserId: uuid("uploaded_by_user_id"),
+    uploadedAt: timestamp("uploaded_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  () => [
+    pgPolicy("task_attachments_isolation", {
       for: "all",
       to: authenticatedRole,
       using: inUserOrgs,

@@ -23,7 +23,15 @@ const DOT_CLASSES: Record<BadgeColor, string> = {
 
 // Native conic-gradient — a 6-slice donut doesn't earn a charting
 // dependency any more than the bar chart did.
-export function DonutChart({ slices }: { slices: { label: string; value: number; color: BadgeColor }[] }) {
+export function DonutChart({
+  slices,
+  centerLabel,
+  centerSublabel = "tasks",
+}: {
+  slices: { label: string; value: number; color: BadgeColor }[];
+  centerLabel?: string;
+  centerSublabel?: string;
+}) {
   const total = slices.reduce((sum, s) => sum + s.value, 0);
 
   let cursor = 0;
@@ -48,8 +56,8 @@ export function DonutChart({ slices }: { slices: { label: string; value: number;
         style={{ background: `conic-gradient(${gradient})` }}
       >
         <div className="absolute inset-4 flex flex-col items-center justify-center rounded-full bg-neutral-50">
-          <span className="text-h1 font-semibold text-neutral-950">{total}</span>
-          <span className="text-caption text-neutral-600">tasks</span>
+          <span className="text-h1 font-semibold text-neutral-950">{centerLabel ?? total}</span>
+          <span className="text-caption text-neutral-600">{centerSublabel}</span>
         </div>
       </div>
 

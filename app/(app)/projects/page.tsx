@@ -1,13 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useOrg } from "@/lib/context/OrgContext";
 import { ProjectStatusBadge, Badge, projectStatusColor } from "@/components/ui/Badge";
 import { CardLink } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
-import { Modal } from "@/components/ui/Modal";
-import { Input, Select, Field } from "@/components/ui/Input";
-import { PROJECT_STATUSES } from "@/lib/constants";
+import { NewProjectWizard } from "@/components/NewProjectWizard";
+import { AiBanner } from "@/components/ui/AiBanner";
+import { generateAI } from "@/lib/ai/generate";
 
 type Project = {
   id: string;
@@ -27,10 +27,14 @@ export default function ProjectsPage() {
   const { selectedOrgId, can, loading: orgLoading } = useOrg();
   const [projects, setProjects] = useState<Project[]>([]);
   const [milestoneCounts, setMilestoneCounts] = useState<Record<string, number>>({});
+  const [taskProgress, setTaskProgress] = useState<Record<string, { done: number; total: number }>>({});
   const [health, setHealth] = useState<Record<string, HealthSnapshot>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showNewProject, setShowNewProject] = useState(false);
+  const [view, setView] = useState<"grid" | "list">("grid");
+  const [aiSummary, setAiSummary] = useState<string | null>(null);
+  const [aiLoading, setAiLoading] = useState(false);
 
   function loadAll() {
     if (!selectedOrgId) return;
@@ -64,12 +68,45 @@ export default function ProjectsPage() {
           ),
         );
         setMilestoneCounts(Object.fromEntries(counts));
+
+        const progress = await Promise.all(
+          list.map((p) =>
+            fetch(`/api/tasks?project_id=${p.id}`)
+              .then((r) => r.json())
+              .then((b) => {
+                const tasks: { status: string }[] = b.data ?? [];
+                return [p.id, { done: tasks.filter((t) => t.status === "done").length, total: tasks.length }] as const;
+              })
+              .catch(() => [p.id, { done: 0, total: 0 }] as const),
+          ),
+        );
+        setTaskProgress(Object.fromEntries(progress));
       })
       .catch((err) => setError(err instanceof Error ? err.message : "Failed to load projects"))
       .finally(() => setLoading(false));
   }
 
   useEffect(loadAll, [selectedOrgId]);
+
+  const kpis = useMemo(() => {
+    const active = projects.filter((p) => p.status === "active").length;
+    const planning = projects.filter((p) => p.status === "planning").length;
+    let atRisk = 0;
+    for (const snap of Object.values(health)) {
+      if (snap.signals.overdueTasks > 0 || snap.signals.blockedTasks > 0) atRisk++;
+    }
+    return { total: projects.length, active, planning, atRisk };
+  }, [projects, health]);
+
+  const filteredProjects = projects;
+
+  async function runAiSummary() {
+    setAiLoading(true);
+    setAiSummary(null);
+    const s = (await generateAI("Writer", "portfolio_summary", { total: kpis.total, active: kpis.active, atRisk: kpis.atRisk })) as string;
+    setAiSummary(s);
+    setAiLoading(false);
+  }
 
   if (orgLoading || loading) {
     return <p className="text-body text-neutral-600">Loading projects…</p>;
@@ -87,19 +124,127 @@ export default function ProjectsPage() {
     <div className="space-y-6">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
         <h1 className="text-display font-semibold text-neutral-950">Projects</h1>
-        <div className="flex items-center gap-3">
-          <span className="text-body text-neutral-600">{projects.length} total</span>
-          {can("project", "create") && (
-            <Button onClick={() => setShowNewProject(true)}>+ New Project</Button>
-          )}
-        </div>
+        {can("project", "create") && <Button onClick={() => setShowNewProject(true)}>+ New Project</Button>}
       </div>
 
-      {projects.length === 0 ? (
-        <p className="text-body text-neutral-600">No projects yet.</p>
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <KpiCard title="Total projects" value={kpis.total} pattern={kpis.total} tone="neutral" />
+        <KpiCard title="Active" value={kpis.active} pattern={kpis.active} tone="success" />
+        <KpiCard title="Planning" value={kpis.planning} pattern={kpis.planning} tone="info" />
+        <KpiCard title="At risk" value={kpis.atRisk} pattern={kpis.atRisk} tone="danger" />
+      </div>
+
+      <div className="space-y-2 rounded-md border border-ai-600/40 bg-neutral-50 p-4">
+        <AiBanner label="AI portfolio summary" />
+        {aiSummary ? (
+          <p className="text-body text-neutral-800">{aiSummary}</p>
+        ) : (
+          <p className="text-body text-neutral-600">
+            Ask AI for a quick read on the whole portfolio — where things stand and what to do next.
+          </p>
+        )}
+        <button
+          type="button"
+          onClick={runAiSummary}
+          disabled={aiLoading}
+          className="inline-flex items-center gap-1.5 rounded-md border border-ai-600 px-2.5 py-1 text-small font-medium text-ai-600 hover:bg-ai-100 disabled:opacity-60"
+        >
+          {aiLoading ? "Thinking…" : aiSummary ? "Regenerate" : "AI: Suggest summary"}
+        </button>
+      </div>
+
+      <div className="flex items-center justify-end gap-1">
+        <button
+          type="button"
+          onClick={() => setView("grid")}
+          title="Grid view"
+          aria-label="Grid view"
+          className={`rounded-md p-2 ${view === "grid" ? "bg-primary-100 text-primary-700" : "text-neutral-500 hover:bg-neutral-100"}`}
+        >
+          <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M4 5h6v6H4V5zm10 0h6v6h-6V5zM4 13h6v6H4v-6zm10 0h6v6h-6v-6z" />
+          </svg>
+        </button>
+        <button
+          type="button"
+          onClick={() => setView("list")}
+          title="List view"
+          aria-label="List view"
+          className={`rounded-md p-2 ${view === "list" ? "bg-primary-100 text-primary-700" : "text-neutral-500 hover:bg-neutral-100"}`}
+        >
+          <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
+          </svg>
+        </button>
+      </div>
+
+      {filteredProjects.length === 0 ? (
+        <p className="text-body text-neutral-600">
+          {projects.length === 0 ? "No projects yet." : "No projects match this filter."}
+        </p>
+      ) : view === "list" ? (
+        <div className="overflow-x-auto rounded-md border border-neutral-300">
+          <table className="w-full min-w-[640px] text-body">
+            <thead>
+              <tr className="border-b border-neutral-200 bg-neutral-100 text-left text-caption font-medium uppercase tracking-wide text-neutral-500">
+                <th className="px-4 py-2">Name</th>
+                <th className="px-4 py-2">Status</th>
+                <th className="px-4 py-2">Milestones</th>
+                <th className="px-4 py-2">Progress</th>
+                <th className="px-4 py-2">Health</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-neutral-200 bg-neutral-50">
+              {filteredProjects.map((project) => {
+                const progress = taskProgress[project.id];
+                const pct = progress && progress.total > 0 ? Math.round((progress.done / progress.total) * 100) : 0;
+                const snapshot = health[project.id];
+                const overdue = snapshot?.signals.overdueTasks ?? 0;
+                const blocked = snapshot?.signals.blockedTasks ?? 0;
+                return (
+                  <tr
+                    key={project.id}
+                    onClick={() => (window.location.href = `/projects/${project.id}`)}
+                    className="cursor-pointer hover:bg-neutral-100"
+                  >
+                    <td className="px-4 py-3 font-medium text-neutral-950">{project.name}</td>
+                    <td className="px-4 py-3">
+                      <ProjectStatusBadge status={project.status} />
+                    </td>
+                    <td className="px-4 py-3 text-neutral-600">{milestoneCounts[project.id] ?? 0}</td>
+                    <td className="px-4 py-3">
+                      {progress && progress.total > 0 ? (
+                        <div className="flex items-center gap-2">
+                          <div className="h-1.5 w-24 overflow-hidden rounded-full bg-neutral-200">
+                            <div className="h-full rounded-full bg-primary-600" style={{ width: `${pct}%` }} />
+                          </div>
+                          <span className="text-small text-neutral-600">{pct}%</span>
+                        </div>
+                      ) : (
+                        <span className="text-small text-neutral-400">—</span>
+                      )}
+                    </td>
+                    <td className="px-4 py-3">
+                      {!snapshot ? (
+                        <span className="text-small text-neutral-400">No scan</span>
+                      ) : overdue === 0 && blocked === 0 ? (
+                        <Badge color="success">On track</Badge>
+                      ) : (
+                        <div className="flex gap-1">
+                          {overdue > 0 && <Badge color="danger">{overdue} overdue</Badge>}
+                          {blocked > 0 && <Badge color="warning">{blocked} blocked</Badge>}
+                        </div>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
       ) : (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {projects.map((project) => {
+          {filteredProjects.map((project) => {
             const snapshot = health[project.id];
             return (
               <CardLink
@@ -114,6 +259,27 @@ export default function ProjectsPage() {
                 </div>
 
                 <div className="text-small text-neutral-600">{milestoneCounts[project.id] ?? 0} milestones</div>
+
+                {(() => {
+                  const progress = taskProgress[project.id];
+                  if (!progress || progress.total === 0) {
+                    return <div className="text-small text-neutral-400">No tasks yet</div>;
+                  }
+                  const pct = Math.round((progress.done / progress.total) * 100);
+                  return (
+                    <div className="space-y-1">
+                      <div className="flex items-center justify-between text-small text-neutral-600">
+                        <span>
+                          {progress.done}/{progress.total} tasks done
+                        </span>
+                        <span>{pct}%</span>
+                      </div>
+                      <div className="h-1.5 w-full overflow-hidden rounded-full bg-neutral-200">
+                        <div className="h-full rounded-full bg-primary-600" style={{ width: `${pct}%` }} />
+                      </div>
+                    </div>
+                  );
+                })()}
 
                 {snapshot ? (
                   <div className="space-y-1.5 border-t border-neutral-200 pt-3">
@@ -136,118 +302,58 @@ export default function ProjectsPage() {
       )}
 
       {showNewProject && (
-        <Modal onClose={() => setShowNewProject(false)}>
-          <NewProjectForm
-            orgId={selectedOrgId}
-            onClose={() => setShowNewProject(false)}
-            onCreated={() => {
-              setShowNewProject(false);
-              loadAll();
-            }}
-          />
-        </Modal>
+        <NewProjectWizard
+          orgId={selectedOrgId}
+          currentUserId=""
+          onClose={() => setShowNewProject(false)}
+          onCreated={() => {
+            setShowNewProject(false);
+            loadAll();
+          }}
+        />
       )}
     </div>
   );
 }
 
-function NewProjectForm({
-  orgId,
-  onClose,
-  onCreated,
+// Reference dashboard KPIs had a fabricated pixel-art growth chart in the
+// corner. Kept the layout (title top / arrow / big number bottom / decorative
+// dot grid) but the dot grid is a repeating pattern of `value` cells — a
+// real signal (bar per project) rather than an invented % growth badge.
+function KpiCard({
+  title,
+  value,
+  pattern,
+  tone,
 }: {
-  orgId: string;
-  onClose: () => void;
-  onCreated: () => void;
+  title: string;
+  value: number;
+  pattern: number;
+  tone: "neutral" | "success" | "info" | "danger";
 }) {
-  const [name, setName] = useState("");
-  const [status, setStatus] = useState<(typeof PROJECT_STATUSES)[number]>("planning");
-  const [portfolioId, setPortfolioId] = useState("");
-  const [startDate, setStartDate] = useState("");
-  const [endDate, setEndDate] = useState("");
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    if (!name) return;
-    setSaving(true);
-    setError(null);
-
-    const res = await fetch("/api/projects", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        org_id: orgId,
-        name,
-        status,
-        portfolio_id: portfolioId || null,
-        start_date: startDate || null,
-        end_date: endDate || null,
-      }),
-    });
-    const body = await res.json();
-    setSaving(false);
-    if (!res.ok) {
-      setError(body.error ?? "Failed to create project");
-      return;
-    }
-    onCreated();
-  }
-
+  const dotClass = {
+    neutral: "bg-neutral-400",
+    success: "bg-success-600",
+    info: "bg-info-600",
+    danger: "bg-danger-600",
+  }[tone];
+  const dots = Math.min(24, Math.max(0, pattern));
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      <h2 className="text-h2 font-semibold text-neutral-950">New Project</h2>
-
-      {error && <p className="rounded-md bg-danger-100 p-3 text-body text-danger-600">{error}</p>}
-
-      <Field label="Name">
-        <Input className="w-full" value={name} onChange={(e) => setName(e.target.value)} autoFocus />
-      </Field>
-
-      <Field label="Status">
-        <Select
-          className="w-full"
-          value={status}
-          onChange={(e) => setStatus(e.target.value as (typeof PROJECT_STATUSES)[number])}
-        >
-          {PROJECT_STATUSES.map((s) => (
-            <option key={s} value={s}>
-              {s}
-            </option>
+    <div className="relative flex flex-col justify-between overflow-hidden rounded-md border border-neutral-300 bg-neutral-50 p-4">
+      <div className="flex items-start justify-between gap-2">
+        <p className="text-small text-neutral-600">{title}</p>
+        <svg className="h-4 w-4 text-neutral-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M7 17L17 7M17 7H8M17 7v9" />
+        </svg>
+      </div>
+      <div className="mt-6 flex items-end justify-between gap-2">
+        <p className="font-heading text-display font-semibold text-neutral-950">{value}</p>
+        <div className="grid grid-cols-6 gap-0.5">
+          {Array.from({ length: 24 }, (_, i) => (
+            <span key={i} className={`h-1.5 w-1.5 rounded-sm ${i < dots ? dotClass : "bg-neutral-200"}`} />
           ))}
-        </Select>
-      </Field>
-
-      {/* No portfolios list endpoint exists yet — same "raw id, not a
-          picker" pattern already used for task assignee elsewhere in the
-          app. Optional: projects.portfolio_id is nullable. */}
-      <Field label="Portfolio ID (optional)">
-        <Input
-          className="w-full"
-          value={portfolioId}
-          onChange={(e) => setPortfolioId(e.target.value)}
-          placeholder="Leave blank if not part of a portfolio"
-        />
-      </Field>
-
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <Field label="Start date">
-          <Input type="date" className="w-full" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
-        </Field>
-        <Field label="End date">
-          <Input type="date" className="w-full" value={endDate} onChange={(e) => setEndDate(e.target.value)} />
-        </Field>
+        </div>
       </div>
-
-      <div className="flex justify-end gap-3 border-t border-neutral-200 pt-4">
-        <Button type="button" variant="secondary" onClick={onClose}>
-          Cancel
-        </Button>
-        <Button type="submit" disabled={saving || !name}>
-          {saving ? "Creating…" : "Create Project"}
-        </Button>
-      </div>
-    </form>
+    </div>
   );
 }

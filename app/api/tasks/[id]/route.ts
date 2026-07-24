@@ -45,6 +45,7 @@ export async function PATCH(req: NextRequest, { params }: Params) {
           sprintId: body.sprint_id === undefined ? undefined : body.sprint_id,
           assigneeId: body.assignee_id === undefined ? undefined : body.assignee_id,
           estimate: body.estimate === undefined ? undefined : body.estimate,
+          dueDate: body.due_date === undefined ? undefined : body.due_date,
         })
         .where(eq(tasks.id, id))
         .returning();

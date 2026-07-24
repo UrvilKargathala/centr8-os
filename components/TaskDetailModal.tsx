@@ -17,7 +17,10 @@ type TaskDetail = {
   estimate: number | null;
   assigneeId: string | null;
   sprintId: string | null;
+  dueDate: string | null;
 };
+
+type Attachment = { id: string; fileName: string; fileSize: number; uploadedAt: string; downloadUrl: string };
 
 type CapacityRow = { userId: string; capacity: number; assigned: number };
 
@@ -35,6 +38,8 @@ export function TaskDetailModal({ taskId, onClose, onChanged }: { taskId: string
   const [originalTask, setOriginalTask] = useState<TaskDetail | null>(null);
   const [capacity, setCapacity] = useState<CapacityRow[]>([]);
   const [dependencies, setDependencies] = useState<Dependency[]>([]);
+  const [attachments, setAttachments] = useState<Attachment[]>([]);
+  const [uploading, setUploading] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -43,9 +48,17 @@ export function TaskDetailModal({ taskId, onClose, onChanged }: { taskId: string
   const [newDepType, setNewDepType] = useState("blocks");
   const [depError, setDepError] = useState<string | null>(null);
 
+  function loadAttachments() {
+    fetch(`/api/tasks/${taskId}/attachments`)
+      .then((r) => r.json())
+      .then((b) => setAttachments(b.data ?? []))
+      .catch(() => setAttachments([]));
+  }
+
   function load() {
     setLoading(true);
     setError(null);
+    loadAttachments();
     Promise.all([
       fetch(`/api/tasks/${taskId}`).then((r) => r.json()),
       fetch(`/api/tasks/${taskId}/dependencies`).then((r) => r.json()),
@@ -96,6 +109,7 @@ export function TaskDetailModal({ taskId, onClose, onChanged }: { taskId: string
         priority: task.priority,
         estimate: task.estimate,
         assignee_id: task.assigneeId,
+        due_date: task.dueDate,
       }),
     });
     const body = await res.json();
@@ -127,6 +141,23 @@ export function TaskDetailModal({ taskId, onClose, onChanged }: { taskId: string
   async function removeDependency(dependsOnTaskId: string) {
     await fetch(`/api/tasks/${taskId}/dependencies?depends_on_task_id=${dependsOnTaskId}`, { method: "DELETE" });
     load();
+  }
+
+  async function handleFileUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    setUploading(true);
+    const formData = new FormData();
+    formData.append("file", file);
+    await fetch(`/api/tasks/${taskId}/attachments`, { method: "POST", body: formData });
+    setUploading(false);
+    loadAttachments();
+  }
+
+  async function removeAttachment(id: string) {
+    await fetch(`/api/task-attachments/${id}`, { method: "DELETE" });
+    loadAttachments();
   }
 
   // Prompt 3.2 task 3 — informational only, never blocks the save. Projects
@@ -206,6 +237,15 @@ export function TaskDetailModal({ taskId, onClose, onChanged }: { taskId: string
                 disabled={!canUpdateTask}
               />
             </Field>
+            <Field label="Due date">
+              <Input
+                type="date"
+                className="w-full"
+                value={task.dueDate ?? ""}
+                onChange={(e) => setTask({ ...task, dueDate: e.target.value || null })}
+                disabled={!canUpdateTask}
+              />
+            </Field>
           </div>
 
           {overAllocated && assigneeCapacity && (
@@ -216,6 +256,36 @@ export function TaskDetailModal({ taskId, onClose, onChanged }: { taskId: string
               </p>
             </div>
           )}
+
+          <div className="space-y-2 border-t border-neutral-200 pt-4">
+            <h3 className="text-h3 font-semibold text-neutral-950">Attachments</h3>
+            {attachments.length === 0 ? (
+              <p className="text-small text-neutral-600">None.</p>
+            ) : (
+              <ul className="space-y-1.5">
+                {attachments.map((a) => (
+                  <li key={a.id} className="flex items-center justify-between text-body">
+                    <a href={a.downloadUrl} target="_blank" rel="noreferrer" className="text-primary-700 hover:underline">
+                      {a.fileName}
+                    </a>
+                    {canUpdateTask && (
+                      <button onClick={() => removeAttachment(a.id)} className="text-small text-danger-600 hover:underline">
+                        Remove
+                      </button>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            )}
+            {canUpdateTask && (
+              <label className="inline-block">
+                <span className="cursor-pointer text-small font-medium text-primary-700 hover:underline">
+                  {uploading ? "Uploading…" : "+ Attach a file"}
+                </span>
+                <input type="file" className="hidden" onChange={handleFileUpload} disabled={uploading} />
+              </label>
+            )}
+          </div>
 
           <div className="space-y-2 border-t border-neutral-200 pt-4">
             <h3 className="text-h3 font-semibold text-neutral-950">Dependencies</h3>

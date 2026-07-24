@@ -10,6 +10,7 @@ export type Task = {
   estimate: number | null;
   assigneeId: string | null;
   sprintId: string | null;
+  dueDate?: string | null;
   // Set only by views that already resolve it (e.g. the org-wide Sprints/
   // Tasks pages) — project-scoped views show the project name once at the
   // page level instead of repeating it on every card.
