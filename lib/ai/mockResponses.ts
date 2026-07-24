@@ -42,6 +42,19 @@ Out-of-scope: mobile-native experiences, third-party marketplace, self-serve bil
 - Design-partner availability during holiday weeks
 - Dependency on an in-flight platform migration`;
     },
+    deadline_summary: (ctx: MockContext) => {
+      const items = (ctx.deadlines as { title: string; days: number; kind: string; sub: string }[]) || [];
+      if (items.length === 0) return "Nothing coming up — no project end-dates or task due-dates set. Add due dates on active tasks so this view can flag what needs attention.";
+      const urgent = items.filter((i) => i.days <= 2);
+      const week = items.filter((i) => i.days > 2 && i.days <= 7);
+      const lines: string[] = [];
+      if (urgent.length) lines.push(`Next 48 hours: ${urgent.map((i) => i.title).join(", ")} — this is what needs eyes today.`);
+      if (week.length) lines.push(`Rest of the week: ${week.length} more item${week.length === 1 ? "" : "s"} due, all still comfortable to hit.`);
+      const beyond = items.filter((i) => i.days > 7);
+      if (beyond.length) lines.push(`Also on the horizon: ${beyond.map((i) => `${i.title} (${new Date().toLocaleDateString()})`).slice(0, 2).join(", ")}.`);
+      lines.push("Nothing looks overdue — the lightweight lift is confirming ownership on anything unassigned so nothing falls through.");
+      return lines.join(" ");
+    },
     portfolio_summary: (ctx: MockContext) => {
       const total = Number(ctx.total) || 0;
       const active = Number(ctx.active) || 0;

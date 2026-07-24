@@ -33,6 +33,9 @@ export default function ProjectsPage() {
   const [error, setError] = useState<string | null>(null);
   const [showNewProject, setShowNewProject] = useState(false);
   const [view, setView] = useState<"grid" | "list">("grid");
+  const [taskDeadlines, setTaskDeadlines] = useState<
+    { projectId: string; projectName: string; taskId: string; taskTitle: string; dueDate: string }[]
+  >([]);
   const [aiSummary, setAiSummary] = useState<string | null>(null);
   const [aiLoading, setAiLoading] = useState(false);
 
@@ -69,18 +72,38 @@ export default function ProjectsPage() {
         );
         setMilestoneCounts(Object.fromEntries(counts));
 
-        const progress = await Promise.all(
+        const perProject = await Promise.all(
           list.map((p) =>
             fetch(`/api/tasks?project_id=${p.id}`)
               .then((r) => r.json())
               .then((b) => {
-                const tasks: { status: string }[] = b.data ?? [];
-                return [p.id, { done: tasks.filter((t) => t.status === "done").length, total: tasks.length }] as const;
+                const tasks: { id: string; title: string; status: string; dueDate: string | null }[] = b.data ?? [];
+                return { project: p, tasks };
               })
-              .catch(() => [p.id, { done: 0, total: 0 }] as const),
+              .catch(() => ({ project: p, tasks: [] as { id: string; title: string; status: string; dueDate: string | null }[] })),
           ),
         );
-        setTaskProgress(Object.fromEntries(progress));
+        setTaskProgress(
+          Object.fromEntries(
+            perProject.map(({ project, tasks }) => [
+              project.id,
+              { done: tasks.filter((t) => t.status === "done").length, total: tasks.length },
+            ]),
+          ),
+        );
+        setTaskDeadlines(
+          perProject.flatMap(({ project, tasks }) =>
+            tasks
+              .filter((t) => t.dueDate && t.status !== "done" && t.status !== "cancelled")
+              .map((t) => ({
+                projectId: project.id,
+                projectName: project.name,
+                taskId: t.id,
+                taskTitle: t.title,
+                dueDate: t.dueDate!,
+              })),
+          ),
+        );
       })
       .catch((err) => setError(err instanceof Error ? err.message : "Failed to load projects"))
       .finally(() => setLoading(false));
@@ -100,10 +123,51 @@ export default function ProjectsPage() {
 
   const filteredProjects = projects;
 
+  // Combine project end-dates + task due-dates into one deadline stream, drop
+  // anything already past, sort nearest first, take the top 5.
+  const upcomingDeadlines = useMemo(() => {
+    type D = { kind: "project" | "task"; title: string; sub: string; date: string; href: string };
+    const items: D[] = [];
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    for (const p of projects) {
+      if (p.endDate) items.push({ kind: "project", title: p.name, sub: "project ends", date: p.endDate, href: `/projects/${p.id}` });
+    }
+    for (const d of taskDeadlines) {
+      items.push({ kind: "task", title: d.taskTitle, sub: d.projectName, date: d.dueDate, href: `/projects/${d.projectId}` });
+    }
+    return items
+      .filter((i) => new Date(i.date + "T00:00:00") >= today)
+      .sort((a, b) => a.date.localeCompare(b.date))
+      .slice(0, 5);
+  }, [projects, taskDeadlines]);
+
+  function daysUntil(iso: string) {
+    const t = new Date(iso + "T00:00:00").getTime();
+    const now = new Date();
+    now.setHours(0, 0, 0, 0);
+    return Math.round((t - now.getTime()) / 86400000);
+  }
+  function daysLabel(iso: string) {
+    const d = daysUntil(iso);
+    if (d === 0) return "Today";
+    if (d === 1) return "Tomorrow";
+    if (d <= 7) return `${d} days`;
+    return new Date(iso + "T00:00:00").toLocaleDateString(undefined, { day: "numeric", month: "short" });
+  }
+  function daysTone(iso: string): "danger" | "warning" | "neutral" {
+    const d = daysUntil(iso);
+    if (d <= 2) return "danger";
+    if (d <= 7) return "warning";
+    return "neutral";
+  }
+
   async function runAiSummary() {
     setAiLoading(true);
     setAiSummary(null);
-    const s = (await generateAI("Writer", "portfolio_summary", { total: kpis.total, active: kpis.active, atRisk: kpis.atRisk })) as string;
+    const s = (await generateAI("Writer", "deadline_summary", {
+      deadlines: upcomingDeadlines.map((d) => ({ title: d.title, days: daysUntil(d.date), kind: d.kind, sub: d.sub })),
+    })) as string;
     setAiSummary(s);
     setAiLoading(false);
   }
@@ -135,21 +199,24 @@ export default function ProjectsPage() {
       </div>
 
       <div className="space-y-2 rounded-md border border-ai-600/40 bg-neutral-50 p-4">
-        <AiBanner label="AI portfolio summary" />
+        <AiBanner label="AI: What's coming up" />
         {aiSummary ? (
           <p className="text-body text-neutral-800">{aiSummary}</p>
+        ) : upcomingDeadlines.length === 0 ? (
+          <p className="text-body text-neutral-600">Nothing due — add task due-dates or project end-dates so AI can flag what needs attention.</p>
         ) : (
           <p className="text-body text-neutral-600">
-            Ask AI for a quick read on the whole portfolio — where things stand and what to do next.
+            {upcomingDeadlines.length} deadline{upcomingDeadlines.length === 1 ? "" : "s"} in the next stretch.
+            Ask AI to summarize what needs your attention and what can wait.
           </p>
         )}
         <button
           type="button"
           onClick={runAiSummary}
-          disabled={aiLoading}
+          disabled={aiLoading || upcomingDeadlines.length === 0}
           className="inline-flex items-center gap-1.5 rounded-md border border-ai-600 px-2.5 py-1 text-small font-medium text-ai-600 hover:bg-ai-100 disabled:opacity-60"
         >
-          {aiLoading ? "Thinking…" : aiSummary ? "Regenerate" : "AI: Suggest summary"}
+          {aiLoading ? "Thinking…" : aiSummary ? "Regenerate" : "AI: Summarize deadlines"}
         </button>
       </div>
 

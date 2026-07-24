@@ -196,14 +196,12 @@ function AppSidebar({
   setCollapsed,
   mobileOpen,
   setMobileOpen,
-  onSignOut,
 }: {
   isAdmin: boolean;
   collapsed: boolean;
   setCollapsed: (v: boolean) => void;
   mobileOpen: boolean;
   setMobileOpen: (v: boolean) => void;
-  onSignOut: () => void;
 }) {
   const pathname = usePathname();
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
@@ -330,17 +328,6 @@ function AppSidebar({
             <Icon path={ICON.help} />
             {!collapsed && <span>Help</span>}
           </Link>
-          <button
-            type="button"
-            onClick={onSignOut}
-            className={`flex w-full items-center gap-2.5 rounded-sm px-3 py-2 text-[13px] font-medium text-danger-600 hover:bg-danger-100 ${
-              collapsed ? "justify-center" : ""
-            }`}
-            title="Sign out"
-          >
-            <Icon path={ICON.logout} />
-            {!collapsed && <span>Sign out</span>}
-          </button>
         </div>
       </aside>
 
@@ -456,7 +443,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         setCollapsed={setCollapsed}
         mobileOpen={mobileOpen}
         setMobileOpen={setMobileOpen}
-        onSignOut={handleSignOut}
       />
 
       <div className="flex min-w-0 flex-1 flex-col">
@@ -501,7 +487,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                   onClick={() => setOrgMenuOpen((v) => !v)}
                   className="flex items-center gap-2 rounded-md border border-neutral-300 bg-neutral-50 px-2 py-1 hover:bg-neutral-100"
                 >
-                  <OrgAvatar name={orgs.find((o) => o.id === selectedOrgId)?.name ?? ""} />
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src="/c8-favicon.png"
+                    alt=""
+                    className="h-7 w-7 shrink-0 rounded-md object-cover"
+                  />
                   <span className="hidden flex-col items-start sm:flex">
                     <span className="max-w-[10rem] truncate text-body-medium font-medium leading-tight text-neutral-950">
                       {orgs.find((o) => o.id === selectedOrgId)?.name ?? "Select org"}
@@ -639,9 +630,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 onClick={() => setMenuOpen((v) => !v)}
                 className="flex items-center gap-2 rounded-sm px-2 py-1.5 hover:bg-neutral-200"
               >
-                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary-600 text-caption font-medium text-neutral-50">
-                  {(email ?? "?").slice(0, 1).toUpperCase()}
-                </div>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src="/avatar.png"
+                  alt={email ?? "Account"}
+                  className="h-8 w-8 shrink-0 rounded-full object-cover"
+                />
                 <span className="hidden flex-col items-start sm:flex">
                   <span className="max-w-[10rem] truncate text-body-medium font-medium leading-tight text-neutral-950">
                     {email ?? "Account"}

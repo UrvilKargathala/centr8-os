@@ -143,11 +143,15 @@ export function NewProjectWizard({
     // demo can show it exists, and left as a TODO for the schema follow-up.
     // "Save as draft": projectStatusEnum has no "draft" today, so it falls
     // back to "planning". TODO: add "draft" to project_status enum + migrate.
+    // Portfolio options in the dropdown are placeholders (there's no real
+    // portfolios list endpoint yet). Only send portfolio_id if it looks like
+    // a real UUID — anything else would blow up on the FK cast.
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(state.portfolioId);
     const body = {
       org_id: orgId,
       name: state.name,
       status: asDraft ? "planning" : state.status,
-      portfolio_id: state.portfolioId || null,
+      portfolio_id: isUuid ? state.portfolioId : null,
       start_date: state.startDate || null,
       end_date: state.endDate || null,
     };
@@ -176,7 +180,7 @@ export function NewProjectWizard({
 
         {submitError && <p className="rounded-md bg-danger-100 p-3 text-body text-danger-600">{submitError}</p>}
 
-        <div className="max-h-[55vh] space-y-5 overflow-y-auto pr-1">
+        <div className="max-h-[55vh] space-y-5 overflow-y-auto pr-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           {step === 0 && <Step1 state={state} patch={patch} errors={errors} />}
           {step === 1 && <Step2 state={state} patch={patch} />}
           {step === 2 && <Step3 state={state} patch={patch} />}
@@ -358,11 +362,21 @@ function Step1({
   const priorityAI = useAiCall<{ priority: string; reasoning: string }>("Analyst", "suggest_priority");
   const tagsAI = useAiCall<{ tags: string[]; reasoning: string }>("Analyst", "suggest_tags");
   const [editingDesc, setEditingDesc] = useState<string | null>(null);
+  const [codeTouched, setCodeTouched] = useState(false);
+
+  function nameToCode(name: string) {
+    const alpha = name.toUpperCase().replace(/[^A-Z]/g, "");
+    return alpha ? `${alpha.slice(0, 4)}-01` : "";
+  }
+
+  function onNameChange(v: string) {
+    patch({ name: v, ...(codeTouched ? {} : { code: nameToCode(v) }) });
+  }
 
   return (
     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
       <Field label="Project name *">
-        <Input className="w-full" value={state.name} onChange={(e) => patch({ name: e.target.value })} autoFocus />
+        <Input className="w-full" value={state.name} onChange={(e) => onNameChange(e.target.value)} autoFocus />
         {errors.name && <p className="mt-1 text-small text-danger-600">{errors.name}</p>}
       </Field>
 
@@ -370,7 +384,10 @@ function Step1({
         <Input
           className="w-full uppercase"
           value={state.code}
-          onChange={(e) => patch({ code: e.target.value.toUpperCase() })}
+          onChange={(e) => {
+            setCodeTouched(true);
+            patch({ code: e.target.value.toUpperCase() });
+          }}
           placeholder="e.g. APEX-01"
         />
       </Field>
@@ -458,14 +475,6 @@ function Step1({
             </AiSuggestionCard>
           )}
         </div>
-      </Field>
-
-      <Field label="Portfolio">
-        <Select className="w-full" value={state.portfolioId} onChange={(e) => patch({ portfolioId: e.target.value })}>
-          <option value="">No portfolio</option>
-          <option value="portfolio-growth">Growth Initiatives (placeholder)</option>
-          <option value="portfolio-platform">Platform (placeholder)</option>
-        </Select>
       </Field>
 
       <Field label="Goal / Objective">
