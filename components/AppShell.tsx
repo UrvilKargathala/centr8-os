@@ -7,6 +7,7 @@ import { useOrg } from "@/lib/context/OrgContext";
 import { createClient } from "@/lib/supabase/client";
 import { generateAI } from "@/lib/ai/generate";
 import { AiBanner } from "@/components/ui/AiBanner";
+import { ToastProvider } from "@/components/ui/Toast";
 
 // icons reused across items that share a shape.
 const ICON = {
@@ -437,6 +438,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   }
 
   return (
+    <ToastProvider>
     <div className="flex min-h-screen bg-neutral-100">
       <AppSidebar
         isAdmin={isAdmin}
@@ -653,11 +655,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               {menuOpen && (
                 <div className="absolute right-0 top-full mt-1 w-48 rounded-md border border-neutral-300 bg-neutral-50 py-1 shadow-lg">
                   <Link
-                    href="/profile"
+                    href="/settings/profile"
                     onClick={() => setMenuOpen(false)}
                     className="block px-3 py-2 text-body text-neutral-800 hover:bg-neutral-200"
                   >
-                    Profile settings
+                    Profile &amp; Settings
                   </Link>
                   <button
                     onClick={handleSignOut}
@@ -676,6 +678,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
       {askOpen && <AskAiDialog onClose={() => setAskOpen(false)} />}
     </div>
+    </ToastProvider>
   );
 }
 

@@ -1262,6 +1262,47 @@ export const holidays = pgTable(
   ],
 ).enableRLS();
 
+// Per-user account preferences (theme, density, date/time format, notification
+// prefs). Keyed by (userId, orgId) since a user in multiple orgs may have
+// different preferences per workspace, same pattern as org_memberships.
+// Auth is Supabase-owned (no local users FK to point at), so userId is a
+// bare uuid — same pattern as tasks.assigneeId / goals.ownerId. RLS scopes
+// by the caller's own userId via auth.uid(), so a user can never see another
+// user's preferences even inside the same org.
+export const userPreferences = pgTable(
+  "user_preferences",
+  {
+    userId: uuid("user_id").notNull(),
+    orgId: uuid("org_id").notNull().references(() => organizations.id, { onDelete: "cascade" }),
+    fullName: text("full_name"),
+    jobTitle: text("job_title"),
+    department: text("department"),
+    phone: text("phone"),
+    avatarUrl: text("avatar_url"),
+    timezone: text("timezone").default("UTC"),
+    language: text("language").default("en"),
+    theme: text("theme").notNull().default("system"),
+    density: text("density").notNull().default("comfortable"),
+    defaultLandingPage: text("default_landing_page").notNull().default("dashboard"),
+    timeFormat: text("time_format").notNull().default("24h"),
+    dateFormat: text("date_format").notNull().default("DD/MM/YYYY"),
+    weekStartsOn: text("week_starts_on").notNull().default("monday"),
+    notifyEmail: jsonb("notify_email").notNull().default({}),
+    notifyInapp: jsonb("notify_inapp").notNull().default({}),
+    notifyDigest: text("notify_digest").notNull().default("realtime"),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    primaryKey({ columns: [t.userId, t.orgId] }),
+    pgPolicy("user_preferences_owner", {
+      for: "all",
+      to: authenticatedRole,
+      using: sql`user_id = auth.uid()`,
+      withCheck: sql`user_id = auth.uid()`,
+    }),
+  ],
+).enableRLS();
+
 // People directory — deliberately named "people" (not "team_members" or
 // "employees") because it's the shared source of truth that HR (Phase 5.1)
 // will extend later rather than duplicating. Kept minimal: HR-specific
