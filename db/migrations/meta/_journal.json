@@ -449,6 +449,34 @@
 			"when": 1785153913995,
 			"tag": "0063_force_rls_project_members",
 			"breakpoints": true
+		},
+		{
+			"idx": 64,
+			"version": "7",
+			"when": 1785155954576,
+			"tag": "0064_awesome_shadow_king",
+			"breakpoints": true
+		},
+		{
+			"idx": 64,
+			"version": "7",
+			"when": 1785155954577,
+			"tag": "0064_awesome_shadow_king",
+			"breakpoints": true
+		},
+		{
+			"idx": 65,
+			"version": "7",
+			"when": 1785155954578,
+			"tag": "0065_task_comments_table",
+			"breakpoints": true
+		},
+		{
+			"idx": 66,
+			"version": "7",
+			"when": 1785155954579,
+			"tag": "0066_seed_task_comment_permissions",
+			"breakpoints": true
 		}
 	]
 }

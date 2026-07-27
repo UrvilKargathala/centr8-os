@@ -64,11 +64,13 @@ export function TaskCard({
   draggable,
   onDragStart,
   onClick,
+  peopleById,
 }: {
   task: Task;
   draggable?: boolean;
   onDragStart?: (e: React.DragEvent) => void;
   onClick: () => void;
+  peopleById?: Record<string, { fullName: string }>;
 }) {
   const dueTone = task.dueDate ? dueDateTone(task.dueDate) : "neutral";
   const dueClass =
@@ -113,12 +115,22 @@ export function TaskCard({
 
       <div className="flex items-center justify-between pt-1">
         {task.assigneeId ? (
-          <div
-            className={`flex h-7 w-7 items-center justify-center rounded-full text-caption font-semibold ${avatarColor(task.assigneeId)}`}
-            title={`Assignee ${task.assigneeId.slice(0, 8)}`}
-          >
-            {task.assigneeId.slice(0, 1).toUpperCase()}
-          </div>
+          (() => {
+            const person = peopleById?.[task.assigneeId];
+            const name = person?.fullName ?? null;
+            const initial = name ? name.split(/\s+/).map((p) => p[0]).filter(Boolean).slice(0, 2).join("").toUpperCase() : task.assigneeId.slice(0, 1).toUpperCase();
+            return (
+              <div className="flex items-center gap-2">
+                <div
+                  className={`flex h-7 w-7 items-center justify-center rounded-full text-caption font-semibold ${avatarColor(task.assigneeId)}`}
+                  title={name ?? `Assignee ${task.assigneeId.slice(0, 8)}`}
+                >
+                  {initial}
+                </div>
+                {name && <span className="truncate text-caption text-neutral-700">{name.split(" ")[0]}</span>}
+              </div>
+            );
+          })()
         ) : (
           <span className="text-caption text-neutral-400">Unassigned</span>
         )}

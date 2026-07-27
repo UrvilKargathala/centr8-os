@@ -41,7 +41,8 @@ export type ResourceType =
   | "activity"
   | "forecast"
   | "campaign"
-  | "integration";
+  | "integration"
+  | "task_comment";
 
 export type PermissionAction =
   | "create"

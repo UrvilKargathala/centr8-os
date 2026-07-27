@@ -44,6 +44,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
   const [milestones, setMilestones] = useState<Milestone[]>([]);
   const [sprints, setSprints] = useState<Sprint[]>([]);
   const [tasks, setTasks] = useState<Task[]>([]);
+  const [peopleById, setPeopleById] = useState<Record<string, { fullName: string }>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [openTaskId, setOpenTaskId] = useState<string | null>(null);
@@ -69,6 +70,19 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
   }
 
   useEffect(loadAll, [id]);
+
+  useEffect(() => {
+    if (!selectedOrgId) return;
+    fetch(`/api/team?org_id=${selectedOrgId}&active=true`)
+      .then((r) => r.json())
+      .then((b) => {
+        if (Array.isArray(b.data)) {
+          const map: Record<string, { fullName: string }> = {};
+          for (const p of b.data) map[p.id] = { fullName: p.fullName };
+          setPeopleById(map);
+        }
+      });
+  }, [selectedOrgId]);
 
   async function handleStatusChange(taskId: string, status: string) {
     // Optimistic update so the board feels immediate, then reconcile with
@@ -124,7 +138,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
 
       {tab === "Overview" && <OverviewTab projectId={id} project={project} milestones={milestones} onMilestoneAdded={loadAll} />}
       {tab === "Sprints" && (
-        <SprintsTab sprints={sprints} tasks={tasks} canEdit={canEditTasks} onTaskClick={setOpenTaskId} onStatusChange={handleStatusChange} />
+        <SprintsTab sprints={sprints} tasks={tasks} canEdit={canEditTasks} onTaskClick={setOpenTaskId} onStatusChange={handleStatusChange} peopleById={peopleById} />
       )}
       {tab === "Tasks" && (
         <TasksTab
@@ -135,6 +149,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
           onTaskClick={setOpenTaskId}
           onStatusChange={handleStatusChange}
           onTaskCreated={loadAll}
+          peopleById={peopleById}
         />
       )}
       {tab === "Settings" && project && (
@@ -280,12 +295,14 @@ function SprintsTab({
   canEdit,
   onTaskClick,
   onStatusChange,
+  peopleById,
 }: {
   sprints: Sprint[];
   tasks: Task[];
   canEdit: boolean;
   onTaskClick: (taskId: string) => void;
   onStatusChange: (taskId: string, status: string) => void;
+  peopleById?: Record<string, { fullName: string }>;
 }) {
   const { selectedOrgId } = useOrg();
   const [openSprintId, setOpenSprintId] = useState<string | null>(null);
@@ -305,7 +322,7 @@ function SprintsTab({
           <SprintStatusBadge status={openSprint.status} />
         </div>
         {selectedOrgId && <CapacityPanel sprintId={openSprint.id} orgId={selectedOrgId} />}
-        <SprintBoard tasks={sprintTasks} canEdit={canEdit} onTaskClick={onTaskClick} onStatusChange={onStatusChange} />
+        <SprintBoard tasks={sprintTasks} canEdit={canEdit} onTaskClick={onTaskClick} onStatusChange={onStatusChange} peopleById={peopleById} />
       </div>
     );
   }
@@ -341,6 +358,7 @@ function TasksTab({
   onTaskClick,
   onStatusChange,
   onTaskCreated,
+  peopleById,
 }: {
   projectId: string;
   orgId: string | null;
@@ -349,6 +367,7 @@ function TasksTab({
   onTaskClick: (taskId: string) => void;
   onStatusChange: (taskId: string, status: string) => void;
   onTaskCreated: () => void;
+  peopleById?: Record<string, { fullName: string }>;
 }) {
   const { can } = useOrg();
   const [view, setView] = useState<TaskView>("List");
@@ -427,6 +446,7 @@ function TasksTab({
               setPrefillStatus(status);
               setShowNew(true);
             }}
+            peopleById={peopleById}
           />
         ))}
 

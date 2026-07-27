@@ -35,20 +35,76 @@ export function SprintBoard({
   onTaskClick,
   onStatusChange,
   onAddTask,
+  peopleById,
 }: {
   tasks: Task[];
   canEdit: boolean;
   onTaskClick: (taskId: string) => void;
   onStatusChange: (taskId: string, status: string) => void;
   onAddTask?: (status: string) => void;
+  peopleById?: Record<string, { fullName: string }>;
 }) {
   const [dragOverStatus, setDragOverStatus] = useState<string | null>(null);
+  const [groupBy, setGroupBy] = useState<"none" | "assignee" | "priority">("none");
+
+  // Swimlane grouping: derive lanes from the task list. "none" → one lane.
+  const lanes: { key: string; label: string; tasks: Task[] }[] = (() => {
+    if (groupBy === "none") return [{ key: "all", label: "All", tasks }];
+    if (groupBy === "assignee") {
+      const byKey = new Map<string, Task[]>();
+      for (const t of tasks) {
+        const k = t.assigneeId ?? "__unassigned";
+        if (!byKey.has(k)) byKey.set(k, []);
+        byKey.get(k)!.push(t);
+      }
+      return [...byKey.entries()].map(([k, ts]) => ({
+        key: k,
+        label: k === "__unassigned" ? "Unassigned" : peopleById?.[k]?.fullName ?? k.slice(0, 8),
+        tasks: ts,
+      }));
+    }
+    // priority
+    const order = ["urgent", "high", "medium", "low"];
+    const byKey = new Map<string, Task[]>();
+    for (const t of tasks) {
+      const k = t.priority ?? "medium";
+      if (!byKey.has(k)) byKey.set(k, []);
+      byKey.get(k)!.push(t);
+    }
+    return order
+      .filter((k) => byKey.has(k))
+      .map((k) => ({ key: k, label: k.charAt(0).toUpperCase() + k.slice(1), tasks: byKey.get(k)! }));
+  })();
 
   return (
-    <div className="flex gap-4 overflow-x-auto pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-      {TASK_STATUSES.map((status) => {
-        const columnTasks = tasks.filter((t) => t.status === status);
-        const tone = taskStatusColor(status);
+    <div className="space-y-3">
+      <div className="flex items-center gap-2 text-caption text-neutral-600">
+        <span>Group by</span>
+        <select
+          value={groupBy}
+          onChange={(e) => setGroupBy(e.target.value as typeof groupBy)}
+          className="rounded-md border border-neutral-300 bg-neutral-50 px-2 py-1 text-caption focus:border-primary-600 focus:outline-none"
+        >
+          <option value="none">None</option>
+          <option value="assignee">Assignee</option>
+          <option value="priority">Priority</option>
+        </select>
+      </div>
+
+      {lanes.map((lane) => (
+        <div key={lane.key} className="space-y-2">
+          {groupBy !== "none" && (
+            <div className="flex items-center gap-2 border-b border-neutral-200 pb-1 text-caption font-semibold uppercase tracking-wide text-neutral-600">
+              <span>{lane.label}</span>
+              <span className="rounded-full bg-neutral-200 px-1.5 py-0.5 text-caption font-medium text-neutral-700">
+                {lane.tasks.length}
+              </span>
+            </div>
+          )}
+          <div className="flex gap-4 overflow-x-auto pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            {TASK_STATUSES.map((status) => {
+              const columnTasks = lane.tasks.filter((t) => t.status === status);
+              const tone = taskStatusColor(status);
         return (
           <div
             key={status}
@@ -97,12 +153,16 @@ export function SprintBoard({
                   draggable={canEdit}
                   onDragStart={(e) => e.dataTransfer.setData("text/plain", task.id)}
                   onClick={() => onTaskClick(task.id)}
+                  peopleById={peopleById}
                 />
               ))}
             </div>
           </div>
         );
-      })}
+            })}
+          </div>
+        </div>
+      ))}
     </div>
   );
 }

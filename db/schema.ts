@@ -501,6 +501,9 @@ export const resourceTypeEnum = pgEnum("resource_type", [
   // Prompt 3.3). Owner/admin only, same tightness as sso/api_key/portal:
   // integration credentials are org-wide, not per-user.
   "integration",
+  // Task comments (first collaboration surface). CRUD; delete gated to author
+  // or admin in application code, not surfaced as a separate permission.
+  "task_comment",
 ]);
 export const permissionActionEnum = pgEnum("permission_action", [
   "create",
@@ -1254,6 +1257,31 @@ export const holidays = pgTable(
   },
   () => [
     pgPolicy("holidays_isolation", {
+      for: "all",
+      to: authenticatedRole,
+      using: inUserOrgs,
+      withCheck: inUserOrgs,
+    }),
+  ],
+).enableRLS();
+
+// Task comments — first collaboration surface. authorUserId is bare uuid
+// (same pattern as tasks.assigneeId / goals.ownerId — no local auth.users to
+// reference). RLS scoped by inUserOrgs so members of the same org see the
+// same thread; permissions gate mutations (task_comment:create/update/delete).
+export const taskComments = pgTable(
+  "task_comments",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    orgId: uuid("org_id").notNull().references(() => organizations.id, { onDelete: "cascade" }),
+    taskId: uuid("task_id").notNull().references(() => tasks.id, { onDelete: "cascade" }),
+    authorUserId: uuid("author_user_id"),
+    body: text("body").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  () => [
+    pgPolicy("task_comments_isolation", {
       for: "all",
       to: authenticatedRole,
       using: inUserOrgs,

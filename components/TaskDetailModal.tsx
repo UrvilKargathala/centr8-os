@@ -26,8 +26,11 @@ type CapacityRow = { userId: string; capacity: number; assigned: number };
 
 type Dependency = { taskId: string; dependsOnTaskId: string; type: string; dependsOnTitle?: string };
 
+type Person = { id: string; fullName: string; jobTitle: string | null };
+type Comment = { id: string; body: string; authorUserId: string | null; createdAt: string };
+
 export function TaskDetailModal({ taskId, onClose, onChanged }: { taskId: string; onClose: () => void; onChanged: () => void }) {
-  const { can } = useOrg();
+  const { can, selectedOrgId } = useOrg();
   const canUpdateTask = can("task", "update");
   const canAddDependency = can("task_dependency", "create");
   const canRemoveDependency = can("task_dependency", "delete");
@@ -43,6 +46,10 @@ export function TaskDetailModal({ taskId, onClose, onChanged }: { taskId: string
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [people, setPeople] = useState<Person[]>([]);
+  const [comments, setComments] = useState<Comment[]>([]);
+  const [newComment, setNewComment] = useState("");
+  const [commenting, setCommenting] = useState(false);
 
   const [newDepId, setNewDepId] = useState("");
   const [newDepType, setNewDepType] = useState("blocks");
@@ -94,6 +101,43 @@ export function TaskDetailModal({ taskId, onClose, onChanged }: { taskId: string
   }
 
   useEffect(load, [taskId]);
+
+  function loadComments() {
+    fetch(`/api/tasks/${taskId}/comments`)
+      .then((r) => r.json())
+      .then((b) => {
+        if (b.data) setComments(b.data);
+      });
+  }
+  useEffect(loadComments, [taskId]);
+
+  useEffect(() => {
+    if (!selectedOrgId) return;
+    fetch(`/api/team?org_id=${selectedOrgId}&active=true`)
+      .then((r) => r.json())
+      .then((b) => {
+        if (b.data) setPeople(b.data);
+      });
+  }, [selectedOrgId]);
+
+  async function addComment() {
+    if (!newComment.trim()) return;
+    setCommenting(true);
+    const res = await fetch(`/api/tasks/${taskId}/comments`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ body: newComment }),
+    });
+    setCommenting(false);
+    if (res.ok) {
+      setNewComment("");
+      loadComments();
+    }
+  }
+  async function deleteComment(id: string) {
+    await fetch(`/api/task-comments/${id}`, { method: "DELETE" });
+    loadComments();
+  }
 
   async function handleSave() {
     if (!task) return;
@@ -227,15 +271,21 @@ export function TaskDetailModal({ taskId, onClose, onChanged }: { taskId: string
                 disabled={!canUpdateTask}
               />
             </Field>
-            {/* No user directory endpoint exists — assignee is a raw user id, not a name picker. */}
-            <Field label="Assignee (user ID)">
-              <Input
+            <Field label="Assignee">
+              <Select
                 className="w-full"
                 value={task.assigneeId ?? ""}
                 onChange={(e) => setTask({ ...task, assigneeId: e.target.value || null })}
-                placeholder="Unassigned"
                 disabled={!canUpdateTask}
-              />
+              >
+                <option value="">Unassigned</option>
+                {people.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.fullName}
+                    {p.jobTitle ? ` — ${p.jobTitle}` : ""}
+                  </option>
+                ))}
+              </Select>
             </Field>
             <Field label="Due date">
               <Input
@@ -321,6 +371,52 @@ export function TaskDetailModal({ taskId, onClose, onChanged }: { taskId: string
                 <Button variant="secondary" onClick={addDependency} disabled={!newDepId}>
                   Add
                 </Button>
+              </div>
+            )}
+          </div>
+
+          <div className="space-y-3 border-t border-neutral-200 pt-4">
+            <h3 className="text-h3 font-semibold text-neutral-950">Comments</h3>
+            {comments.length === 0 ? (
+              <p className="text-body text-neutral-600">No comments yet.</p>
+            ) : (
+              <ul className="space-y-3">
+                {comments.map((c) => (
+                  <li key={c.id} className="rounded-md border border-neutral-300 bg-neutral-50 p-3">
+                    <div className="flex items-baseline justify-between gap-2">
+                      <span className="text-caption font-medium text-neutral-700">
+                        {c.authorUserId ? c.authorUserId.slice(0, 8) : "Unknown"}
+                      </span>
+                      <span className="text-caption text-neutral-500">{new Date(c.createdAt).toLocaleString()}</span>
+                    </div>
+                    <p className="mt-1 whitespace-pre-wrap text-body text-neutral-950">{c.body}</p>
+                    {can("task_comment", "delete") && (
+                      <button
+                        type="button"
+                        onClick={() => deleteComment(c.id)}
+                        className="mt-1 text-caption text-danger-600 hover:underline"
+                      >
+                        Delete
+                      </button>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            )}
+            {can("task_comment", "create") && (
+              <div className="space-y-2">
+                <Textarea
+                  className="w-full"
+                  rows={2}
+                  placeholder="Write a comment…"
+                  value={newComment}
+                  onChange={(e) => setNewComment(e.target.value)}
+                />
+                <div className="flex justify-end">
+                  <Button onClick={addComment} disabled={commenting || !newComment.trim()}>
+                    {commenting ? "Posting…" : "Post comment"}
+                  </Button>
+                </div>
               </div>
             )}
           </div>
