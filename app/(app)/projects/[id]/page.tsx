@@ -356,6 +356,7 @@ function TasksTab({
   const [priorityFilter, setPriorityFilter] = useState("all");
   const [assigneeFilter, setAssigneeFilter] = useState("");
   const [showNew, setShowNew] = useState(false);
+  const [prefillStatus, setPrefillStatus] = useState<string | undefined>(undefined);
 
   const filtered = tasks.filter(
     (t) =>
@@ -417,7 +418,16 @@ function TasksTab({
         (tasks.length === 0 ? (
           <p className="text-body text-neutral-600">No tasks yet.</p>
         ) : (
-          <SprintBoard tasks={tasks} canEdit={canEdit} onTaskClick={onTaskClick} onStatusChange={onStatusChange} />
+          <SprintBoard
+            tasks={tasks}
+            canEdit={canEdit}
+            onTaskClick={onTaskClick}
+            onStatusChange={onStatusChange}
+            onAddTask={(status) => {
+              setPrefillStatus(status);
+              setShowNew(true);
+            }}
+          />
         ))}
 
       {view === "Calendar" && <TaskCalendarView tasks={tasks} onTaskClick={onTaskClick} />}
@@ -429,9 +439,14 @@ function TasksTab({
           <NewTaskForm
             orgId={orgId}
             projectId={projectId}
-            onClose={() => setShowNew(false)}
+            initialStatus={prefillStatus}
+            onClose={() => {
+              setShowNew(false);
+              setPrefillStatus(undefined);
+            }}
             onCreated={() => {
               setShowNew(false);
+              setPrefillStatus(undefined);
               onTaskCreated();
             }}
           />
@@ -444,11 +459,13 @@ function TasksTab({
 function NewTaskForm({
   orgId,
   projectId,
+  initialStatus,
   onClose,
   onCreated,
 }: {
   orgId: string;
   projectId: string;
+  initialStatus?: string;
   onClose: () => void;
   onCreated: () => void;
 }) {
@@ -475,6 +492,7 @@ function NewTaskForm({
         description: description || null,
         priority,
         due_date: dueDate || null,
+        status: initialStatus || undefined,
       }),
     });
     const body = await res.json();

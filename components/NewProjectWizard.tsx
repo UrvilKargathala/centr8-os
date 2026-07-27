@@ -155,7 +155,23 @@ export function NewProjectWizard({
     // Portfolio options in the dropdown are placeholders (there's no real
     // portfolios list endpoint yet). Only send portfolio_id if it looks like
     // a real UUID — anything else would blow up on the FK cast.
-    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(state.portfolioId);
+    const uuidRe = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    const isUuid = uuidRe.test(state.portfolioId);
+    // Members with real person ids from the picker; synthetic ids from AI-only
+    // recommendations get skipped. Project lead field: if it's a real person
+    // id, promote it too and flag is_lead so cards can render an "owner".
+    const memberPayload = state.members
+      .filter((m) => m.userId && uuidRe.test(m.userId))
+      .map((m) => ({
+        person_id: m.userId,
+        role: m.role || null,
+        hours_per_week: Number(m.hoursPerWeek) || null,
+        access: m.access,
+        is_lead: m.userId === state.projectLead,
+      }));
+    if (uuidRe.test(state.projectLead) && !memberPayload.some((m) => m.person_id === state.projectLead)) {
+      memberPayload.push({ person_id: state.projectLead, role: "Project Lead", hours_per_week: null, access: "Admin", is_lead: true });
+    }
     const body = {
       org_id: orgId,
       name: state.name,
@@ -163,6 +179,7 @@ export function NewProjectWizard({
       portfolio_id: isUuid ? state.portfolioId : null,
       start_date: state.startDate || null,
       end_date: state.endDate || null,
+      members: memberPayload,
     };
     console.log("NewProjectWizard: submitting", { asDraft, apiBody: body, fullWizardState: state });
 

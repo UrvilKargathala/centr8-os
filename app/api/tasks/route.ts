@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { withOrgContext } from "@/db/withOrgContext";
-import { tasks } from "@/db/schema";
+import { tasks, taskAttachments } from "@/db/schema";
 import { ApiError, handleApiError, requireUserId } from "@/lib/api/helpers";
 import { requirePermission } from "@/lib/api/permissions";
 
@@ -14,11 +14,32 @@ export async function GET(req: NextRequest) {
       throw new ApiError(400, "project_id or sprint_id is required");
     }
 
-    const rows = await withOrgContext(userId, (db) =>
-      sprintId
-        ? db.select().from(tasks).where(eq(tasks.sprintId, sprintId))
-        : db.select().from(tasks).where(eq(tasks.projectId, projectId!)),
-    );
+    // Attachment count as a correlated subquery so the board doesn't need
+    // N+1 per-task fetches to render the paperclip badge.
+    const attachmentCountSql = sql<number>`(
+      select count(*)::int from ${taskAttachments}
+      where ${taskAttachments.taskId} = ${tasks.id}
+    )`.as("attachment_count");
+
+    const rows = await withOrgContext(userId, (db) => {
+      const q = db.select({
+        id: tasks.id,
+        orgId: tasks.orgId,
+        projectId: tasks.projectId,
+        sprintId: tasks.sprintId,
+        title: tasks.title,
+        description: tasks.description,
+        status: tasks.status,
+        priority: tasks.priority,
+        estimate: tasks.estimate,
+        assigneeId: tasks.assigneeId,
+        dueDate: tasks.dueDate,
+        attachmentCount: attachmentCountSql,
+      }).from(tasks);
+      return sprintId
+        ? q.where(eq(tasks.sprintId, sprintId))
+        : q.where(eq(tasks.projectId, projectId!));
+    });
 
     return NextResponse.json({ data: rows });
   } catch (err) {

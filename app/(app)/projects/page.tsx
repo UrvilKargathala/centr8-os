@@ -18,6 +18,13 @@ type Project = {
   endDate: string | null;
 };
 
+type ProjectMember = {
+  personId: string;
+  fullName: string | null;
+  jobTitle: string | null;
+  isLead: boolean;
+};
+
 type HealthSnapshot = {
   projectId: string;
   aiSummary: string;
@@ -29,11 +36,12 @@ export default function ProjectsPage() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [milestoneCounts, setMilestoneCounts] = useState<Record<string, number>>({});
   const [taskProgress, setTaskProgress] = useState<Record<string, { done: number; total: number }>>({});
+  const [projectMembers, setProjectMembers] = useState<Record<string, ProjectMember[]>>({});
   const [health, setHealth] = useState<Record<string, HealthSnapshot>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showNewProject, setShowNewProject] = useState(false);
-  const [view, setView] = useState<"grid" | "list">("grid");
+  const [view, setView] = useState<"grid" | "list" | "timeline">("grid");
   const [taskDeadlines, setTaskDeadlines] = useState<
     { projectId: string; projectName: string; taskId: string; taskTitle: string; dueDate: string }[]
   >([]);
@@ -105,6 +113,16 @@ export default function ProjectsPage() {
               })),
           ),
         );
+
+        const memberLists = await Promise.all(
+          list.map((p) =>
+            fetch(`/api/projects/${p.id}/members`)
+              .then((r) => r.json())
+              .then((b) => [p.id, (b.data ?? []) as ProjectMember[]] as const)
+              .catch(() => [p.id, [] as ProjectMember[]] as const),
+          ),
+        );
+        setProjectMembers(Object.fromEntries(memberLists));
       })
       .catch((err) => setError(err instanceof Error ? err.message : "Failed to load projects"))
       .finally(() => setLoading(false));
@@ -244,6 +262,18 @@ export default function ProjectsPage() {
             <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
           </svg>
         </button>
+        <button
+          type="button"
+          onClick={() => setView("timeline")}
+          title="Timeline view"
+          aria-label="Timeline view"
+          className={`rounded-md p-2 ${view === "timeline" ? "bg-primary-100 text-primary-700" : "text-neutral-500 hover:bg-neutral-100"}`}
+        >
+          <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M3 6h10M3 12h14M3 18h8" />
+            <path strokeLinecap="round" strokeLinejoin="round" d="M5 6v.01M5 12v.01M5 18v.01" />
+          </svg>
+        </button>
       </div>
 
       {filteredProjects.length === 0 ? (
@@ -310,6 +340,8 @@ export default function ProjectsPage() {
             </tbody>
           </table>
         </div>
+      ) : view === "timeline" ? (
+        <TimelineView projects={filteredProjects} />
       ) : (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {filteredProjects.map((project) => {
@@ -326,7 +358,10 @@ export default function ProjectsPage() {
                   <ProjectStatusBadge status={project.status} />
                 </div>
 
-                <div className="text-small text-neutral-600">{milestoneCounts[project.id] ?? 0} milestones</div>
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-small text-neutral-600">{milestoneCounts[project.id] ?? 0} milestones</span>
+                  <MemberStack members={projectMembers[project.id] ?? []} />
+                </div>
 
                 {(() => {
                   const progress = taskProgress[project.id];
@@ -384,3 +419,156 @@ export default function ProjectsPage() {
   );
 }
 
+function memberInitials(name: string | null) {
+  if (!name) return "?";
+  return name
+    .split(/\s+/)
+    .map((p) => p[0])
+    .filter(Boolean)
+    .slice(0, 2)
+    .join("")
+    .toUpperCase();
+}
+
+// Small stacked avatar row — lead first, then up to 2 more members, "+N"
+// bubble for the tail. Real names from project_members ← people.
+function MemberStack({ members }: { members: ProjectMember[] }) {
+  if (members.length === 0) {
+    return <span className="text-caption text-neutral-400">No team</span>;
+  }
+  const ordered = [...members].sort((a, b) => Number(b.isLead) - Number(a.isLead));
+  const visible = ordered.slice(0, 3);
+  const overflow = ordered.length - visible.length;
+  return (
+    <div className="flex -space-x-1.5">
+      {visible.map((m) => (
+        <span
+          key={m.personId}
+          title={`${m.fullName ?? "Team member"}${m.isLead ? " (Lead)" : ""}`}
+          className={`flex h-6 w-6 items-center justify-center rounded-full border border-neutral-50 bg-neutral-100 text-caption font-semibold text-neutral-800 ${
+            m.isLead ? "ring-2 ring-primary-600" : ""
+          }`}
+        >
+          {memberInitials(m.fullName)}
+        </span>
+      ))}
+      {overflow > 0 && (
+        <span className="flex h-6 min-w-6 items-center justify-center rounded-full border border-neutral-50 bg-neutral-200 px-1.5 text-caption font-medium text-neutral-700">
+          +{overflow}
+        </span>
+      )}
+    </div>
+  );
+}
+
+// Horizontal timeline. Plots each project as a bar between its startDate
+// and endDate against a shared timeline scale. Projects without both dates
+// render a dim ghost row at the bottom (not fabricated — just visibly
+// "missing dates" so the user knows to fill them in).
+function TimelineView({ projects }: { projects: Project[] }) {
+  const dated = projects.filter((p): p is Project & { startDate: string; endDate: string } => !!(p.startDate && p.endDate));
+  const undated = projects.filter((p) => !p.startDate || !p.endDate);
+
+  if (dated.length === 0) {
+    return (
+      <div className="rounded-md border border-dashed border-neutral-300 bg-neutral-50 p-8 text-center">
+        <p className="text-body-medium font-medium text-neutral-950">No projects with dates yet</p>
+        <p className="mt-1 text-small text-neutral-600">Set start and end dates on a project to see it on the timeline.</p>
+      </div>
+    );
+  }
+
+  const min = Math.min(...dated.map((p) => new Date(p.startDate + "T00:00:00").getTime()));
+  const max = Math.max(...dated.map((p) => new Date(p.endDate + "T00:00:00").getTime()));
+  const span = Math.max(1, max - min);
+  const pct = (iso: string) => ((new Date(iso + "T00:00:00").getTime() - min) / span) * 100;
+
+  // Month tick marks between min and max, first of each month.
+  const ticks: { pct: number; label: string }[] = [];
+  const startCursor = new Date(min);
+  startCursor.setDate(1);
+  for (let d = new Date(startCursor); d.getTime() <= max; d.setMonth(d.getMonth() + 1)) {
+    const iso = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-01`;
+    const p = pct(iso);
+    if (p >= 0 && p <= 100) ticks.push({ pct: p, label: d.toLocaleDateString(undefined, { month: "short", year: "2-digit" }) });
+  }
+
+  const todayIso = new Date().toISOString().slice(0, 10);
+  const todayPct = pct(todayIso);
+  const todayInRange = todayPct >= 0 && todayPct <= 100;
+
+  const toneClass = {
+    planning: "bg-info-600",
+    active: "bg-success-600",
+    on_hold: "bg-warning-600",
+    completed: "bg-neutral-400",
+    archived: "bg-neutral-400",
+  } as Record<string, string>;
+
+  return (
+    <div className="rounded-md border border-neutral-300 bg-neutral-50 p-4">
+      <div className="relative">
+        {/* Month tick strip */}
+        <div className="relative mb-3 h-6 border-b border-neutral-200">
+          {ticks.map((t) => (
+            <div key={t.label} className="absolute top-0 h-full" style={{ left: `${t.pct}%` }}>
+              <div className="h-3 w-px bg-neutral-300" />
+              <span className="ml-1 text-caption text-neutral-500">{t.label}</span>
+            </div>
+          ))}
+        </div>
+
+        <ul className="space-y-2">
+          {dated.map((p) => {
+            const left = pct(p.startDate);
+            const right = pct(p.endDate);
+            const width = Math.max(2, right - left);
+            return (
+              <li key={p.id} className="grid grid-cols-[10rem_1fr] items-center gap-3">
+                <a href={`/projects/${p.id}`} className="min-w-0 truncate text-body-medium font-medium text-neutral-950 hover:underline" title={p.name}>
+                  {p.name}
+                </a>
+                <div className="relative h-6 rounded-md bg-neutral-100">
+                  <a
+                    href={`/projects/${p.id}`}
+                    className={`absolute top-1/2 flex h-4 -translate-y-1/2 items-center rounded-md px-2 text-caption font-medium text-neutral-50 hover:opacity-90 ${toneClass[p.status] ?? "bg-primary-600"}`}
+                    style={{ left: `${left}%`, width: `${width}%` }}
+                    title={`${p.startDate} → ${p.endDate}`}
+                  >
+                    <span className="truncate">{p.status}</span>
+                  </a>
+                </div>
+              </li>
+            );
+          })}
+        </ul>
+
+        {/* Today marker overlays the whole grid */}
+        {todayInRange && (
+          <div
+            className="pointer-events-none absolute top-6 bottom-0 w-px bg-danger-600"
+            style={{ left: `calc(10rem + 12px + (100% - 10rem - 12px) * ${todayPct / 100})` }}
+            title={`Today: ${todayIso}`}
+          />
+        )}
+      </div>
+
+      {undated.length > 0 && (
+        <div className="mt-4 border-t border-neutral-200 pt-3">
+          <p className="mb-1 text-caption font-medium uppercase tracking-wide text-neutral-500">
+            No dates set ({undated.length})
+          </p>
+          <ul className="flex flex-wrap gap-2">
+            {undated.map((p) => (
+              <li key={p.id}>
+                <a href={`/projects/${p.id}`} className="rounded-full bg-neutral-100 px-2 py-0.5 text-small text-neutral-700 hover:bg-neutral-200">
+                  {p.name}
+                </a>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </div>
+  );
+}

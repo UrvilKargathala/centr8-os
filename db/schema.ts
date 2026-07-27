@@ -1303,6 +1303,33 @@ export const userPreferences = pgTable(
   ],
 ).enableRLS();
 
+// Project ↔ people link — persists the wizard's Step 3 members plus who
+// leads the project. Composite PK (projectId, personId) means a person
+// appears at most once on a project. hoursPerWeek/access are per-project
+// overrides of the person's defaults from the `people` row.
+export const projectMembers = pgTable(
+  "project_members",
+  {
+    projectId: uuid("project_id").notNull().references(() => projects.id, { onDelete: "cascade" }),
+    personId: uuid("person_id").notNull().references(() => people.id, { onDelete: "cascade" }),
+    orgId: uuid("org_id").notNull().references(() => organizations.id, { onDelete: "cascade" }),
+    role: text("role"),
+    hoursPerWeek: integer("hours_per_week"),
+    access: text("access").notNull().default("Editor"),
+    isLead: boolean("is_lead").notNull().default(false),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    primaryKey({ columns: [t.projectId, t.personId] }),
+    pgPolicy("project_members_isolation", {
+      for: "all",
+      to: authenticatedRole,
+      using: inUserOrgs,
+      withCheck: inUserOrgs,
+    }),
+  ],
+).enableRLS();
+
 // People directory — deliberately named "people" (not "team_members" or
 // "employees") because it's the shared source of truth that HR (Phase 5.1)
 // will extend later rather than duplicating. Kept minimal: HR-specific

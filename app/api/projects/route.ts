@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { and, eq } from "drizzle-orm";
 import { withOrgContext } from "@/db/withOrgContext";
-import { projects } from "@/db/schema";
+import { projects, projectMembers } from "@/db/schema";
 import { ApiError, handleApiError, requireUserId } from "@/lib/api/helpers";
 import { requirePermission } from "@/lib/api/permissions";
 
@@ -35,9 +35,16 @@ export async function POST(req: NextRequest) {
       throw new ApiError(400, "org_id and name are required");
     }
 
+    const uuidRe = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    const rawMembers: { person_id?: string; role?: string; hours_per_week?: number; access?: string; is_lead?: boolean }[] =
+      Array.isArray(body.members) ? body.members : [];
+    // Filter down to real people rows (synthetic AI-only ids from the wizard
+    // are skipped rather than persisted with a fake FK).
+    const memberInputs = rawMembers.filter((m) => m.person_id && uuidRe.test(m.person_id));
+
     const [row] = await withOrgContext(userId, async (db) => {
       await requirePermission(db, userId, body.org_id, "project", "create");
-      return db
+      const [created] = await db
         .insert(projects)
         .values({
           orgId: body.org_id,
@@ -48,6 +55,22 @@ export async function POST(req: NextRequest) {
           endDate: body.end_date ?? null,
         })
         .returning();
+
+      if (memberInputs.length > 0) {
+        await db.insert(projectMembers).values(
+          memberInputs.map((m) => ({
+            projectId: created.id,
+            personId: m.person_id!,
+            orgId: body.org_id,
+            role: m.role ?? null,
+            hoursPerWeek: m.hours_per_week ?? null,
+            access: m.access ?? "Editor",
+            isLead: !!m.is_lead,
+          })),
+        );
+      }
+
+      return [created];
     });
 
     return NextResponse.json({ data: row }, { status: 201 });
