@@ -50,7 +50,6 @@ const NAV_SECTIONS: NavSection[] = [
     items: [
       { href: "/dashboard", label: "Dashboard", icon: ICON.dashboard },
       { href: "/projects", label: "Projects", icon: ICON.folder },
-      { href: "/sprints", label: "Sprints", icon: ICON.checklist },
       { href: "/tasks", label: "Tasks", icon: ICON.checklist },
       { href: "/team", label: "Team", icon: ICON.users },
     ],
@@ -73,16 +72,6 @@ const NAV_SECTIONS: NavSection[] = [
     ],
   },
   {
-    title: "Communication",
-    icon: ICON.chat,
-    items: [
-      { href: "/comms/messenger", label: "Messenger", icon: ICON.chat, comingSoon: true },
-      { href: "/comms/mail", label: "Mail", icon: ICON.mail, comingSoon: true },
-      { href: "/comms/calls", label: "Calls", icon: ICON.phone, comingSoon: true },
-      { href: "/comms/video", label: "Video", icon: ICON.video, comingSoon: true },
-    ],
-  },
-  {
     title: "CRM",
     icon: ICON.wallet,
     items: [
@@ -95,10 +84,20 @@ const NAV_SECTIONS: NavSection[] = [
     ],
   },
   {
+    title: "Communication",
+    icon: ICON.chat,
+    items: [
+      { href: "/communication", label: "Unified Inbox", icon: ICON.dashboard },
+      { href: "/communication/messenger", label: "Messenger", icon: ICON.chat },
+      { href: "/communication/mail", label: "Mail", icon: ICON.mail },
+      { href: "/communication/calls", label: "Calls", icon: ICON.phone },
+      { href: "/communication/video", label: "Video", icon: ICON.video },
+    ],
+  },
+  {
     title: "Resources",
     icon: ICON.gauge,
     items: [
-      { href: "/sprints", label: "Capacity Planning", icon: ICON.gauge },
       { href: "/budgets", label: "Budgets", icon: ICON.currency },
     ],
   },
@@ -155,6 +154,19 @@ function OrgAvatar({ name }: { name: string }) {
       {(name || "?").slice(0, 1).toUpperCase()}
     </span>
   );
+}
+
+// Longest-prefix wins. Without this a parent item like "/communication" would
+// stay active on every child route ("/communication/mail" etc.) alongside the
+// child item, lighting both up at once.
+function isItemActive(item: NavItem, siblings: NavItem[], pathname: string) {
+  if (pathname === item.href) return true;
+  const isPrefixMatch = pathname.startsWith(item.href + "/");
+  if (!isPrefixMatch) return false;
+  const longerMatch = siblings.some(
+    (o) => o !== item && o.href.length > item.href.length && (pathname === o.href || pathname.startsWith(o.href + "/")),
+  );
+  return !longerMatch;
 }
 
 function Icon({ path, className = "h-4 w-4" }: { path: string; className?: string }) {
@@ -306,7 +318,7 @@ function AppSidebar({
                             <NavLeaf
                               key={`${item.href}-${i}`}
                               item={item}
-                              active={pathname === item.href || pathname.startsWith(item.href + "/")}
+                              active={isItemActive(item, section.items, pathname)}
                             />
                           ))}
                         </div>
@@ -350,7 +362,7 @@ function AppSidebar({
               <NavLeaf
                 key={`${item.href}-${i}`}
                 item={item}
-                active={pathname === item.href || pathname.startsWith(item.href + "/")}
+                active={isItemActive(item, hoveredSection.items, pathname)}
               />
             ))}
           </div>

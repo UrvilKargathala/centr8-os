@@ -315,6 +315,8 @@ export const tasks = pgTable(
     assigneeId: uuid("assignee_id"),
     estimate: integer("estimate"),
     dueDate: date("due_date"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
   () => [
     pgPolicy("tasks_isolation", {

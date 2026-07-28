@@ -352,7 +352,7 @@ export default function DashboardPage() {
           {activeSprint && (
             <div className="rounded-md border border-neutral-300 bg-neutral-50 p-3">
               <p className="text-caption font-medium uppercase tracking-wide text-neutral-500">Active sprint</p>
-              <Link href="/sprints" className="mt-0.5 block text-body-medium font-medium text-neutral-950 hover:underline">
+              <Link href={`/projects/${activeSprint.projectId}`} className="mt-0.5 block text-body-medium font-medium text-neutral-950 hover:underline">
                 {activeSprint.name}
               </Link>
               <p className="text-small text-neutral-600">

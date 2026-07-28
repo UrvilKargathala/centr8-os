@@ -1,130 +1,370 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useOrg } from "@/lib/context/OrgContext";
 import { TaskStatusBadge, TaskPriorityBadge } from "@/components/ui/Badge";
-import { Select, Input } from "@/components/ui/Input";
+import { Button } from "@/components/ui/Button";
+import { Input, Select, Textarea, Field } from "@/components/ui/Input";
+import { Modal } from "@/components/ui/Modal";
+import { Segmented } from "@/components/ui/Segmented";
+import { AiBanner } from "@/components/ui/AiBanner";
+import { KpiCard } from "@/components/ui/KpiCard";
+import { Empty, EmptyHeader, EmptyMedia, EmptyTitle, EmptyDescription } from "@/components/ui/Empty";
+import { useToast } from "@/components/ui/Toast";
 import { TaskDetailModal } from "@/components/TaskDetailModal";
-import type { Task } from "@/components/TaskCard";
-import { TASK_STATUSES, TASK_STATUS_LABELS, TASK_PRIORITIES } from "@/lib/constants";
+import { generateAI } from "@/lib/ai/generate";
+import { TASK_PRIORITIES } from "@/lib/constants";
 
+type Row = {
+  id: string;
+  projectId: string;
+  sprintId: string | null;
+  title: string;
+  description: string | null;
+  status: string;
+  priority: string;
+  estimate: number | null;
+  assigneeId: string | null;
+  dueDate: string | null;
+  createdAt: string;
+};
+type Counts = {
+  total: number;
+  pending: number;
+  in_progress: number;
+  in_review: number;
+  completed: number;
+  overdue: number;
+  trend_total: number;
+  trend_completed: number;
+};
 type Project = { id: string; name: string };
+type Person = { id: string; fullName: string; jobTitle: string | null };
 
-// Same fan-out pattern as /sprints — /api/tasks has no org-wide list
-// endpoint, only project_id/sprint_id scoped, so this fetches every
-// project's tasks in parallel and aggregates client-side.
+type Tab = "all" | "pending" | "in_progress" | "in_review" | "completed" | "overdue";
+const TABS: { id: Tab; label: string }[] = [
+  { id: "all", label: "All" },
+  { id: "pending", label: "Pending" },
+  { id: "in_progress", label: "In Progress" },
+  { id: "in_review", label: "In Review" },
+  { id: "completed", label: "Completed" },
+  { id: "overdue", label: "Overdue" },
+];
+
+const EMPTY_COPY: Record<Tab, string> = {
+  all: "No tasks yet — create your first task to get started",
+  pending: "No pending tasks",
+  in_progress: "No tasks currently in progress",
+  in_review: "No tasks in review",
+  completed: "No completed tasks yet",
+  overdue: "No overdue tasks — you're on track",
+};
+
+// URL query params drive tab, project, priority, assignee, q so the page
+// state is bookmarkable.
+function tabToParams(tab: Tab) {
+  if (tab === "all") return {} as Record<string, string>;
+  if (tab === "overdue") return { overdue_only: "true" };
+  const map: Record<Tab, string> = { all: "", pending: "todo", in_progress: "in_progress", in_review: "in_review", completed: "done", overdue: "" };
+  return { status: map[tab] };
+}
+
 export default function TasksPage() {
-  const { selectedOrgId, loading: orgLoading } = useOrg();
+  return (
+    <Suspense fallback={<p className="text-body text-neutral-600">Loading…</p>}>
+      <TasksInner />
+    </Suspense>
+  );
+}
+
+function TasksInner() {
+  const { selectedOrgId, can, loading: orgLoading } = useOrg();
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const toast = useToast();
+
+  const tab = (searchParams.get("tab") as Tab) || "all";
+  const projectFilter = searchParams.get("project") || "";
+  const priorityFilter = searchParams.get("priority") || "";
+  const assigneeFilter = searchParams.get("assignee") || "";
+  const searchFromUrl = searchParams.get("q") || "";
+
+  const [q, setQ] = useState(searchFromUrl);
+  const [rows, setRows] = useState<Row[]>([]);
+  const [counts, setCounts] = useState<Counts | null>(null);
   const [projects, setProjects] = useState<Project[]>([]);
-  const [tasks, setTasks] = useState<Task[]>([]);
+  const [people, setPeople] = useState<Person[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [openTaskId, setOpenTaskId] = useState<string | null>(null);
+  const [showNew, setShowNew] = useState(false);
+  const [flashId, setFlashId] = useState<string | null>(null);
+  const searchRef = useRef<HTMLInputElement>(null);
 
-  const [statusFilter, setStatusFilter] = useState("all");
-  const [priorityFilter, setPriorityFilter] = useState("all");
-  const [projectFilter, setProjectFilter] = useState("all");
+  const peopleById = useMemo(() => {
+    const m: Record<string, Person> = {};
+    for (const p of people) m[p.id] = p;
+    return m;
+  }, [people]);
 
-  function loadAll() {
-    if (!selectedOrgId) return;
-    setLoading(true);
-    setError(null);
-    fetch(`/api/projects?org_id=${selectedOrgId}`)
-      .then((r) => r.json())
-      .then(async (projectsBody) => {
-        if (!projectsBody.data) throw new Error(projectsBody.error ?? "Failed to load projects");
-        const projectList: Project[] = projectsBody.data;
-        setProjects(projectList);
+  // Debounced search value → URL (300ms).
+  useEffect(() => {
+    const t = setTimeout(() => {
+      const params = new URLSearchParams(searchParams.toString());
+      if (q) params.set("q", q);
+      else params.delete("q");
+      router.replace(`?${params.toString()}`);
+    }, 300);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [q]);
 
-        const perProject = await Promise.all(
-          projectList.map((p) =>
-            fetch(`/api/tasks?project_id=${p.id}`)
-              .then((r) => r.json())
-              .then((b) => (b.data ?? []) as (Task & { projectId: string })[])
-              .catch(() => []),
-          ),
-        );
-        setTasks(perProject.flat());
-      })
-      .catch((err) => setError(err instanceof Error ? err.message : "Failed to load tasks"))
-      .finally(() => setLoading(false));
+  function setParam(key: string, value: string | null) {
+    const params = new URLSearchParams(searchParams.toString());
+    if (!value) params.delete(key);
+    else params.set(key, value);
+    router.replace(`?${params.toString()}`);
   }
 
-  useEffect(loadAll, [selectedOrgId]);
+  const loadAll = useCallback(() => {
+    if (!selectedOrgId) return;
+    setLoading(true);
+    const listParams = new URLSearchParams({ org_id: selectedOrgId });
+    Object.entries(tabToParams(tab)).forEach(([k, v]) => v && listParams.set(k, v));
+    if (projectFilter) listParams.set("project", projectFilter);
+    if (priorityFilter) listParams.set("priority", priorityFilter);
+    if (assigneeFilter) listParams.set("assignee_id", assigneeFilter);
+    if (searchFromUrl) listParams.set("q", searchFromUrl);
 
-  if (orgLoading || loading) return <p className="text-body text-neutral-600">Loading…</p>;
-  if (!selectedOrgId) return <p className="text-body text-neutral-600">No organization selected.</p>;
-  if (error) return <p className="rounded-md bg-danger-100 p-3 text-body text-danger-600">{error}</p>;
+    Promise.all([
+      fetch(`/api/tasks?${listParams}`).then((r) => r.json()),
+      fetch(`/api/tasks/counts?org_id=${selectedOrgId}`).then((r) => r.json()),
+      fetch(`/api/projects?org_id=${selectedOrgId}`).then((r) => r.json()),
+      fetch(`/api/team?org_id=${selectedOrgId}&active=true`).then((r) => r.json()),
+    ])
+      .then(([tBody, cBody, pBody, teamBody]) => {
+        setRows(tBody.data ?? []);
+        setCounts(cBody.data ?? null);
+        setProjects(pBody.data ?? []);
+        setPeople(teamBody.data ?? []);
+      })
+      .finally(() => setLoading(false));
+  }, [selectedOrgId, tab, projectFilter, priorityFilter, assigneeFilter, searchFromUrl]);
 
-  const projectName = (id: string) => projects.find((p) => p.id === id)?.name ?? "Unknown project";
-  const filtered = (tasks as (Task & { projectId: string })[]).filter(
-    (t) =>
-      (statusFilter === "all" || t.status === statusFilter) &&
-      (priorityFilter === "all" || t.priority === priorityFilter) &&
-      (projectFilter === "all" || t.projectId === projectFilter),
-  );
+  useEffect(loadAll, [loadAll]);
+
+  // Cmd+K to focus search.
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if ((e.metaKey || e.ctrlKey) && e.key === "k") {
+        e.preventDefault();
+        searchRef.current?.focus();
+      }
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
+
+  const anyFilterActive = !!(projectFilter || priorityFilter || assigneeFilter);
+  const projectName = (id: string) => projects.find((p) => p.id === id)?.name ?? "";
+
+  async function handleDelete(id: string) {
+    if (!confirm("Delete this task? This cannot be undone.")) return;
+    const res = await fetch(`/api/tasks/${id}`, { method: "DELETE" });
+    if (res.ok) {
+      toast.show("Task deleted");
+      loadAll();
+    } else {
+      toast.show("Failed to delete", "error");
+    }
+  }
+
+  if (orgLoading || !selectedOrgId) return <p className="text-body text-neutral-600">Loading…</p>;
 
   return (
     <div className="space-y-6">
-      <h1 className="text-display font-semibold text-neutral-950">Tasks</h1>
-
-      <div className="flex flex-wrap gap-2">
-        <Select value={projectFilter} onChange={(e) => setProjectFilter(e.target.value)}>
-          <option value="all">All projects</option>
-          {projects.map((p) => (
-            <option key={p.id} value={p.id}>
-              {p.name}
-            </option>
-          ))}
-        </Select>
-        <Select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
-          <option value="all">All statuses</option>
-          {TASK_STATUSES.map((s) => (
-            <option key={s} value={s}>
-              {TASK_STATUS_LABELS[s]}
-            </option>
-          ))}
-        </Select>
-        <Select value={priorityFilter} onChange={(e) => setPriorityFilter(e.target.value)}>
-          <option value="all">All priorities</option>
-          {TASK_PRIORITIES.map((p) => (
-            <option key={p} value={p}>
-              {p}
-            </option>
-          ))}
-        </Select>
+      {/* Header */}
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h1 className="font-heading text-display font-semibold text-neutral-950">Tasks</h1>
+          <p className="mt-1 text-body text-neutral-600">All tasks across your projects</p>
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="relative">
+            <Input
+              ref={searchRef}
+              className="w-64 pl-8"
+              placeholder="Search tasks…  ⌘K"
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+            />
+            <svg className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-neutral-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-4.35-4.35M10 18a8 8 0 100-16 8 8 0 000 16z" />
+            </svg>
+          </div>
+          {can("task", "create") && <Button onClick={() => setShowNew(true)}>+ New Task</Button>}
+        </div>
       </div>
 
-      {tasks.length === 0 ? (
-        <p className="text-body text-neutral-600">No tasks yet. Create one from a project's Tasks tab.</p>
-      ) : filtered.length === 0 ? (
-        <p className="text-body text-neutral-600">No tasks match.</p>
+      {/* KPI cards */}
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <KpiClickCard title="Total tasks" value={counts?.total ?? 0} trend={counts?.trend_total ?? 0} onClick={() => setParam("tab", "all")} tone="neutral" />
+        <KpiClickCard title="Pending" value={counts?.pending ?? 0} onClick={() => setParam("tab", "pending")} tone="warning" />
+        <KpiClickCard title="In progress" value={counts?.in_progress ?? 0} onClick={() => setParam("tab", "in_progress")} tone="info" />
+        <KpiClickCard title="Completed" value={counts?.completed ?? 0} trend={counts?.trend_completed ?? 0} onClick={() => setParam("tab", "completed")} tone="success" />
+      </div>
+
+      {/* Tab bar + secondary filters */}
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex flex-wrap gap-1 rounded-md border border-neutral-300 bg-neutral-50 p-0.5">
+          {TABS.map((t) => {
+            const active = tab === t.id;
+            const n =
+              t.id === "all" ? counts?.total :
+              t.id === "pending" ? counts?.pending :
+              t.id === "in_progress" ? counts?.in_progress :
+              t.id === "in_review" ? counts?.in_review :
+              t.id === "completed" ? counts?.completed :
+              counts?.overdue;
+            return (
+              <button
+                key={t.id}
+                type="button"
+                onClick={() => setParam("tab", t.id)}
+                className={`rounded-sm px-3 py-1.5 text-body-medium font-medium transition-colors ${
+                  active ? "bg-primary-100 text-primary-700" : "text-neutral-600 hover:bg-neutral-200"
+                }`}
+              >
+                {t.label} {n != null && <span className="text-caption text-neutral-500">({n})</span>}
+              </button>
+            );
+          })}
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2">
+          <Select value={projectFilter} onChange={(e) => setParam("project", e.target.value || null)} className="w-40">
+            <option value="">All projects</option>
+            {projects.map((p) => (
+              <option key={p.id} value={p.id}>{p.name}</option>
+            ))}
+          </Select>
+          <Select value={priorityFilter} onChange={(e) => setParam("priority", e.target.value || null)} className="w-32">
+            <option value="">Any priority</option>
+            {TASK_PRIORITIES.map((p) => (
+              <option key={p} value={p}>{p}</option>
+            ))}
+          </Select>
+          <Select value={assigneeFilter} onChange={(e) => setParam("assignee", e.target.value || null)} className="w-40">
+            <option value="">Any assignee</option>
+            {people.map((p) => (
+              <option key={p.id} value={p.id}>{p.fullName}</option>
+            ))}
+          </Select>
+          {anyFilterActive && (
+            <button
+              type="button"
+              onClick={() => {
+                setParam("project", null);
+                setParam("priority", null);
+                setParam("assignee", null);
+              }}
+              className="text-small text-primary-700 hover:underline"
+            >
+              Clear filters
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* List */}
+      {loading ? (
+        <p className="text-body text-neutral-600">Loading…</p>
+      ) : rows.length === 0 ? (
+        <Empty>
+          <EmptyHeader>
+            <EmptyMedia variant="icon">
+              <svg className="h-8 w-8 text-neutral-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+              </svg>
+            </EmptyMedia>
+            <EmptyTitle>{EMPTY_COPY[tab]}</EmptyTitle>
+            <EmptyDescription>Filters and search all keep working — clear them if the tab feels wrong.</EmptyDescription>
+          </EmptyHeader>
+          {can("task", "create") && tab !== "overdue" && (
+            <div className="mt-3 flex justify-center">
+              <Button onClick={() => setShowNew(true)}>+ New Task</Button>
+            </div>
+          )}
+        </Empty>
       ) : (
         <div className="overflow-x-auto rounded-md border border-neutral-300">
-          <table className="w-full min-w-[640px] text-body">
-            <thead className="bg-neutral-100">
-              <tr className="text-left text-caption font-medium uppercase tracking-wide text-neutral-600">
-                <th className="px-4 py-2">Title</th>
-                <th className="px-4 py-2">Project</th>
+          <table className="w-full min-w-[960px] text-body">
+            <thead>
+              <tr className="border-b border-neutral-200 bg-neutral-100 text-left text-caption font-medium uppercase tracking-wide text-neutral-500">
+                <th className="w-8 px-3 py-2" />
+                <th className="px-4 py-2">Task</th>
+                <th className="px-4 py-2">Assignee</th>
                 <th className="px-4 py-2">Priority</th>
                 <th className="px-4 py-2">Status</th>
-                <th className="px-4 py-2">Estimate</th>
+                <th className="px-4 py-2">Due</th>
+                <th className="px-4 py-2 text-right">Est</th>
+                <th className="w-8 px-3 py-2" />
               </tr>
             </thead>
             <tbody className="divide-y divide-neutral-200 bg-neutral-50">
-              {filtered.map((t) => (
-                <tr key={t.id} onClick={() => setOpenTaskId(t.id)} className="cursor-pointer hover:bg-neutral-100">
-                  <td className="px-4 py-3 text-neutral-950">{t.title}</td>
-                  <td className="px-4 py-3 text-neutral-600">{projectName(t.projectId)}</td>
-                  <td className="px-4 py-3">
-                    <TaskPriorityBadge priority={t.priority} />
-                  </td>
-                  <td className="px-4 py-3">
-                    <TaskStatusBadge status={t.status} />
-                  </td>
-                  <td className="px-4 py-3 text-neutral-600">{t.estimate ?? "—"}</td>
-                </tr>
-              ))}
+              {rows.map((r) => {
+                const overdue = r.dueDate && r.dueDate < new Date().toISOString().slice(0, 10) && r.status !== "done" && r.status !== "cancelled";
+                const person = r.assigneeId ? peopleById[r.assigneeId] : null;
+                const flash = flashId === r.id;
+                return (
+                  <tr
+                    key={r.id}
+                    onClick={() => setOpenTaskId(r.id)}
+                    className={`cursor-pointer transition-colors ${flash ? "bg-primary-100" : overdue ? "bg-danger-100/40 hover:bg-danger-100" : "hover:bg-neutral-100"}`}
+                  >
+                    <td className="px-3 py-3" onClick={(e) => e.stopPropagation()}>
+                      {/* TODO: wire bulk actions */}
+                      <input type="checkbox" />
+                    </td>
+                    <td className="px-4 py-3">
+                      <p className="font-medium text-neutral-950">{r.title}</p>
+                      <p className="text-caption text-neutral-500">{projectName(r.projectId)}</p>
+                    </td>
+                    <td className="px-4 py-3">
+                      {person ? (
+                        <div className="flex items-center gap-2">
+                          <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary-100 text-caption font-semibold text-primary-700">
+                            {person.fullName.split(/\s+/).map((s) => s[0]).slice(0, 2).join("").toUpperCase()}
+                          </span>
+                          <span className="text-small">{person.fullName}</span>
+                        </div>
+                      ) : (
+                        <span className="text-small text-neutral-400">Unassigned</span>
+                      )}
+                    </td>
+                    <td className="px-4 py-3"><TaskPriorityBadge priority={r.priority} /></td>
+                    <td className="px-4 py-3"><TaskStatusBadge status={r.status} /></td>
+                    <td className={`px-4 py-3 text-small ${overdue ? "font-medium text-danger-600" : "text-neutral-700"}`}>
+                      {r.dueDate ?? "—"}
+                    </td>
+                    <td className="px-4 py-3 text-right text-small text-neutral-700">{r.estimate ?? "—"}</td>
+                    <td className="px-3 py-3 text-right" onClick={(e) => e.stopPropagation()}>
+                      {can("task", "delete") && (
+                        <button
+                          type="button"
+                          onClick={() => handleDelete(r.id)}
+                          aria-label="Delete"
+                          className="rounded-md p-1 text-neutral-500 hover:bg-danger-100 hover:text-danger-600"
+                        >
+                          <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6M1 7h22M9 7V4a2 2 0 012-2h2a2 2 0 012 2v3" />
+                          </svg>
+                        </button>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
@@ -140,6 +380,256 @@ export default function TasksPage() {
           }}
         />
       )}
+
+      {showNew && selectedOrgId && (
+        <QuickNewTaskModal
+          orgId={selectedOrgId}
+          projects={projects}
+          people={people}
+          onClose={() => setShowNew(false)}
+          onCreated={(id) => {
+            setShowNew(false);
+            loadAll();
+            setFlashId(id);
+            setTimeout(() => setFlashId(null), 2000);
+            toast.show("Task created");
+          }}
+        />
+      )}
     </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────
+// KPI click card with trend
+// ─────────────────────────────────────────────────────────────
+
+function KpiClickCard({
+  title,
+  value,
+  trend,
+  onClick,
+  tone,
+}: {
+  title: string;
+  value: number;
+  trend?: number;
+  onClick: () => void;
+  tone: "neutral" | "success" | "info" | "warning" | "danger";
+}) {
+  const trendProp =
+    trend !== undefined && trend !== 0
+      ? { text: `${trend > 0 ? "+" : ""}${trend} this week`, positive: trend > 0 }
+      : undefined;
+  return (
+    <button type="button" onClick={onClick} className="h-full text-left transition hover:scale-[1.01]">
+      <KpiCard title={title} value={value} pattern={value} tone={tone} trend={trendProp} />
+    </button>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────
+// Quick-add task modal
+// ─────────────────────────────────────────────────────────────
+
+type Sprint = { id: string; name: string; projectId: string };
+
+function QuickNewTaskModal({
+  orgId,
+  projects,
+  people,
+  onClose,
+  onCreated,
+}: {
+  orgId: string;
+  projects: Project[];
+  people: Person[];
+  onClose: () => void;
+  onCreated: (newTaskId: string) => void;
+}) {
+  const [title, setTitle] = useState("");
+  const [projectId, setProjectId] = useState(projects[0]?.id ?? "");
+  const [sprints, setSprints] = useState<Sprint[]>([]);
+  const [sprintId, setSprintId] = useState<string>("");
+  const [assigneeId, setAssigneeId] = useState<string>("");
+  const [priority, setPriority] = useState<"low" | "medium" | "high" | "urgent">("medium");
+  const [dueDate, setDueDate] = useState("");
+  const [estimate, setEstimate] = useState("");
+  const [description, setDescription] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+  const [ai, setAi] = useState<{ subtask_titles: string[]; reasoning: string } | null>(null);
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiPicked, setAiPicked] = useState<Set<string>>(new Set());
+
+  useEffect(() => {
+    if (!projectId) return setSprints([]);
+    fetch(`/api/sprints?project_id=${projectId}`)
+      .then((r) => r.json())
+      .then((b) => setSprints(b.data ?? []));
+  }, [projectId]);
+
+  async function runAi() {
+    setAiLoading(true);
+    const r = (await generateAI("Planner", "suggest_task_breakdown", { title, projectId })) as {
+      subtask_titles: string[];
+      reasoning: string;
+    };
+    setAi(r);
+    setAiPicked(new Set(r.subtask_titles));
+    setAiLoading(false);
+  }
+  function acceptAi() {
+    if (!ai) return;
+    // TODO: subtask table doesn't exist yet — just logging accepted subtasks
+    // so the flow is proven end-to-end. Full wiring in a later prompt.
+    console.log("Task subtasks accepted (TODO: wire once subtask table lands)", {
+      title,
+      subtasks: [...aiPicked],
+    });
+    setAi(null);
+  }
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!title || !projectId) return;
+    setSaving(true);
+    setErr(null);
+    const res = await fetch("/api/tasks", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        org_id: orgId,
+        project_id: projectId,
+        sprint_id: sprintId || null,
+        title,
+        description: description || null,
+        priority,
+        assignee_id: assigneeId || null,
+        due_date: dueDate || null,
+        estimate: estimate ? Number(estimate) : null,
+      }),
+    });
+    const body = await res.json();
+    setSaving(false);
+    if (!res.ok) return setErr(body.error ?? "Failed to create task");
+    onCreated(body.data.id);
+  }
+
+  return (
+    <Modal onClose={onClose} maxWidth="max-w-2xl">
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <h2 className="font-heading text-h2 font-semibold text-neutral-950">New task</h2>
+        {err && <p className="rounded-md bg-danger-100 p-2 text-body text-danger-600">{err}</p>}
+
+        <Field label="Title *">
+          <Input className="w-full" value={title} onChange={(e) => setTitle(e.target.value)} autoFocus required />
+        </Field>
+
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <Field label="Project *">
+            <Select className="w-full" value={projectId} onChange={(e) => setProjectId(e.target.value)} required>
+              <option value="">Select project…</option>
+              {projects.map((p) => (
+                <option key={p.id} value={p.id}>{p.name}</option>
+              ))}
+            </Select>
+          </Field>
+          <Field label="Sprint">
+            <Select className="w-full" value={sprintId} onChange={(e) => setSprintId(e.target.value)} disabled={!projectId}>
+              <option value="">Backlog (no sprint)</option>
+              {sprints.map((s) => (
+                <option key={s.id} value={s.id}>{s.name}</option>
+              ))}
+            </Select>
+          </Field>
+          <Field label="Assignee">
+            <Select className="w-full" value={assigneeId} onChange={(e) => setAssigneeId(e.target.value)}>
+              <option value="">Unassigned</option>
+              {people.map((p) => (
+                <option key={p.id} value={p.id}>{p.fullName}</option>
+              ))}
+            </Select>
+          </Field>
+          <Field label="Priority">
+            <Segmented
+              value={priority}
+              onChange={(v) => setPriority(v)}
+              options={[
+                { value: "low", label: "Low" },
+                { value: "medium", label: "Med" },
+                { value: "high", label: "High" },
+                { value: "urgent", label: "Urgent" },
+              ]}
+            />
+          </Field>
+          <Field label="Due date">
+            <Input type="date" className="w-full" value={dueDate} onChange={(e) => setDueDate(e.target.value)} />
+          </Field>
+          <Field label="Estimate (hrs)">
+            <Input type="number" className="w-full" min="0" value={estimate} onChange={(e) => setEstimate(e.target.value)} />
+          </Field>
+        </div>
+
+        <Field label="Description">
+          <Textarea rows={2} className="w-full" value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Short note — full description later" />
+        </Field>
+
+        {title && projectId && (
+          <div className="space-y-2">
+            <button
+              type="button"
+              onClick={runAi}
+              disabled={aiLoading}
+              className="inline-flex items-center gap-1.5 rounded-md border border-ai-600 px-2.5 py-1 text-small font-medium text-ai-600 hover:bg-ai-100 disabled:opacity-60"
+            >
+              <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 3l1.9 5.6L19.5 10.5l-5.6 1.9L12 18l-1.9-5.6L4.5 10.5l5.6-1.9L12 3z" />
+              </svg>
+              {aiLoading ? "Thinking…" : "AI: Suggest breakdown"}
+            </button>
+            {ai && (
+              <div className="space-y-2 overflow-hidden rounded-md border border-ai-600/40">
+                <AiBanner />
+                <div className="space-y-2 px-4 pb-3">
+                  <ul className="space-y-1">
+                    {ai.subtask_titles.map((s) => (
+                      <li key={s} className="flex items-center gap-2 text-body">
+                        <input
+                          type="checkbox"
+                          checked={aiPicked.has(s)}
+                          onChange={(e) => {
+                            const next = new Set(aiPicked);
+                            if (e.target.checked) next.add(s);
+                            else next.delete(s);
+                            setAiPicked(next);
+                          }}
+                        />
+                        <span className="text-neutral-800">{s}</span>
+                      </li>
+                    ))}
+                  </ul>
+                  <p className="text-small text-neutral-600">{ai.reasoning}</p>
+                  <div className="flex gap-2">
+                    <Button type="button" onClick={acceptAi}>Accept selected</Button>
+                    <Button type="button" variant="secondary" onClick={() => setAi(null)}>Reject</Button>
+                  </div>
+                  <p className="text-caption text-neutral-500">
+                    Subtasks logged on accept — the subtask table doesn&apos;t exist yet, so no rows are created for now.
+                  </p>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        <div className="flex justify-end gap-2 border-t border-neutral-200 pt-4">
+          <Button type="button" variant="secondary" onClick={onClose}>Cancel</Button>
+          <Button type="submit" disabled={saving || !title || !projectId}>
+            {saving ? "Creating…" : "Create task"}
+          </Button>
+        </div>
+      </form>
+    </Modal>
   );
 }

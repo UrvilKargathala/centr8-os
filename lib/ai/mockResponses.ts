@@ -62,6 +62,41 @@ Out-of-scope: mobile-native experiences, third-party marketplace, self-serve bil
       const health = atRisk === 0 ? "healthy" : atRisk / Math.max(total, 1) < 0.25 ? "mostly on track" : "under pressure";
       return `Portfolio is ${health}: ${active} of ${total} projects are actively delivering, and ${atRisk} carry at least one overdue or blocked task. The best next move is a 15-minute unblock pass on the at-risk items — most slippages here typically resolve with a single reassignment or a scope trim rather than a full replan.`;
     },
+    draft_slack_reply: (ctx: MockContext) => {
+      const preview = (ctx.preview as string) || "";
+      const low = preview.toLowerCase();
+      if (low.includes("push") || low.includes("thursday")) return "Thursday works — I've updated the calendar. Same 2pm start?";
+      if (low.includes("pr") || low.includes("merged")) return "Nice — I'll take a look this afternoon and sign off if it's clean.";
+      if (low.includes("hero") || low.includes("design") || low.includes("figma")) return "Really like the softer gradient. One small note — CTA could use a touch more breathing room.";
+      return "Thanks — I'll take a look and follow up shortly.";
+    },
+    draft_email_reply: (ctx: MockContext) => {
+      const subject = (ctx.subject as string) || "";
+      if (subject.toLowerCase().includes("sprint")) {
+        return {
+          subject: `Re: ${subject}`,
+          body: `Hi Sarah,\n\nThursday at 2pm works on our end — I've updated our internal calendar. We'll come with the sprint 3 delta plus a quick preview of what's landing in sprint 4.\n\nSee you then,\nUrvil`,
+        };
+      }
+      if (subject.toLowerCase().includes("proposal") || subject.toLowerCase().includes("sow")) {
+        return {
+          subject: `Re: ${subject}`,
+          body: `Hi Diana,\n\nThanks for sending this over so quickly. Terms look good on my side. Let me get one more read from the team and I'll come back tomorrow with a signed version.\n\nBest,\nUrvil`,
+        };
+      }
+      return {
+        subject: `Re: ${subject}`,
+        body: `Thanks for reaching out — I'll reply properly shortly with the detail you asked for.\n\nBest,\nUrvil`,
+      };
+    },
+    summarize_call: (ctx: MockContext) => {
+      const name = (ctx.participant as string) || "the caller";
+      const notes = (ctx.notes as string) || "";
+      return {
+        summary: notes || `Short call with ${name}. Covered current status and next steps.`,
+        action_items: ["Follow up with a written recap by end of day", "Add next milestone to the shared plan", "Schedule the follow-up for next week"],
+      };
+    },
     kickoff_notes: (ctx: MockContext) => {
       const name = (ctx.name as string) || "the project";
       return `Kick-off agenda for ${name}:
@@ -171,6 +206,28 @@ Follow-ups:
       ];
       return list;
     },
+    summarize_channel: (ctx: MockContext) => {
+      const name = (ctx.channel as string) || "channel";
+      return `## Today in #${name}\n\n- PR #482 (project_members table) merged and shipped to prod without a rollback.\n- Marco kicked off review of the payments module; asked for one more pair of eyes.\n- Aditi confirmed the review queue is on track for the sprint gate.\n\n**Watch for:** the client review moved from Wednesday → Thursday — calendar is updated but re-check standing invites.`;
+    },
+    summarize_email_thread: (_ctx: MockContext) =>
+      "Sarah at Acme is pushing the sprint 3 review from Wed to Thu (same 2pm slot) because something came up on her side. She's asking whether that clashes with anything and expects a same-day reply.",
+    categorize_email: (ctx: MockContext) => {
+      const from = ((ctx.from_email as string) || "").toLowerCase();
+      const subject = ((ctx.subject as string) || "").toLowerCase();
+      if (from.includes("github") || from.includes("vercel") || from.includes("stripe")) return { label: "Notifications", reasoning: "Automated service update, not a person-to-person message." };
+      if (from.includes("acme") || subject.includes("sprint") || subject.includes("review")) return { label: "Clients", reasoning: "Client-facing thread — likely needs a personal reply." };
+      if (from.includes("beacon") || subject.includes("proposal") || subject.includes("sow")) return { label: "Sales", reasoning: "Prospect proposal — routing to the sales workspace." };
+      if (from.includes("digest") || from.includes("newsletter")) return { label: "Newsletter", reasoning: "Bulk newsletter — safe to archive after skim." };
+      return { label: "Personal", reasoning: "No matching client/vendor rule — treating as personal correspondence." };
+    },
+    summarize_meeting: (ctx: MockContext) => {
+      const title = (ctx.title as string) || "the meeting";
+      return {
+        summary: `${title}: kicked off with a review of current status, then walked through the near-term plan. Team agreed on the aggressive-but-doable target and named the main risk (data-import) so it stays visible next week.`,
+        action_items: ["Data-import spike: 3-day timebox this week", "Diana to share success criteria doc by Wed", "Urvil to circulate weekly status template"],
+      };
+    },
     suggest_budget_breakdown: (ctx: MockContext) => {
       const total = Number(ctx.allocatedBudget) || 100000;
       return {
@@ -192,6 +249,31 @@ Follow-ups:
         start_date: iso(start),
         end_date: iso(end),
         reasoning: "One-week runway to kick off, then a 12-week delivery window matching your typical squad velocity. Adjust down if the scope is tighter than the brief implies.",
+      };
+    },
+    suggest_task_breakdown: (ctx: MockContext) => {
+      const title = ((ctx.title as string) || "").toLowerCase();
+      if (title.includes("landing") || title.includes("page") || title.includes("site")) {
+        return {
+          subtask_titles: ["Wireframe the hero section", "Copy pass with brand voice", "Component build", "Cross-browser QA", "Publish + share preview link"],
+          reasoning: "Typical marketing-page flow. Skip the wireframe step if you already have a Figma from a prior sprint.",
+        };
+      }
+      if (title.includes("auth") || title.includes("login") || title.includes("signup")) {
+        return {
+          subtask_titles: ["Provider selection + docs read", "Backend session wiring", "UI: login + signup forms", "Error states + rate-limit", "E2E test happy path + reset"],
+          reasoning: "5-step auth flow with the failure paths people usually skip until support tickets show up.",
+        };
+      }
+      if (title.includes("migration") || title.includes("schema")) {
+        return {
+          subtask_titles: ["Draft the migration on a branch DB", "Backfill script if needed", "Deploy + smoke test", "Update ORM types", "Announce in Slack once green"],
+          reasoning: "Migrations bite hardest at the announcement step — teams edit the same tables in parallel without knowing.",
+        };
+      }
+      return {
+        subtask_titles: ["Scope + definition of done", "Implementation", "Self-review + tests", "PR + reviewer sign-off", "Deploy + verify"],
+        reasoning: "Generic 5-step breakdown. Trim or add rows before accepting — it should read like your team's actual playbook.",
       };
     },
     suggest_team_composition: (_ctx: MockContext) => [

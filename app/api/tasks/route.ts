@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { eq, sql } from "drizzle-orm";
+import { and, desc, eq, ilike, lt, ne, or, sql, type SQL } from "drizzle-orm";
 import { withOrgContext } from "@/db/withOrgContext";
 import { tasks, taskAttachments } from "@/db/schema";
 import { ApiError, handleApiError, requireUserId } from "@/lib/api/helpers";
@@ -8,38 +8,64 @@ import { requirePermission } from "@/lib/api/permissions";
 export async function GET(req: NextRequest) {
   try {
     const userId = await requireUserId(req);
-    const projectId = req.nextUrl.searchParams.get("project_id");
-    const sprintId = req.nextUrl.searchParams.get("sprint_id");
-    if (!projectId && !sprintId) {
-      throw new ApiError(400, "project_id or sprint_id is required");
+    const sp = req.nextUrl.searchParams;
+    const projectId = sp.get("project_id");
+    const sprintId = sp.get("sprint_id");
+    const orgId = sp.get("org_id");
+    if (!projectId && !sprintId && !orgId) {
+      throw new ApiError(400, "project_id, sprint_id, or org_id is required");
     }
 
-    // Attachment count as a correlated subquery so the board doesn't need
-    // N+1 per-task fetches to render the paperclip badge.
     const attachmentCountSql = sql<number>`(
       select count(*)::int from ${taskAttachments}
       where ${taskAttachments.taskId} = ${tasks.id}
     )`.as("attachment_count");
 
-    const rows = await withOrgContext(userId, (db) => {
-      const q = db.select({
-        id: tasks.id,
-        orgId: tasks.orgId,
-        projectId: tasks.projectId,
-        sprintId: tasks.sprintId,
-        title: tasks.title,
-        description: tasks.description,
-        status: tasks.status,
-        priority: tasks.priority,
-        estimate: tasks.estimate,
-        assigneeId: tasks.assigneeId,
-        dueDate: tasks.dueDate,
-        attachmentCount: attachmentCountSql,
-      }).from(tasks);
-      return sprintId
-        ? q.where(eq(tasks.sprintId, sprintId))
-        : q.where(eq(tasks.projectId, projectId!));
-    });
+    const conds: SQL[] = [];
+    if (sprintId) conds.push(eq(tasks.sprintId, sprintId));
+    else if (projectId) conds.push(eq(tasks.projectId, projectId));
+    else if (orgId) conds.push(eq(tasks.orgId, orgId));
+
+    const statusFilter = sp.get("status");
+    if (statusFilter) conds.push(eq(tasks.status, statusFilter as never));
+    const priorityFilter = sp.get("priority");
+    if (priorityFilter) conds.push(eq(tasks.priority, priorityFilter as never));
+    const assigneeFilter = sp.get("assignee_id");
+    if (assigneeFilter) conds.push(eq(tasks.assigneeId, assigneeFilter));
+    const projFilter = sp.get("project");
+    if (projFilter && !projectId) conds.push(eq(tasks.projectId, projFilter));
+    if (sp.get("overdue_only") === "true") {
+      const todayIso = new Date().toISOString().slice(0, 10);
+      conds.push(lt(tasks.dueDate, todayIso));
+      conds.push(ne(tasks.status, "done"));
+      conds.push(ne(tasks.status, "cancelled"));
+    }
+    const q = sp.get("q");
+    if (q && q.trim()) {
+      conds.push(or(ilike(tasks.title, `%${q}%`), ilike(tasks.description, `%${q}%`))!);
+    }
+
+    const rows = await withOrgContext(userId, (db) =>
+      db
+        .select({
+          id: tasks.id,
+          orgId: tasks.orgId,
+          projectId: tasks.projectId,
+          sprintId: tasks.sprintId,
+          title: tasks.title,
+          description: tasks.description,
+          status: tasks.status,
+          priority: tasks.priority,
+          estimate: tasks.estimate,
+          assigneeId: tasks.assigneeId,
+          dueDate: tasks.dueDate,
+          createdAt: tasks.createdAt,
+          attachmentCount: attachmentCountSql,
+        })
+        .from(tasks)
+        .where(and(...conds))
+        .orderBy(desc(tasks.createdAt)),
+    );
 
     return NextResponse.json({ data: rows });
   } catch (err) {

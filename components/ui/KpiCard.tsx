@@ -7,11 +7,14 @@ export function KpiCard({
   value,
   pattern,
   tone,
+  trend,
 }: {
   title: string;
   value: number | string;
   pattern: number;
   tone: "neutral" | "success" | "info" | "danger" | "warning" | "primary";
+  // Optional footer text rendered inside the card (e.g. "+6 this week")
+  trend?: { text: string; positive?: boolean };
 }) {
   const dotClass = {
     neutral: "bg-neutral-400",
@@ -23,7 +26,7 @@ export function KpiCard({
   }[tone];
   const dots = Math.min(24, Math.max(0, pattern));
   return (
-    <div className="relative flex flex-col justify-between overflow-hidden rounded-md border border-neutral-300 bg-neutral-50 p-4">
+    <div className="relative flex h-full flex-col justify-between overflow-hidden rounded-md border border-neutral-300 bg-neutral-50 p-4">
       <div className="flex items-start justify-between gap-2">
         <p className="text-small text-neutral-600">{title}</p>
         <svg className="h-4 w-4 text-neutral-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -31,7 +34,14 @@ export function KpiCard({
         </svg>
       </div>
       <div className="mt-6 flex items-end justify-between gap-2">
-        <p className="font-heading text-display font-semibold text-neutral-950">{value}</p>
+        <div className="min-w-0">
+          <p className="font-heading text-display font-semibold text-neutral-950">{value}</p>
+          {trend && (
+            <p className={`mt-0.5 text-caption ${trend.positive ? "text-success-600" : "text-neutral-500"}`}>
+              {trend.text}
+            </p>
+          )}
+        </div>
         <div className="grid grid-cols-6 gap-0.5">
           {Array.from({ length: 24 }, (_, i) => (
             <span key={i} className={`h-1.5 w-1.5 rounded-sm ${i < dots ? dotClass : "bg-neutral-200"}`} />
