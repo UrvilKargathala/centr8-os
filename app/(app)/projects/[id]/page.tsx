@@ -738,23 +738,25 @@ function SettingsTab({ project, orgId, onSaved }: { project: Project; orgId: str
   const canUpdateBudget = can("budget", "update");
   const [name, setName] = useState(project.name);
   const [status, setStatus] = useState(project.status);
+  const [startDate, setStartDate] = useState(project.startDate ?? "");
+  const [endDate, setEndDate] = useState(project.endDate ?? "");
   const [budgetAllocated, setBudgetAllocated] = useState(project.budgetAllocated?.toString() ?? "");
   const [budgetSpent, setBudgetSpent] = useState(project.budgetSpent?.toString() ?? "");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [archiving, setArchiving] = useState(false);
 
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();
     setSaving(true);
     setError(null);
 
-    // Only send fields the role can actually change — sending an unchanged
-    // name/status while only budget:update is granted would still trip
-    // the server's project:update check for no reason.
     const payload: Record<string, unknown> = {};
     if (canUpdate) {
       payload.name = name;
       payload.status = status;
+      payload.start_date = startDate || null;
+      payload.end_date = endDate || null;
     }
     if (canUpdateBudget) {
       payload.budget_allocated = budgetAllocated === "" ? null : Number(budgetAllocated);
@@ -775,62 +777,144 @@ function SettingsTab({ project, orgId, onSaved }: { project: Project; orgId: str
     onSaved();
   }
 
+  async function archiveProject() {
+    if (!confirm("Archive this project? It will be hidden from active lists but not deleted.")) return;
+    setArchiving(true);
+    await fetch(`/api/projects/${project.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status: "archived" }),
+    });
+    setArchiving(false);
+    onSaved();
+  }
+
+  const budgetPct = budgetAllocated && Number(budgetAllocated) > 0
+    ? Math.min(100, Math.round((Number(budgetSpent) / Number(budgetAllocated)) * 100))
+    : 0;
+  const overBudget = budgetAllocated && Number(budgetSpent) > Number(budgetAllocated);
+
   return (
-    <div className="max-w-md space-y-8">
-    <form onSubmit={handleSave} className="space-y-4">
+    <div className="space-y-6">
       {error && <p className="rounded-md bg-danger-100 p-3 text-body text-danger-600">{error}</p>}
-      <Field label="Name">
-        <Input className="w-full" value={name} onChange={(e) => setName(e.target.value)} disabled={!canUpdate} />
-      </Field>
-      <Field label="Status">
-        <Select className="w-full" value={status} onChange={(e) => setStatus(e.target.value)} disabled={!canUpdate}>
-          {PROJECT_STATUSES.map((s) => (
-            <option key={s} value={s}>
-              {s}
-            </option>
-          ))}
-        </Select>
-      </Field>
 
-      {/* FR-3.x (Prompt 3.2) — simple manual entry, no finance integration. */}
-      <div className="grid grid-cols-1 gap-4 border-t border-neutral-200 pt-4 sm:grid-cols-2">
-        <Field label="Budget allocated ($)">
-          <Input
-            type="number"
-            min="0"
-            step="0.01"
-            className="w-full"
-            value={budgetAllocated}
-            onChange={(e) => setBudgetAllocated(e.target.value)}
-            disabled={!canUpdateBudget}
-            placeholder="Not set"
-          />
-        </Field>
-        <Field label="Budget spent ($)">
-          <Input
-            type="number"
-            min="0"
-            step="0.01"
-            className="w-full"
-            value={budgetSpent}
-            onChange={(e) => setBudgetSpent(e.target.value)}
-            disabled={!canUpdateBudget}
-            placeholder="Not set"
-          />
-        </Field>
-      </div>
+      <form onSubmit={handleSave} className="space-y-6">
+        {/* General */}
+        <section className="rounded-md border border-neutral-300 bg-neutral-50 p-5">
+          <div className="mb-4 border-b border-neutral-200 pb-3">
+            <h2 className="font-heading text-h3 font-semibold text-neutral-950">General</h2>
+            <p className="mt-0.5 text-caption text-neutral-500">Name, status, and timeline</p>
+          </div>
 
-      <p className="text-small text-neutral-400">Org: {orgId}</p>
-      {canUpdate || canUpdateBudget ? (
-        <Button type="submit" disabled={saving}>
-          {saving ? "Saving…" : "Save changes"}
-        </Button>
-      ) : (
-        <p className="text-small text-neutral-400">Your role doesn't allow editing project settings.</p>
-      )}
-    </form>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <Field label="Project name">
+              <Input className="w-full" value={name} onChange={(e) => setName(e.target.value)} disabled={!canUpdate} />
+            </Field>
+            <Field label="Status">
+              <Select className="w-full" value={status} onChange={(e) => setStatus(e.target.value)} disabled={!canUpdate}>
+                {PROJECT_STATUSES.map((s) => (
+                  <option key={s} value={s}>{s}</option>
+                ))}
+              </Select>
+            </Field>
+            <Field label="Start date">
+              <Input type="date" className="w-full" value={startDate} onChange={(e) => setStartDate(e.target.value)} disabled={!canUpdate} />
+            </Field>
+            <Field label="End date">
+              <Input type="date" className="w-full" value={endDate} onChange={(e) => setEndDate(e.target.value)} disabled={!canUpdate} />
+            </Field>
+          </div>
+        </section>
+
+        {/* Budget */}
+        <section className="rounded-md border border-neutral-300 bg-neutral-50 p-5">
+          <div className="mb-4 flex flex-wrap items-baseline justify-between gap-2 border-b border-neutral-200 pb-3">
+            <div>
+              <h2 className="font-heading text-h3 font-semibold text-neutral-950">Budget</h2>
+              <p className="mt-0.5 text-caption text-neutral-500">Manual entry — no finance integration</p>
+            </div>
+            {overBudget && <Badge color="danger">Over budget</Badge>}
+          </div>
+
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <Field label="Allocated ($)">
+              <Input
+                type="number"
+                min="0"
+                step="0.01"
+                className="w-full"
+                value={budgetAllocated}
+                onChange={(e) => setBudgetAllocated(e.target.value)}
+                disabled={!canUpdateBudget}
+                placeholder="Not set"
+              />
+            </Field>
+            <Field label="Spent ($)">
+              <Input
+                type="number"
+                min="0"
+                step="0.01"
+                className="w-full"
+                value={budgetSpent}
+                onChange={(e) => setBudgetSpent(e.target.value)}
+                disabled={!canUpdateBudget}
+                placeholder="Not set"
+              />
+            </Field>
+          </div>
+
+          {budgetAllocated && Number(budgetAllocated) > 0 && (
+            <div className="mt-4">
+              <div className="h-2 w-full overflow-hidden rounded-full bg-neutral-200">
+                <div
+                  className={`h-full rounded-full ${overBudget ? "bg-danger-600" : "bg-primary-600"}`}
+                  style={{ width: `${budgetPct}%` }}
+                />
+              </div>
+              <p className="mt-1 text-caption text-neutral-500">{budgetPct}% used</p>
+            </div>
+          )}
+        </section>
+
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <p className="text-caption text-neutral-400">Org: {orgId}</p>
+          {(canUpdate || canUpdateBudget) ? (
+            <Button type="submit" disabled={saving}>
+              {saving ? "Saving…" : "Save changes"}
+            </Button>
+          ) : (
+            <p className="text-caption text-neutral-400">Your role doesn&apos;t allow editing project settings.</p>
+          )}
+        </div>
+      </form>
 
       {orgId && <PortalAccessSection projectId={project.id} orgId={orgId} />}
+
+      {/* Danger zone */}
+      {canUpdate && (
+        <section className="rounded-md border border-danger-100 bg-neutral-50 p-5">
+          <div className="mb-4 border-b border-neutral-200 pb-3">
+            <h2 className="font-heading text-h3 font-semibold text-danger-600">Danger zone</h2>
+            <p className="mt-0.5 text-caption text-neutral-500">Reversible actions for a project you&apos;re done with</p>
+          </div>
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div className="min-w-0 flex-1">
+              <p className="text-body-medium font-medium text-neutral-950">Archive project</p>
+              <p className="text-small text-neutral-600">
+                Hides from the active projects list. Data is preserved and can be restored by changing status back to Active.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={archiveProject}
+              disabled={archiving || status === "archived"}
+              className="rounded-md border border-danger-600 px-3 py-1.5 text-small font-medium text-danger-600 hover:bg-danger-100 disabled:opacity-60"
+            >
+              {archiving ? "Archiving…" : status === "archived" ? "Already archived" : "Archive project"}
+            </button>
+          </div>
+        </section>
+      )}
     </div>
   );
 }
