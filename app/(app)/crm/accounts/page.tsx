@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/Button";
 import { Modal } from "@/components/ui/Modal";
 import { Input, Select, Field } from "@/components/ui/Input";
 import { AccountTypeBadge, AccountStatusBadge } from "@/components/ui/Badge";
+import { Avatar, ViewIconLink } from "@/components/ui/Avatar";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/Table";
 import { Empty, EmptyHeader, EmptyTitle, EmptyDescription } from "@/components/ui/Empty";
 import { ACCOUNT_TYPES, ACCOUNT_STATUSES } from "@/lib/constants";
@@ -166,39 +167,52 @@ export default function AccountsPage() {
           </EmptyHeader>
         </Empty>
       ) : (
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Name</TableHead>
-              <TableHead>Industry</TableHead>
-              <TableHead>Type</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Contacts</TableHead>
-              <TableHead>Annual Revenue</TableHead>
-              <TableHead>Owner</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {accounts.map((a) => (
-              <TableRow key={a.id} className="cursor-pointer" onClick={() => router.push(`/crm/accounts/${a.id}`)}>
-                <TableCell>
-                  <p className="font-medium text-neutral-950">{a.name}</p>
-                  {a.website && <p className="text-caption text-neutral-500">{a.website}</p>}
-                </TableCell>
-                <TableCell>{a.industry ?? "—"}</TableCell>
-                <TableCell>
-                  <AccountTypeBadge type={a.type} />
-                </TableCell>
-                <TableCell>
-                  <AccountStatusBadge status={a.status} />
-                </TableCell>
-                <TableCell>{contactCount(a.id)}</TableCell>
-                <TableCell>{a.annualRevenue !== null ? `${a.currency} ${a.annualRevenue.toLocaleString()}` : "—"}</TableCell>
-                <TableCell>{employeeName(a.ownerId)}</TableCell>
+        <div className="overflow-x-auto rounded-md border border-neutral-300">
+          <Table>
+            <TableHeader>
+              <TableRow className="bg-neutral-100 text-caption font-medium uppercase tracking-wide text-neutral-500">
+                <TableHead>Name</TableHead>
+                <TableHead>Industry</TableHead>
+                <TableHead>Type</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Contacts</TableHead>
+                <TableHead>Annual Revenue</TableHead>
+                <TableHead>Owner</TableHead>
+                <TableHead />
               </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+            </TableHeader>
+            <TableBody className="bg-neutral-50">
+              {accounts.map((a) => (
+                <TableRow key={a.id} className="cursor-pointer" onClick={() => router.push(`/crm/accounts/${a.id}`)}>
+                  <TableCell>
+                    <div className="flex items-center gap-3">
+                      <Avatar name={a.name} />
+                      <div className="min-w-0">
+                        <p className="truncate font-medium text-neutral-950">{a.name}</p>
+                        {a.website && <p className="truncate text-small text-neutral-600">{a.website}</p>}
+                      </div>
+                    </div>
+                  </TableCell>
+                  <TableCell>{a.industry ?? "—"}</TableCell>
+                  <TableCell>
+                    <AccountTypeBadge type={a.type} />
+                  </TableCell>
+                  <TableCell>
+                    <AccountStatusBadge status={a.status} />
+                  </TableCell>
+                  <TableCell>{contactCount(a.id)}</TableCell>
+                  <TableCell>{a.annualRevenue !== null ? `${a.currency} ${a.annualRevenue.toLocaleString()}` : "—"}</TableCell>
+                  <TableCell>{employeeName(a.ownerId)}</TableCell>
+                  <TableCell onClick={(e) => e.stopPropagation()}>
+                    <div className="flex items-center justify-end gap-1">
+                      <ViewIconLink href={`/crm/accounts/${a.id}`} />
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
       )}
 
       {showNew && (
@@ -273,19 +287,19 @@ export function NewAccountModal({
         </Field>
         <div className="grid grid-cols-2 gap-3">
           <Field label="Industry">
-            <Input value={industry} onChange={(e) => setIndustry(e.target.value)} />
+            <Input className="w-full" value={industry} onChange={(e) => setIndustry(e.target.value)} />
           </Field>
           <Field label="Website">
-            <Input value={website} onChange={(e) => setWebsite(e.target.value)} />
+            <Input className="w-full" value={website} onChange={(e) => setWebsite(e.target.value)} />
           </Field>
           <Field label="Phone">
-            <Input value={phone} onChange={(e) => setPhone(e.target.value)} />
+            <Input className="w-full" value={phone} onChange={(e) => setPhone(e.target.value)} />
           </Field>
           <Field label="Email">
-            <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
+            <Input className="w-full" type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
           </Field>
           <Field label="Type">
-            <Select value={type} onChange={(e) => setType(e.target.value)}>
+            <Select className="w-full" value={type} onChange={(e) => setType(e.target.value)}>
               {ACCOUNT_TYPES.map((t) => (
                 <option key={t} value={t}>
                   {t}
@@ -294,7 +308,7 @@ export function NewAccountModal({
             </Select>
           </Field>
           <Field label="Status">
-            <Select value={status} onChange={(e) => setStatus(e.target.value)}>
+            <Select className="w-full" value={status} onChange={(e) => setStatus(e.target.value)}>
               {ACCOUNT_STATUSES.map((s) => (
                 <option key={s} value={s}>
                   {s}
@@ -303,10 +317,10 @@ export function NewAccountModal({
             </Select>
           </Field>
           <Field label="Annual revenue">
-            <Input type="number" value={annualRevenue} onChange={(e) => setAnnualRevenue(e.target.value)} />
+            <Input className="w-full" type="number" value={annualRevenue} onChange={(e) => setAnnualRevenue(e.target.value)} />
           </Field>
           <Field label="Owner">
-            <Select value={ownerId} onChange={(e) => setOwnerId(e.target.value)}>
+            <Select className="w-full" value={ownerId} onChange={(e) => setOwnerId(e.target.value)}>
               <option value="">Unassigned</option>
               {employees.map((e) => (
                 <option key={e.id} value={e.id}>

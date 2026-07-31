@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/Button";
 import { Modal } from "@/components/ui/Modal";
 import { Input, Select, Field } from "@/components/ui/Input";
 import { Badge } from "@/components/ui/Badge";
+import { Avatar, ViewIconLink } from "@/components/ui/Avatar";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/Table";
 import { Empty, EmptyHeader, EmptyTitle, EmptyDescription } from "@/components/ui/Empty";
 import { useToast } from "@/components/ui/Toast";
@@ -263,6 +264,7 @@ export default function DealsPage() {
                         draggable
                         onDragStart={(e) => e.dataTransfer.setData("text/plain", deal.id)}
                         onClick={() => router.push(`/crm/deals/${deal.id}`)}
+                        title={`${deal.name} · ${accountName(deal.accountId)}\n${fmtMoney(deal.value, deal.currency)} · ${deal.probability ?? 0}% probability\nExpected close: ${deal.expectedCloseDate ?? "No date"}\nOwner: ${employeeName(deal.ownerId)}${isStale(deal.stageChangedAt) ? "\nStale — no stage change in a while" : ""}`}
                         className="cursor-pointer rounded-sm border border-neutral-300 bg-neutral-50 p-2 text-body shadow-sm hover:shadow-md"
                       >
                         <p className="font-medium text-neutral-950">{deal.name}</p>
@@ -297,45 +299,58 @@ export default function DealsPage() {
           })}
         </div>
       ) : view === "table" ? (
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead onClick={() => toggleSort("name")} className="cursor-pointer">
-                Deal
-              </TableHead>
-              <TableHead onClick={() => toggleSort("value")} className="cursor-pointer">
-                Value
-              </TableHead>
-              <TableHead>Stage</TableHead>
-              <TableHead>Probability</TableHead>
-              <TableHead onClick={() => toggleSort("expectedCloseDate")} className="cursor-pointer">
-                Expected Close
-              </TableHead>
-              <TableHead>Days in Stage</TableHead>
-              <TableHead>Owner</TableHead>
-              <TableHead>Next Step</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {sortedDeals().map((deal) => (
-              <TableRow key={deal.id} className="cursor-pointer" onClick={() => router.push(`/crm/deals/${deal.id}`)}>
-                <TableCell>
-                  <p className="font-medium text-neutral-950">{deal.name}</p>
-                  <p className="text-caption text-neutral-500">{accountName(deal.accountId)}</p>
-                </TableCell>
-                <TableCell>{fmtMoney(deal.value, deal.currency)}</TableCell>
-                <TableCell>
-                  <Badge color={STAGE_BADGE_COLOR[deal.stage] ?? "neutral"}>{STAGE_LABEL[deal.stage] ?? deal.stage}</Badge>
-                </TableCell>
-                <TableCell>{deal.probability ?? 0}%</TableCell>
-                <TableCell>{deal.expectedCloseDate ?? "—"}</TableCell>
-                <TableCell>{daysInStage(deal.stageChangedAt)}d</TableCell>
-                <TableCell>{employeeName(deal.ownerId)}</TableCell>
-                <TableCell className="max-w-[160px] truncate">{deal.nextStep ?? "—"}</TableCell>
+        <div className="overflow-x-auto rounded-md border border-neutral-300">
+          <Table>
+            <TableHeader>
+              <TableRow className="bg-neutral-100 text-caption font-medium uppercase tracking-wide text-neutral-500">
+                <TableHead onClick={() => toggleSort("name")} className="cursor-pointer">
+                  Deal
+                </TableHead>
+                <TableHead onClick={() => toggleSort("value")} className="cursor-pointer">
+                  Value
+                </TableHead>
+                <TableHead>Stage</TableHead>
+                <TableHead>Probability</TableHead>
+                <TableHead onClick={() => toggleSort("expectedCloseDate")} className="cursor-pointer">
+                  Expected Close
+                </TableHead>
+                <TableHead>Days in Stage</TableHead>
+                <TableHead>Owner</TableHead>
+                <TableHead>Next Step</TableHead>
+                <TableHead />
               </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+            </TableHeader>
+            <TableBody className="bg-neutral-50">
+              {sortedDeals().map((deal) => (
+                <TableRow key={deal.id} className="cursor-pointer" onClick={() => router.push(`/crm/deals/${deal.id}`)}>
+                  <TableCell>
+                    <div className="flex items-center gap-3">
+                      <Avatar name={deal.name} />
+                      <div className="min-w-0">
+                        <p className="truncate font-medium text-neutral-950">{deal.name}</p>
+                        <p className="truncate text-small text-neutral-600">{accountName(deal.accountId)}</p>
+                      </div>
+                    </div>
+                  </TableCell>
+                  <TableCell>{fmtMoney(deal.value, deal.currency)}</TableCell>
+                  <TableCell>
+                    <Badge color={STAGE_BADGE_COLOR[deal.stage] ?? "neutral"}>{STAGE_LABEL[deal.stage] ?? deal.stage}</Badge>
+                  </TableCell>
+                  <TableCell>{deal.probability ?? 0}%</TableCell>
+                  <TableCell>{deal.expectedCloseDate ?? "—"}</TableCell>
+                  <TableCell>{daysInStage(deal.stageChangedAt)}d</TableCell>
+                  <TableCell>{employeeName(deal.ownerId)}</TableCell>
+                  <TableCell className="max-w-[160px] truncate">{deal.nextStep ?? "—"}</TableCell>
+                  <TableCell onClick={(e) => e.stopPropagation()}>
+                    <div className="flex items-center justify-end gap-1">
+                      <ViewIconLink href={`/crm/deals/${deal.id}`} />
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
       ) : (
         <ForecastView deals={deals} stats={stats} />
       )}
@@ -475,11 +490,11 @@ export function NewDealModal({
       <h2 className="text-h3 font-semibold text-neutral-950">New Deal</h2>
       <div className="mt-4 space-y-3">
         <Field label="Deal name">
-          <Input value={name} onChange={(e) => setName(e.target.value)} />
+          <Input className="w-full" value={name} onChange={(e) => setName(e.target.value)} />
         </Field>
         {!defaults.accountId && (
           <Field label="Account">
-            <Select value={accountId} onChange={(e) => setAccountId(e.target.value)}>
+            <Select className="w-full" value={accountId} onChange={(e) => setAccountId(e.target.value)}>
               <option value="">No account</option>
               {accounts.map((a) => (
                 <option key={a.id} value={a.id}>
@@ -490,7 +505,7 @@ export function NewDealModal({
           </Field>
         )}
         <Field label="Primary contact">
-          <Select value={contactId} onChange={(e) => setContactId(e.target.value)}>
+          <Select className="w-full" value={contactId} onChange={(e) => setContactId(e.target.value)}>
             <option value="">No contact</option>
             {filteredContacts.map((c) => (
               <option key={c.id} value={c.id}>
@@ -501,17 +516,17 @@ export function NewDealModal({
         </Field>
         <div className="grid grid-cols-2 gap-3">
           <Field label="Value">
-            <Input type="number" value={value} onChange={(e) => setValue(e.target.value)} />
+            <Input className="w-full" type="number" value={value} onChange={(e) => setValue(e.target.value)} />
           </Field>
           <Field label="Currency">
-            <Input value={currency} onChange={(e) => setCurrency(e.target.value)} />
+            <Input className="w-full" value={currency} onChange={(e) => setCurrency(e.target.value)} />
           </Field>
         </div>
         <Field label="Expected close date">
-          <Input type="date" value={expectedCloseDate} onChange={(e) => setExpectedCloseDate(e.target.value)} />
+          <Input className="w-full" type="date" value={expectedCloseDate} onChange={(e) => setExpectedCloseDate(e.target.value)} />
         </Field>
         <Field label="Owner">
-          <Select value={ownerId} onChange={(e) => setOwnerId(e.target.value)}>
+          <Select className="w-full" value={ownerId} onChange={(e) => setOwnerId(e.target.value)}>
             <option value="">Unassigned</option>
             {employees.map((e) => (
               <option key={e.id} value={e.id}>

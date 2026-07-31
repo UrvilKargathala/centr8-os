@@ -282,11 +282,11 @@ function NewCampaignModal({
       <h2 className="text-h3 font-semibold text-neutral-950">New Campaign</h2>
       <div className="mt-4 space-y-3">
         <Field label="Campaign name">
-          <Input value={name} onChange={(e) => setName(e.target.value)} />
+          <Input className="w-full" value={name} onChange={(e) => setName(e.target.value)} />
         </Field>
         <div className="grid grid-cols-2 gap-3">
           <Field label="Type">
-            <Select value={type} onChange={(e) => setType(e.target.value)}>
+            <Select className="w-full" value={type} onChange={(e) => setType(e.target.value)}>
               {CAMPAIGN_TYPES.map((t) => (
                 <option key={t} value={t}>
                   {humanize(t)}
@@ -295,7 +295,7 @@ function NewCampaignModal({
             </Select>
           </Field>
           <Field label="Status">
-            <Select value={status} onChange={(e) => setStatus(e.target.value)}>
+            <Select className="w-full" value={status} onChange={(e) => setStatus(e.target.value)}>
               {CAMPAIGN_STATUSES.map((s) => (
                 <option key={s} value={s}>
                   {humanize(s)}
@@ -305,29 +305,29 @@ function NewCampaignModal({
           </Field>
         </div>
         <Field label="Description">
-          <Textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={2} />
+          <Textarea className="w-full" value={description} onChange={(e) => setDescription(e.target.value)} rows={2} />
         </Field>
         <div className="grid grid-cols-2 gap-3">
           <Field label="Start date">
-            <Input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
+            <Input className="w-full" type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
           </Field>
           <Field label="End date">
-            <Input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} />
+            <Input className="w-full" type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} />
           </Field>
         </div>
         <div className="grid grid-cols-2 gap-3">
           <Field label="Budget allocated">
-            <Input type="number" value={budgetAllocated} onChange={(e) => setBudgetAllocated(e.target.value)} />
+            <Input className="w-full" type="number" value={budgetAllocated} onChange={(e) => setBudgetAllocated(e.target.value)} />
           </Field>
           <Field label="Currency">
-            <Input value={currency} onChange={(e) => setCurrency(e.target.value)} />
+            <Input className="w-full" value={currency} onChange={(e) => setCurrency(e.target.value)} />
           </Field>
         </div>
         <Field label="Target audience">
-          <Input value={targetAudience} onChange={(e) => setTargetAudience(e.target.value)} />
+          <Input className="w-full" value={targetAudience} onChange={(e) => setTargetAudience(e.target.value)} />
         </Field>
         <Field label="Channel">
-          <Select value={channel} onChange={(e) => setChannel(e.target.value)}>
+          <Select className="w-full" value={channel} onChange={(e) => setChannel(e.target.value)}>
             {CAMPAIGN_CHANNELS.map((c) => (
               <option key={c} value={c}>
                 {humanize(c)}
@@ -336,7 +336,7 @@ function NewCampaignModal({
           </Select>
         </Field>
         <Field label="Owner">
-          <Select value={ownerId} onChange={(e) => setOwnerId(e.target.value)}>
+          <Select className="w-full" value={ownerId} onChange={(e) => setOwnerId(e.target.value)}>
             <option value="">Unassigned</option>
             {employees.map((e) => (
               <option key={e.id} value={e.id}>

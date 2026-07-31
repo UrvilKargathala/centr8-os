@@ -169,22 +169,22 @@ export default function AccountDetailPage() {
         <Card>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <Field label="Name">
-              <Input value={editForm.name} disabled={!canUpdate} onChange={(e) => setEditForm({ ...editForm, name: e.target.value })} />
+              <Input className="w-full" value={editForm.name} disabled={!canUpdate} onChange={(e) => setEditForm({ ...editForm, name: e.target.value })} />
             </Field>
             <Field label="Industry">
-              <Input value={editForm.industry ?? ""} disabled={!canUpdate} onChange={(e) => setEditForm({ ...editForm, industry: e.target.value })} />
+              <Input className="w-full" value={editForm.industry ?? ""} disabled={!canUpdate} onChange={(e) => setEditForm({ ...editForm, industry: e.target.value })} />
             </Field>
             <Field label="Website">
-              <Input value={editForm.website ?? ""} disabled={!canUpdate} onChange={(e) => setEditForm({ ...editForm, website: e.target.value })} />
+              <Input className="w-full" value={editForm.website ?? ""} disabled={!canUpdate} onChange={(e) => setEditForm({ ...editForm, website: e.target.value })} />
             </Field>
             <Field label="Phone">
-              <Input value={editForm.phone ?? ""} disabled={!canUpdate} onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })} />
+              <Input className="w-full" value={editForm.phone ?? ""} disabled={!canUpdate} onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })} />
             </Field>
             <Field label="Email">
-              <Input value={editForm.email ?? ""} disabled={!canUpdate} onChange={(e) => setEditForm({ ...editForm, email: e.target.value })} />
+              <Input className="w-full" value={editForm.email ?? ""} disabled={!canUpdate} onChange={(e) => setEditForm({ ...editForm, email: e.target.value })} />
             </Field>
             <Field label="Type">
-              <Select value={editForm.type} disabled={!canUpdate} onChange={(e) => setEditForm({ ...editForm, type: e.target.value })}>
+              <Select className="w-full" value={editForm.type} disabled={!canUpdate} onChange={(e) => setEditForm({ ...editForm, type: e.target.value })}>
                 {ACCOUNT_TYPES.map((t) => (
                   <option key={t} value={t}>
                     {t}
@@ -193,7 +193,7 @@ export default function AccountDetailPage() {
               </Select>
             </Field>
             <Field label="Status">
-              <Select value={editForm.status} disabled={!canUpdate} onChange={(e) => setEditForm({ ...editForm, status: e.target.value })}>
+              <Select className="w-full" value={editForm.status} disabled={!canUpdate} onChange={(e) => setEditForm({ ...editForm, status: e.target.value })}>
                 {ACCOUNT_STATUSES.map((s) => (
                   <option key={s} value={s}>
                     {s}
@@ -203,6 +203,7 @@ export default function AccountDetailPage() {
             </Field>
             <Field label="Annual Revenue">
               <Input
+                className="w-full"
                 type="number"
                 value={editForm.annualRevenue ?? ""}
                 disabled={!canUpdate}
@@ -210,21 +211,21 @@ export default function AccountDetailPage() {
               />
             </Field>
             <Field label="Address line 1">
-              <Input value={editForm.addressLine1 ?? ""} disabled={!canUpdate} onChange={(e) => setEditForm({ ...editForm, addressLine1: e.target.value })} />
+              <Input className="w-full" value={editForm.addressLine1 ?? ""} disabled={!canUpdate} onChange={(e) => setEditForm({ ...editForm, addressLine1: e.target.value })} />
             </Field>
             <Field label="City">
-              <Input value={editForm.city ?? ""} disabled={!canUpdate} onChange={(e) => setEditForm({ ...editForm, city: e.target.value })} />
+              <Input className="w-full" value={editForm.city ?? ""} disabled={!canUpdate} onChange={(e) => setEditForm({ ...editForm, city: e.target.value })} />
             </Field>
             <Field label="State">
-              <Input value={editForm.state ?? ""} disabled={!canUpdate} onChange={(e) => setEditForm({ ...editForm, state: e.target.value })} />
+              <Input className="w-full" value={editForm.state ?? ""} disabled={!canUpdate} onChange={(e) => setEditForm({ ...editForm, state: e.target.value })} />
             </Field>
             <Field label="Postal code">
-              <Input value={editForm.postalCode ?? ""} disabled={!canUpdate} onChange={(e) => setEditForm({ ...editForm, postalCode: e.target.value })} />
+              <Input className="w-full" value={editForm.postalCode ?? ""} disabled={!canUpdate} onChange={(e) => setEditForm({ ...editForm, postalCode: e.target.value })} />
             </Field>
           </div>
           <div className="mt-3">
             <Field label="Notes">
-              <Textarea value={editForm.notes ?? ""} disabled={!canUpdate} onChange={(e) => setEditForm({ ...editForm, notes: e.target.value })} rows={3} />
+              <Textarea className="w-full" value={editForm.notes ?? ""} disabled={!canUpdate} onChange={(e) => setEditForm({ ...editForm, notes: e.target.value })} rows={3} />
             </Field>
           </div>
           {canUpdate && (
@@ -425,13 +426,13 @@ function QuickAddContactModal({
       <h2 className="text-h3 font-semibold text-neutral-950">Add Contact</h2>
       <div className="mt-4 space-y-3">
         <Field label="Full name">
-          <Input value={fullName} onChange={(e) => setFullName(e.target.value)} />
+          <Input className="w-full" value={fullName} onChange={(e) => setFullName(e.target.value)} />
         </Field>
         <Field label="Email">
-          <Input value={email} onChange={(e) => setEmail(e.target.value)} />
+          <Input className="w-full" value={email} onChange={(e) => setEmail(e.target.value)} />
         </Field>
         <Field label="Job title">
-          <Input value={jobTitle} onChange={(e) => setJobTitle(e.target.value)} />
+          <Input className="w-full" value={jobTitle} onChange={(e) => setJobTitle(e.target.value)} />
         </Field>
         {error && <p className="text-small text-danger-600">{error}</p>}
         <div className="flex gap-2 pt-2">

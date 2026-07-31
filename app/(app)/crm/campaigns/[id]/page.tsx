@@ -232,11 +232,11 @@ export default function CampaignDetailPage() {
           {editing && canUpdate && editForm ? (
             <div className="space-y-3">
               <Field label="Name">
-                <Input value={editForm.name} onChange={(e) => setEditForm({ ...editForm, name: e.target.value })} />
+                <Input className="w-full" value={editForm.name} onChange={(e) => setEditForm({ ...editForm, name: e.target.value })} />
               </Field>
               <div className="grid grid-cols-2 gap-3">
                 <Field label="Type">
-                  <Select value={editForm.type ?? "other"} onChange={(e) => setEditForm({ ...editForm, type: e.target.value })}>
+                  <Select className="w-full" value={editForm.type ?? "other"} onChange={(e) => setEditForm({ ...editForm, type: e.target.value })}>
                     {CAMPAIGN_TYPES.map((t) => (
                       <option key={t} value={t}>
                         {humanize(t)}
@@ -245,7 +245,7 @@ export default function CampaignDetailPage() {
                   </Select>
                 </Field>
                 <Field label="Status">
-                  <Select value={editForm.status} onChange={(e) => setEditForm({ ...editForm, status: e.target.value })}>
+                  <Select className="w-full" value={editForm.status} onChange={(e) => setEditForm({ ...editForm, status: e.target.value })}>
                     {CAMPAIGN_STATUSES.map((s) => (
                       <option key={s} value={s}>
                         {humanize(s)}
@@ -255,14 +255,14 @@ export default function CampaignDetailPage() {
                 </Field>
               </div>
               <Field label="Description">
-                <Textarea value={editForm.description ?? ""} onChange={(e) => setEditForm({ ...editForm, description: e.target.value })} rows={2} />
+                <Textarea className="w-full" value={editForm.description ?? ""} onChange={(e) => setEditForm({ ...editForm, description: e.target.value })} rows={2} />
               </Field>
               <div className="grid grid-cols-2 gap-3">
                 <Field label="Start date">
-                  <Input type="date" value={editForm.startDate ?? ""} onChange={(e) => setEditForm({ ...editForm, startDate: e.target.value })} />
+                  <Input className="w-full" type="date" value={editForm.startDate ?? ""} onChange={(e) => setEditForm({ ...editForm, startDate: e.target.value })} />
                 </Field>
                 <Field label="End date">
-                  <Input type="date" value={editForm.endDate ?? ""} onChange={(e) => setEditForm({ ...editForm, endDate: e.target.value })} />
+                  <Input className="w-full" type="date" value={editForm.endDate ?? ""} onChange={(e) => setEditForm({ ...editForm, endDate: e.target.value })} />
                 </Field>
               </div>
               <div className="grid grid-cols-3 gap-3">
@@ -281,14 +281,14 @@ export default function CampaignDetailPage() {
                   />
                 </Field>
                 <Field label="Currency">
-                  <Input value={editForm.currency} onChange={(e) => setEditForm({ ...editForm, currency: e.target.value })} />
+                  <Input className="w-full" value={editForm.currency} onChange={(e) => setEditForm({ ...editForm, currency: e.target.value })} />
                 </Field>
               </div>
               <Field label="Target audience">
-                <Input value={editForm.targetAudience ?? ""} onChange={(e) => setEditForm({ ...editForm, targetAudience: e.target.value })} />
+                <Input className="w-full" value={editForm.targetAudience ?? ""} onChange={(e) => setEditForm({ ...editForm, targetAudience: e.target.value })} />
               </Field>
               <Field label="Channel">
-                <Select value={editForm.channel ?? "other"} onChange={(e) => setEditForm({ ...editForm, channel: e.target.value })}>
+                <Select className="w-full" value={editForm.channel ?? "other"} onChange={(e) => setEditForm({ ...editForm, channel: e.target.value })}>
                   {CAMPAIGN_CHANNELS.map((c) => (
                     <option key={c} value={c}>
                       {humanize(c)}
@@ -297,7 +297,7 @@ export default function CampaignDetailPage() {
                 </Select>
               </Field>
               <Field label="Owner">
-                <Select value={editForm.ownerId ?? ""} onChange={(e) => setEditForm({ ...editForm, ownerId: e.target.value || null })}>
+                <Select className="w-full" value={editForm.ownerId ?? ""} onChange={(e) => setEditForm({ ...editForm, ownerId: e.target.value || null })}>
                   <option value="">Unassigned</option>
                   {employees.map((e) => (
                     <option key={e.id} value={e.id}>
@@ -307,7 +307,7 @@ export default function CampaignDetailPage() {
                 </Select>
               </Field>
               <Field label="Notes">
-                <Textarea value={editForm.notes ?? ""} onChange={(e) => setEditForm({ ...editForm, notes: e.target.value })} rows={2} />
+                <Textarea className="w-full" value={editForm.notes ?? ""} onChange={(e) => setEditForm({ ...editForm, notes: e.target.value })} rows={2} />
               </Field>
               <Button onClick={saveOverview} disabled={saving}>
                 {saving ? "Saving…" : "Save"}

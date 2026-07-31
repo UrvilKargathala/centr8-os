@@ -286,10 +286,11 @@ export default function DealDetailPage() {
         <Card>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <Field label="Name">
-              <Input value={editForm.name} disabled={!canUpdate} onChange={(e) => setEditForm({ ...editForm, name: e.target.value })} />
+              <Input className="w-full" value={editForm.name} disabled={!canUpdate} onChange={(e) => setEditForm({ ...editForm, name: e.target.value })} />
             </Field>
             <Field label="Value">
               <Input
+                className="w-full"
                 type="number"
                 value={editForm.value ?? ""}
                 disabled={!canUpdate}
@@ -297,10 +298,11 @@ export default function DealDetailPage() {
               />
             </Field>
             <Field label="Currency">
-              <Input value={editForm.currency} disabled={!canUpdate} onChange={(e) => setEditForm({ ...editForm, currency: e.target.value })} />
+              <Input className="w-full" value={editForm.currency} disabled={!canUpdate} onChange={(e) => setEditForm({ ...editForm, currency: e.target.value })} />
             </Field>
             <Field label="Recurring revenue">
               <Input
+                className="w-full"
                 type="number"
                 value={editForm.recurringRevenue ?? ""}
                 disabled={!canUpdate}
@@ -309,6 +311,7 @@ export default function DealDetailPage() {
             </Field>
             <Field label="Recurring frequency">
               <Input
+                className="w-full"
                 value={editForm.recurringFrequency ?? ""}
                 disabled={!canUpdate}
                 onChange={(e) => setEditForm({ ...editForm, recurringFrequency: e.target.value })}
@@ -316,6 +319,7 @@ export default function DealDetailPage() {
             </Field>
             <Field label="Expected close date">
               <Input
+                className="w-full"
                 type="date"
                 value={editForm.expectedCloseDate ?? ""}
                 disabled={!canUpdate}
@@ -323,12 +327,12 @@ export default function DealDetailPage() {
               />
             </Field>
             <Field label="Source">
-              <Input value={editForm.source ?? ""} disabled={!canUpdate} onChange={(e) => setEditForm({ ...editForm, source: e.target.value })} />
+              <Input className="w-full" value={editForm.source ?? ""} disabled={!canUpdate} onChange={(e) => setEditForm({ ...editForm, source: e.target.value })} />
             </Field>
           </div>
           <div className="mt-3">
             <Field label="Notes">
-              <Textarea value={editForm.notes ?? ""} disabled={!canUpdate} onChange={(e) => setEditForm({ ...editForm, notes: e.target.value })} rows={3} />
+              <Textarea className="w-full" value={editForm.notes ?? ""} disabled={!canUpdate} onChange={(e) => setEditForm({ ...editForm, notes: e.target.value })} rows={3} />
             </Field>
           </div>
           {canUpdate && (
@@ -629,11 +633,11 @@ function CloseModal({
       <div className="mt-4 space-y-3">
         {outcome === "won" ? (
           <Field label="Won notes (optional)">
-            <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={3} />
+            <Textarea className="w-full" value={notes} onChange={(e) => setNotes(e.target.value)} rows={3} />
           </Field>
         ) : (
           <Field label="Lost reason (required)">
-            <Textarea value={lostReason} onChange={(e) => setLostReason(e.target.value)} rows={3} />
+            <Textarea className="w-full" value={lostReason} onChange={(e) => setLostReason(e.target.value)} rows={3} />
           </Field>
         )}
         {error && <p className="text-small text-danger-600">{error}</p>}
@@ -686,7 +690,7 @@ function AssignModal({
       <h2 className="text-h3 font-semibold text-neutral-950">Assign Deal</h2>
       <div className="mt-4 space-y-3">
         <Field label="Owner">
-          <Select value={ownerId} onChange={(e) => setOwnerId(e.target.value)}>
+          <Select className="w-full" value={ownerId} onChange={(e) => setOwnerId(e.target.value)}>
             <option value="">Select owner…</option>
             {employees.map((e) => (
               <option key={e.id} value={e.id}>

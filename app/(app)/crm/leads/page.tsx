@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/Button";
 import { Modal } from "@/components/ui/Modal";
 import { Input, Select, Field, Textarea } from "@/components/ui/Input";
 import { LeadStatusBadge } from "@/components/ui/Badge";
+import { Avatar } from "@/components/ui/Avatar";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/Table";
 import { Empty, EmptyHeader, EmptyTitle, EmptyDescription } from "@/components/ui/Empty";
 import { AiButton, AiSuggestionCard, useAiCall } from "@/components/ui/AiTouchpoint";
@@ -233,37 +234,65 @@ export default function LeadsPage() {
           </EmptyHeader>
         </Empty>
       ) : view === "table" ? (
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Name</TableHead>
-              <TableHead>Email</TableHead>
-              <TableHead>Source</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Score</TableHead>
-              <TableHead>Owner</TableHead>
-              <TableHead>Created</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {leads.map((lead) => (
-              <TableRow key={lead.id} className="cursor-pointer" onClick={() => setSelected(lead)}>
-                <TableCell>
-                  <p className="font-medium text-neutral-950">{lead.fullName}</p>
-                  {lead.companyName && <p className="text-caption text-neutral-500">{lead.companyName}</p>}
-                </TableCell>
-                <TableCell>{lead.email ?? "—"}</TableCell>
-                <TableCell className="capitalize">{lead.source ?? "—"}</TableCell>
-                <TableCell>
-                  <LeadStatusBadge status={lead.status} />
-                </TableCell>
-                <TableCell>{lead.score ?? "—"}</TableCell>
-                <TableCell>{employeeName(lead.ownerId)}</TableCell>
-                <TableCell>{timeAgo(lead.createdAt)}</TableCell>
+        <div className="overflow-x-auto rounded-md border border-neutral-300">
+          <Table>
+            <TableHeader>
+              <TableRow className="bg-neutral-100 text-caption font-medium uppercase tracking-wide text-neutral-500">
+                <TableHead>Name</TableHead>
+                <TableHead>Email</TableHead>
+                <TableHead>Source</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Score</TableHead>
+                <TableHead>Owner</TableHead>
+                <TableHead>Created</TableHead>
+                <TableHead />
               </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+            </TableHeader>
+            <TableBody className="bg-neutral-50">
+              {leads.map((lead) => (
+                <TableRow key={lead.id} className="cursor-pointer" onClick={() => setSelected(lead)}>
+                  <TableCell>
+                    <div className="flex items-center gap-3">
+                      <Avatar name={lead.fullName} />
+                      <div className="min-w-0">
+                        <p className="truncate font-medium text-neutral-950">{lead.fullName}</p>
+                        {lead.companyName && <p className="truncate text-small text-neutral-600">{lead.companyName}</p>}
+                      </div>
+                    </div>
+                  </TableCell>
+                  <TableCell>{lead.email ?? "—"}</TableCell>
+                  <TableCell className="capitalize">{lead.source ?? "—"}</TableCell>
+                  <TableCell>
+                    <LeadStatusBadge status={lead.status} />
+                  </TableCell>
+                  <TableCell>{lead.score ?? "—"}</TableCell>
+                  <TableCell>{employeeName(lead.ownerId)}</TableCell>
+                  <TableCell>{timeAgo(lead.createdAt)}</TableCell>
+                  <TableCell onClick={(e) => e.stopPropagation()}>
+                    <div className="flex items-center justify-end gap-1">
+                      <button
+                        type="button"
+                        onClick={() => setSelected(lead)}
+                        title="View"
+                        aria-label="View"
+                        className="rounded-md p-1.5 text-neutral-600 hover:bg-primary-100 hover:text-primary-700"
+                      >
+                        <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+                          />
+                        </svg>
+                      </button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
       ) : (
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
           {KANBAN_STATUSES.map((s) => (
@@ -374,19 +403,19 @@ function NewLeadModal({ orgId, onClose, onSaved }: { orgId: string; onClose: () 
       <h2 className="text-h3 font-semibold text-neutral-950">New Lead</h2>
       <div className="mt-4 space-y-3">
         <Field label="Full name">
-          <Input value={fullName} onChange={(e) => setFullName(e.target.value)} />
+          <Input className="w-full" value={fullName} onChange={(e) => setFullName(e.target.value)} />
         </Field>
         <Field label="Company">
-          <Input value={companyName} onChange={(e) => setCompanyName(e.target.value)} />
+          <Input className="w-full" value={companyName} onChange={(e) => setCompanyName(e.target.value)} />
         </Field>
         <Field label="Email">
-          <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
+          <Input className="w-full" type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
         </Field>
         <Field label="Phone">
-          <Input value={phone} onChange={(e) => setPhone(e.target.value)} />
+          <Input className="w-full" value={phone} onChange={(e) => setPhone(e.target.value)} />
         </Field>
         <Field label="Source">
-          <Select value={source} onChange={(e) => setSource(e.target.value)}>
+          <Select className="w-full" value={source} onChange={(e) => setSource(e.target.value)}>
             <option value="manual">Manual</option>
             <option value="website">Website</option>
             <option value="referral">Referral</option>
@@ -395,7 +424,7 @@ function NewLeadModal({ orgId, onClose, onSaved }: { orgId: string; onClose: () 
           </Select>
         </Field>
         <Field label="Campaign">
-          <Select value={campaignId} onChange={(e) => setCampaignId(e.target.value)}>
+          <Select className="w-full" value={campaignId} onChange={(e) => setCampaignId(e.target.value)}>
             <option value="">No campaign</option>
             {campaigns.map((c) => (
               <option key={c.id} value={c.id}>
@@ -515,27 +544,27 @@ function LeadDetailModal({
 
       <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
         <Field label="Full name">
-          <Input value={form.fullName} disabled={!canUpdate} onChange={(e) => setForm({ ...form, fullName: e.target.value })} />
+          <Input className="w-full" value={form.fullName} disabled={!canUpdate} onChange={(e) => setForm({ ...form, fullName: e.target.value })} />
         </Field>
         <Field label="Company">
-          <Input value={form.companyName ?? ""} disabled={!canUpdate} onChange={(e) => setForm({ ...form, companyName: e.target.value })} />
+          <Input className="w-full" value={form.companyName ?? ""} disabled={!canUpdate} onChange={(e) => setForm({ ...form, companyName: e.target.value })} />
         </Field>
         <Field label="Email">
-          <Input value={form.email ?? ""} disabled={!canUpdate} onChange={(e) => setForm({ ...form, email: e.target.value })} />
+          <Input className="w-full" value={form.email ?? ""} disabled={!canUpdate} onChange={(e) => setForm({ ...form, email: e.target.value })} />
         </Field>
         <Field label="Phone">
-          <Input value={form.phone ?? ""} disabled={!canUpdate} onChange={(e) => setForm({ ...form, phone: e.target.value })} />
+          <Input className="w-full" value={form.phone ?? ""} disabled={!canUpdate} onChange={(e) => setForm({ ...form, phone: e.target.value })} />
         </Field>
         <Field label="Job title">
-          <Input value={form.jobTitle ?? ""} disabled={!canUpdate} onChange={(e) => setForm({ ...form, jobTitle: e.target.value })} />
+          <Input className="w-full" value={form.jobTitle ?? ""} disabled={!canUpdate} onChange={(e) => setForm({ ...form, jobTitle: e.target.value })} />
         </Field>
         <Field label="Score">
-          <Input type="number" value={form.score ?? ""} disabled={!canUpdate} onChange={(e) => setForm({ ...form, score: e.target.value ? Number(e.target.value) : null })} />
+          <Input className="w-full" type="number" value={form.score ?? ""} disabled={!canUpdate} onChange={(e) => setForm({ ...form, score: e.target.value ? Number(e.target.value) : null })} />
         </Field>
       </div>
       <div className="mt-3">
         <Field label="Notes">
-          <Textarea value={form.notes ?? ""} disabled={!canUpdate} onChange={(e) => setForm({ ...form, notes: e.target.value })} rows={2} />
+          <Textarea className="w-full" value={form.notes ?? ""} disabled={!canUpdate} onChange={(e) => setForm({ ...form, notes: e.target.value })} rows={2} />
         </Field>
       </div>
 
@@ -788,7 +817,7 @@ export function LogActivityForm({
     <div className="mt-3 space-y-2 rounded-md border border-neutral-200 p-3">
       <div className="grid grid-cols-2 gap-2">
         <Field label="Type">
-          <Select value={type} onChange={(e) => setType(e.target.value)}>
+          <Select className="w-full" value={type} onChange={(e) => setType(e.target.value)}>
             {ACTIVITY_TYPES.map((t) => (
               <option key={t} value={t}>
                 {t}
@@ -797,17 +826,17 @@ export function LogActivityForm({
           </Select>
         </Field>
         <Field label="Duration (min)">
-          <Input type="number" value={durationMinutes} onChange={(e) => setDurationMinutes(e.target.value)} />
+          <Input className="w-full" type="number" value={durationMinutes} onChange={(e) => setDurationMinutes(e.target.value)} />
         </Field>
       </div>
       <Field label="Subject">
-        <Input value={subject} onChange={(e) => setSubject(e.target.value)} />
+        <Input className="w-full" value={subject} onChange={(e) => setSubject(e.target.value)} />
       </Field>
       <Field label="Description">
-        <Textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={2} />
+        <Textarea className="w-full" value={description} onChange={(e) => setDescription(e.target.value)} rows={2} />
       </Field>
       <Field label="Outcome">
-        <Input value={outcome} onChange={(e) => setOutcome(e.target.value)} />
+        <Input className="w-full" value={outcome} onChange={(e) => setOutcome(e.target.value)} />
       </Field>
       <Button onClick={log} disabled={saving}>
         {saving ? "Logging…" : "Log Activity"}

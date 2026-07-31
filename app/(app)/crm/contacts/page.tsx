@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/Button";
 import { Modal } from "@/components/ui/Modal";
 import { Input, Select, Field, Textarea } from "@/components/ui/Input";
 import { Badge } from "@/components/ui/Badge";
+import { Avatar } from "@/components/ui/Avatar";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/Table";
 import { Empty, EmptyHeader, EmptyTitle, EmptyDescription } from "@/components/ui/Empty";
 import { AiButton, AiSuggestionCard, useAiCall } from "@/components/ui/AiTouchpoint";
@@ -168,51 +169,80 @@ export default function ContactsPage() {
           </EmptyHeader>
         </Empty>
       ) : (
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Name</TableHead>
-              <TableHead>Email</TableHead>
-              <TableHead>Phone</TableHead>
-              <TableHead>Account</TableHead>
-              <TableHead>Primary</TableHead>
-              <TableHead>Decision Maker</TableHead>
-              <TableHead>Last Contacted</TableHead>
-              <TableHead>Owner</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {contacts.map((c) => (
-              <TableRow key={c.id} className="cursor-pointer" onClick={() => setSelected(c)}>
-                <TableCell>
-                  <p className="font-medium text-neutral-950">{c.fullName}</p>
-                  {c.jobTitle && <p className="text-caption text-neutral-500">{c.jobTitle}</p>}
-                </TableCell>
-                <TableCell>{c.email ?? "—"}</TableCell>
-                <TableCell>{c.phone ?? "—"}</TableCell>
-                <TableCell>
-                  {c.accountId ? (
-                    <Link href={`/crm/accounts/${c.accountId}`} className="text-danger-600 underline" onClick={(e) => e.stopPropagation()}>
-                      {accountName(c.accountId) ?? "View account"}
-                    </Link>
-                  ) : (
-                    <span className="text-neutral-500">No account</span>
-                  )}
-                </TableCell>
-                <TableCell>{c.isPrimaryContact && <Badge color="info">Primary</Badge>}</TableCell>
-                <TableCell>{c.isDecisionMaker && <Badge color="success">Decision Maker</Badge>}</TableCell>
-                <TableCell>{c.lastContactedAt ? timeAgo(c.lastContactedAt) : "Never"}</TableCell>
-                <TableCell>{employeeName(c.ownerId)}</TableCell>
+        <div className="overflow-x-auto rounded-md border border-neutral-300">
+          <Table>
+            <TableHeader>
+              <TableRow className="bg-neutral-100 text-caption font-medium uppercase tracking-wide text-neutral-500">
+                <TableHead>Name</TableHead>
+                <TableHead>Email</TableHead>
+                <TableHead>Phone</TableHead>
+                <TableHead>Account</TableHead>
+                <TableHead>Primary</TableHead>
+                <TableHead>Decision Maker</TableHead>
+                <TableHead>Last Contacted</TableHead>
+                <TableHead>Owner</TableHead>
+                <TableHead />
               </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+            </TableHeader>
+            <TableBody className="bg-neutral-50">
+              {contacts.map((c) => (
+                <TableRow key={c.id} className="cursor-pointer" onClick={() => setSelected(c)}>
+                  <TableCell>
+                    <div className="flex items-center gap-3">
+                      <Avatar name={c.fullName} />
+                      <div className="min-w-0">
+                        <p className="truncate font-medium text-neutral-950">{c.fullName}</p>
+                        {c.jobTitle && <p className="truncate text-small text-neutral-600">{c.jobTitle}</p>}
+                      </div>
+                    </div>
+                  </TableCell>
+                  <TableCell>{c.email ?? "—"}</TableCell>
+                  <TableCell>{c.phone ?? "—"}</TableCell>
+                  <TableCell>
+                    {c.accountId ? (
+                      <Link href={`/crm/accounts/${c.accountId}`} className="text-danger-600 underline" onClick={(e) => e.stopPropagation()}>
+                        {accountName(c.accountId) ?? "View account"}
+                      </Link>
+                    ) : (
+                      <span className="text-neutral-500">No account</span>
+                    )}
+                  </TableCell>
+                  <TableCell>{c.isPrimaryContact && <Badge color="info">Primary</Badge>}</TableCell>
+                  <TableCell>{c.isDecisionMaker && <Badge color="success">Decision Maker</Badge>}</TableCell>
+                  <TableCell>{c.lastContactedAt ? timeAgo(c.lastContactedAt) : "Never"}</TableCell>
+                  <TableCell>{employeeName(c.ownerId)}</TableCell>
+                  <TableCell onClick={(e) => e.stopPropagation()}>
+                    <div className="flex items-center justify-end gap-1">
+                      <button
+                        type="button"
+                        onClick={() => setSelected(c)}
+                        title="View"
+                        aria-label="View"
+                        className="rounded-md p-1.5 text-neutral-600 hover:bg-primary-100 hover:text-primary-700"
+                      >
+                        <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+                          />
+                        </svg>
+                      </button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
       )}
 
       {showNew && (
         <NewContactModal
           orgId={selectedOrgId}
           accounts={accounts}
+          employees={employees}
           onClose={() => setShowNew(false)}
           onSaved={() => {
             setShowNew(false);
@@ -238,18 +268,26 @@ export default function ContactsPage() {
 function NewContactModal({
   orgId,
   accounts,
+  employees,
   onClose,
   onSaved,
 }: {
   orgId: string;
   accounts: Account[];
+  employees: Employee[];
   onClose: () => void;
   onSaved: () => void;
 }) {
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
+  const [mobile, setMobile] = useState("");
+  const [jobTitle, setJobTitle] = useState("");
+  const [department, setDepartment] = useState("");
   const [accountId, setAccountId] = useState("");
+  const [ownerId, setOwnerId] = useState("");
+  const [isPrimaryContact, setIsPrimaryContact] = useState(false);
+  const [isDecisionMaker, setIsDecisionMaker] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -259,7 +297,19 @@ function NewContactModal({
     const res = await fetch("/api/crm/contacts", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ org_id: orgId, full_name: fullName, email: email || null, phone: phone || null, account_id: accountId || null }),
+      body: JSON.stringify({
+        org_id: orgId,
+        full_name: fullName,
+        email: email || null,
+        phone: phone || null,
+        mobile: mobile || null,
+        job_title: jobTitle || null,
+        department: department || null,
+        account_id: accountId || null,
+        owner_id: ownerId || null,
+        is_primary_contact: isPrimaryContact,
+        is_decision_maker: isDecisionMaker,
+      }),
     });
     const body = await res.json();
     setSaving(false);
@@ -272,24 +322,55 @@ function NewContactModal({
       <h2 className="text-h3 font-semibold text-neutral-950">New Contact</h2>
       <div className="mt-4 space-y-3">
         <Field label="Full name">
-          <Input value={fullName} onChange={(e) => setFullName(e.target.value)} />
+          <Input className="w-full" value={fullName} onChange={(e) => setFullName(e.target.value)} />
         </Field>
-        <Field label="Email">
-          <Input value={email} onChange={(e) => setEmail(e.target.value)} />
-        </Field>
-        <Field label="Phone">
-          <Input value={phone} onChange={(e) => setPhone(e.target.value)} />
-        </Field>
-        <Field label="Account">
-          <Select value={accountId} onChange={(e) => setAccountId(e.target.value)}>
-            <option value="">No account</option>
-            {accounts.map((a) => (
-              <option key={a.id} value={a.id}>
-                {a.name}
-              </option>
-            ))}
-          </Select>
-        </Field>
+        <div className="grid grid-cols-2 gap-3">
+          <Field label="Email">
+            <Input className="w-full" type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
+          </Field>
+          <Field label="Phone">
+            <Input className="w-full" value={phone} onChange={(e) => setPhone(e.target.value)} />
+          </Field>
+          <Field label="Mobile">
+            <Input className="w-full" value={mobile} onChange={(e) => setMobile(e.target.value)} />
+          </Field>
+          <Field label="Job title">
+            <Input className="w-full" value={jobTitle} onChange={(e) => setJobTitle(e.target.value)} />
+          </Field>
+          <Field label="Department">
+            <Input className="w-full" value={department} onChange={(e) => setDepartment(e.target.value)} />
+          </Field>
+          <Field label="Account">
+            <Select className="w-full" value={accountId} onChange={(e) => setAccountId(e.target.value)}>
+              <option value="">No account</option>
+              {accounts.map((a) => (
+                <option key={a.id} value={a.id}>
+                  {a.name}
+                </option>
+              ))}
+            </Select>
+          </Field>
+          <Field label="Owner">
+            <Select className="w-full" value={ownerId} onChange={(e) => setOwnerId(e.target.value)}>
+              <option value="">Unassigned</option>
+              {employees.map((e) => (
+                <option key={e.id} value={e.id}>
+                  {e.fullName}
+                </option>
+              ))}
+            </Select>
+          </Field>
+        </div>
+        <div className="flex gap-4">
+          <label className="flex items-center gap-2 text-body text-neutral-950">
+            <input type="checkbox" checked={isPrimaryContact} onChange={(e) => setIsPrimaryContact(e.target.checked)} />
+            Primary contact
+          </label>
+          <label className="flex items-center gap-2 text-body text-neutral-950">
+            <input type="checkbox" checked={isDecisionMaker} onChange={(e) => setIsDecisionMaker(e.target.checked)} />
+            Decision maker
+          </label>
+        </div>
         {error && <p className="text-small text-danger-600">{error}</p>}
         <div className="flex gap-2 pt-2">
           <Button onClick={save} disabled={saving || !fullName}>
@@ -360,21 +441,21 @@ function ContactDetailModal({
 
       <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
         <Field label="Full name">
-          <Input value={form.fullName} disabled={!canUpdate} onChange={(e) => setForm({ ...form, fullName: e.target.value })} />
+          <Input className="w-full" value={form.fullName} disabled={!canUpdate} onChange={(e) => setForm({ ...form, fullName: e.target.value })} />
         </Field>
         <Field label="Job title">
-          <Input value={form.jobTitle ?? ""} disabled={!canUpdate} onChange={(e) => setForm({ ...form, jobTitle: e.target.value })} />
+          <Input className="w-full" value={form.jobTitle ?? ""} disabled={!canUpdate} onChange={(e) => setForm({ ...form, jobTitle: e.target.value })} />
         </Field>
         <Field label="Email">
-          <Input value={form.email ?? ""} disabled={!canUpdate} onChange={(e) => setForm({ ...form, email: e.target.value })} />
+          <Input className="w-full" value={form.email ?? ""} disabled={!canUpdate} onChange={(e) => setForm({ ...form, email: e.target.value })} />
         </Field>
         <Field label="Phone">
-          <Input value={form.phone ?? ""} disabled={!canUpdate} onChange={(e) => setForm({ ...form, phone: e.target.value })} />
+          <Input className="w-full" value={form.phone ?? ""} disabled={!canUpdate} onChange={(e) => setForm({ ...form, phone: e.target.value })} />
         </Field>
       </div>
       <div className="mt-3">
         <Field label="Notes">
-          <Textarea value={form.notes ?? ""} disabled={!canUpdate} onChange={(e) => setForm({ ...form, notes: e.target.value })} rows={2} />
+          <Textarea className="w-full" value={form.notes ?? ""} disabled={!canUpdate} onChange={(e) => setForm({ ...form, notes: e.target.value })} rows={2} />
         </Field>
       </div>
 
