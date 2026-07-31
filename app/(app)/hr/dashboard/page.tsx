@@ -149,7 +149,7 @@ export default function HrDashboardPage() {
               .filter((e) => e.employmentStatus === "onboarding")
               .map((e) => (
                 <li key={e.id} className="flex items-center justify-between gap-2 px-4 py-3 text-body">
-                  <a href={`/hr/directory/${e.id}`} className="text-neutral-950 hover:underline">
+                  <a href={`/hr/employees/${e.id}`} className="text-neutral-950 hover:underline">
                     {e.fullName}
                   </a>
                   <EmploymentStatusBadge status={e.employmentStatus} />

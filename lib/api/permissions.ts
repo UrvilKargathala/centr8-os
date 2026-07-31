@@ -42,7 +42,20 @@ export type ResourceType =
   | "forecast"
   | "campaign"
   | "integration"
-  | "task_comment";
+  | "task_comment"
+  // HR Batch 1 — onboarding templates/workflows aren't shaped like "read
+  // an onboarding row" (there's no single onboarding entity a role reads);
+  // they're "configure a template" / "assign a template to someone" /
+  // "check off a step", so this gets its own resourceType with the
+  // dedicated actions below rather than overloading employee:*.
+  | "onboarding"
+  // HR Batch 2 Part 3 — payslip_records lifecycle, kept separate from
+  // "compensation" (see db/schema.ts's resourceTypeEnum comment).
+  | "payroll"
+  // HR Batch 3 — Performance Reviews & OKRs hybrid self+manager model,
+  // split out of the old "performance" (see db/schema.ts's comment).
+  | "review"
+  | "okr";
 
 export type PermissionAction =
   | "create"
@@ -54,7 +67,86 @@ export type PermissionAction =
   | "terminate"
   | "record"
   | "request"
-  | "view_sensitive";
+  | "view_sensitive"
+  // HR Batch 1
+  | "view_full"
+  | "assign"
+  | "complete_step"
+  // HR Batch 2 — attendance self-service (replaces the old "record")
+  | "record_own"
+  | "view_own"
+  | "view_all"
+  | "edit_any"
+  // HR Batch 2 — leave self-service (replaces the old "request")
+  | "request_own"
+  | "manage_balances"
+  // HR Batch 2 Part 3 — payroll run lifecycle, admin-only by design.
+  | "generate"
+  | "finalize"
+  | "mark_paid"
+  // HR Batch 3 — Performance Reviews. view_own/view_all reused from
+  // Attendance/Leave above.
+  | "submit_self"
+  | "submit_manager"
+  | "view_team"
+  // HR Batch 3 — OKRs. view_own/view_team/view_all reused.
+  | "create_own"
+  | "create_team"
+  // HR Batch 3 — Recruitment (finer-grained than the old flat create/update).
+  | "create_job"
+  | "manage_candidates"
+  | "schedule_interview"
+  | "submit_feedback"
+  // HR Batch 4 — HR Cases, Training, Surveys.
+  | "manage"
+  | "enroll_own"
+  | "view_all_progress"
+  | "respond"
+  | "view_results"
+  // CRM Batch 1 ("assign" reused from HR Batch 1)
+  | "convert"
+  // CRM Batch 2
+  | "close"
+  // CRM Batch 3
+  | "set_target";
+
+// Non-throwing check — for response shaping (e.g. trimming fields to a
+// "basic" subset when the caller lacks a *:view_full grant) rather than
+// gating the request itself. Use requirePermission below for the latter.
+export async function hasPermission(
+  db: OrgScopedDb,
+  userId: string,
+  orgId: string,
+  resourceType: ResourceType,
+  action: PermissionAction,
+): Promise<boolean> {
+  const [membership] = await db
+    .select({ role: orgMemberships.role })
+    .from(orgMemberships)
+    .where(
+      and(
+        eq(orgMemberships.userId, userId),
+        eq(orgMemberships.orgId, orgId),
+        isNull(orgMemberships.deactivatedAt),
+      ),
+    );
+  if (!membership) return false;
+
+  const [grant] = await db
+    .select({ id: permissions.id })
+    .from(permissions)
+    .where(
+      and(
+        or(eq(permissions.orgId, orgId), isNull(permissions.orgId)),
+        eq(permissions.role, membership.role),
+        eq(permissions.resourceType, resourceType),
+        eq(permissions.action, action),
+      ),
+    )
+    .limit(1);
+
+  return Boolean(grant);
+}
 
 // Call inside the same withOrgContext(userId, ...) transaction the mutation
 // itself runs in, right after the target resource's orgId is known.
@@ -80,20 +172,7 @@ export async function requirePermission(
     throw new ApiError(403, "Not a member of this organization");
   }
 
-  const [grant] = await db
-    .select({ id: permissions.id })
-    .from(permissions)
-    .where(
-      and(
-        or(eq(permissions.orgId, orgId), isNull(permissions.orgId)),
-        eq(permissions.role, membership.role),
-        eq(permissions.resourceType, resourceType),
-        eq(permissions.action, action),
-      ),
-    )
-    .limit(1);
-
-  if (!grant) {
+  if (!(await hasPermission(db, userId, orgId, resourceType, action))) {
     throw new ApiError(403, `Role '${membership.role}' cannot ${action} ${resourceType}`);
   }
 }

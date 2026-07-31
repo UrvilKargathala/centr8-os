@@ -72,14 +72,42 @@ const TASK_PRIORITY_COLOR: Record<string, keyof typeof COLOR_CLASSES> = {
 const EMPLOYMENT_STATUS_COLOR: Record<string, keyof typeof COLOR_CLASSES> = {
   active: "success",
   onboarding: "info",
+  on_leave: "warning",
+  notice_period: "warning",
   terminated: "neutral",
 };
 const LEAD_STATUS_COLOR: Record<string, keyof typeof COLOR_CLASSES> = {
-  new: "neutral",
-  contacted: "info",
-  qualified: "warning",
+  new: "info",
+  contacted: "warning",
+  qualified: "success",
   unqualified: "neutral",
   converted: "success",
+  lost: "danger",
+};
+const ACCOUNT_TYPE_COLOR: Record<string, keyof typeof COLOR_CLASSES> = {
+  prospect: "neutral",
+  customer: "success",
+  partner: "info",
+  vendor: "warning",
+  other: "neutral",
+};
+const ACCOUNT_STATUS_COLOR: Record<string, keyof typeof COLOR_CLASSES> = {
+  active: "success",
+  inactive: "neutral",
+  churned: "danger",
+};
+// CRM Batch 2 — deal_stage. Early-pipeline stages read neutral/info, the
+// two pre-close stages warning (getting real, still open), won success,
+// lost danger — same "closer to done reads warmer" progression as
+// TASK_STATUS_COLOR.
+const DEAL_STAGE_COLOR: Record<string, keyof typeof COLOR_CLASSES> = {
+  prospecting: "neutral",
+  discovery: "info",
+  proposal: "info",
+  negotiation: "warning",
+  contract_sent: "warning",
+  won: "success",
+  lost: "danger",
 };
 
 export function ProjectStatusBadge({ status }: { status: string }) {
@@ -99,6 +127,15 @@ export function TaskPriorityBadge({ priority }: { priority: string }) {
 }
 export function LeadStatusBadge({ status }: { status: string }) {
   return <Badge color={LEAD_STATUS_COLOR[status] ?? "neutral"}>{humanize(status)}</Badge>;
+}
+export function AccountTypeBadge({ type }: { type: string }) {
+  return <Badge color={ACCOUNT_TYPE_COLOR[type] ?? "neutral"}>{humanize(type)}</Badge>;
+}
+export function AccountStatusBadge({ status }: { status: string }) {
+  return <Badge color={ACCOUNT_STATUS_COLOR[status] ?? "neutral"}>{humanize(status)}</Badge>;
+}
+export function DealStageBadge({ stage }: { stage: string }) {
+  return <Badge color={DEAL_STAGE_COLOR[stage] ?? "neutral"}>{humanize(stage)}</Badge>;
 }
 
 // Exposed so cards can accent themselves (colored left border) with the

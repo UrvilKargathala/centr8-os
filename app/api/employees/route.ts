@@ -3,7 +3,8 @@ import { and, eq } from "drizzle-orm";
 import { withOrgContext } from "@/db/withOrgContext";
 import { employees } from "@/db/schema";
 import { ApiError, handleApiError, requireUserId } from "@/lib/api/helpers";
-import { requirePermission } from "@/lib/api/permissions";
+import { hasPermission, requirePermission } from "@/lib/api/permissions";
+import { trimEmployeeFields } from "@/lib/api/employees";
 
 export async function GET(req: NextRequest) {
   try {
@@ -15,15 +16,17 @@ export async function GET(req: NextRequest) {
     // UI doesn't need to already know its own employee id.
     const mine = req.nextUrl.searchParams.get("mine") === "true";
 
-    const rows = await withOrgContext(userId, async (db) => {
+    const { rows, canViewFull } = await withOrgContext(userId, async (db) => {
       await requirePermission(db, userId, orgId, "employee", "read");
-      return db
+      const canViewFull = await hasPermission(db, userId, orgId, "employee", "view_full");
+      const rows = await db
         .select()
         .from(employees)
         .where(mine ? and(eq(employees.orgId, orgId), eq(employees.userId, userId)) : eq(employees.orgId, orgId));
+      return { rows, canViewFull };
     });
 
-    return NextResponse.json({ data: rows });
+    return NextResponse.json({ data: rows.map((r) => trimEmployeeFields(r, canViewFull)) });
   } catch (err) {
     return handleApiError(err);
   }

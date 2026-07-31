@@ -11,6 +11,7 @@ import {
   pgTable,
   primaryKey,
   text,
+  time,
   timestamp,
   uniqueIndex,
   uuid,
@@ -506,6 +507,24 @@ export const resourceTypeEnum = pgEnum("resource_type", [
   // Task comments (first collaboration surface). CRUD; delete gated to author
   // or admin in application code, not surfaced as a separate permission.
   "task_comment",
+  // HR Batch 1 — onboarding templates/workflows (see PermissionAction's
+  // "assign"/"complete_step" below for why this isn't folded into "employee").
+  "onboarding",
+  // HR Batch 2 Part 3 — payslip_records lifecycle (generate/finalize/
+  // mark_paid below). Deliberately its own resourceType rather than
+  // folded into "compensation": a role could in principle run payroll
+  // generation without holding compensation:update (editing a person's
+  // salary record) — same reasoning "leave" got its own type instead of
+  // riding on "employee".
+  "payroll",
+  // HR Batch 3 — Performance Reviews & OKRs restructured to a hybrid
+  // self+manager model (distinct from Attendance/Leave's full self-service
+  // and Compensation's zero-self-service — see CLAUDE.md §11a). Split out
+  // of the old "performance" resourceType into two so a role's view/submit
+  // scope for reviews and OKRs can differ (e.g. everyone gets okr:create_own
+  // but review:submit_manager is manager-tier only).
+  "review",
+  "okr",
 ]);
 export const permissionActionEnum = pgEnum("permission_action", [
   "create",
@@ -533,6 +552,74 @@ export const permissionActionEnum = pgEnum("permission_action", [
   // access is HR-admin-grant-only plus the employee's own record, per the
   // prompt's "not even their manager, unless explicitly granted."
   "view_sensitive",
+  // HR Batch 1
+  "view_full",
+  "assign",
+  "complete_step",
+  // HR Batch 2 — Attendance self-service (replaces the old owner/admin-only
+  // "record" action for attendance specifically; see CLAUDE.md §11a for the
+  // reversal of the original no-self-service decision, scoped to this one
+  // module only).
+  "record_own",
+  "view_own",
+  "view_all",
+  "edit_any",
+  // HR Batch 2 — Leave self-service. view_own/view_all are reused from
+  // Attendance above (same "see my own"/"see everyone's" shape); only
+  // request_own and manage_balances are genuinely new actions.
+  "request_own",
+  "manage_balances",
+  // HR Batch 2 Part 3 — payroll run lifecycle. Admin-only by design (see
+  // CLAUDE.md §11a: Payroll & Compensation has zero self-service,
+  // deliberately and permanently, unlike Attendance/Leave).
+  "generate",
+  "finalize",
+  "mark_paid",
+  // HR Batch 3 — Performance Reviews (hybrid self+manager model). view_own/
+  // view_all reused from above; submit_self/submit_manager/view_team are
+  // the genuinely new actions this module needs.
+  "submit_self",
+  "submit_manager",
+  "view_team",
+  // HR Batch 3 — OKRs. view_own/view_all/view_team reused; create_own/
+  // create_team distinguish "anyone can set their own OKRs" from
+  // "team-level OKRs need a manager/HR-admin grant."
+  "create_own",
+  "create_team",
+  // HR Batch 3 — Recruitment. "read" is reused for recruitment:view
+  // (renamed in the permission grid's action, not a new enum value); these
+  // three are genuinely new, finer-grained than the old flat create/update.
+  "create_job",
+  "manage_candidates",
+  "schedule_interview",
+  "submit_feedback",
+  // HR Batch 4 — HR Cases, Training, Surveys. create_own/view_own/view_all
+  // reused from above (self-raise/self-enroll/self-respond vs. HR-admin
+  // oversight, same "full self-service + admin resolution" shape as
+  // Attendance/Leave). "manage" covers case assignment+resolution, course
+  // authoring, and survey authoring — one action per module rather than
+  // three separate "manage_cases"/"manage_courses"/"manage_surveys" enum
+  // values, since each is already scoped by its own resourceType.
+  "manage",
+  "enroll_own",
+  "view_all_progress",
+  "respond",
+  "view_results",
+  // CRM Batch 1 — lead/account/contact "convert" is deliberately separate
+  // from "update": a role can edit a lead's fields without being trusted
+  // to execute the one-way conversion into a new account+contact.
+  // "assign" already exists (HR Batch 1, onboarding template assignment)
+  // and is reused here for lead/account/contact reassignment — same
+  // generic-action-reused-across-resourceTypes shape as view_own/view_all.
+  "convert",
+  // CRM Batch 2 — deal:close is separate from deal:update: closing a deal
+  // (won or lost) has financial/reporting implications, same reasoning as
+  // lead:convert being separate from lead:update.
+  "close",
+  // CRM Batch 3 — forecast:set_target is separate from update/create:
+  // setting quota targets is a manager/admin action distinct from viewing
+  // the (always-computed-live) forecast itself.
+  "set_target",
 ]);
 
 // org_id nullable, same pattern as `templates`: null rows are the built-in
@@ -797,16 +884,45 @@ export const ssoConfigurations = pgTable(
 
 // --- HR: Employee Directory & Onboarding (Prompt 5.1, CLAUDE.md §11a) ---
 
-export const leadStatusEnum = pgEnum("lead_status", ["new", "contacted", "qualified", "unqualified", "converted"]);
-export const dealStageEnum = pgEnum("deal_stage", ["prospecting", "proposal", "negotiation", "won", "lost"]);
+// CRM Batch 1 — "lost" added as a terminal status alongside "converted"
+// (leads.lostReason is only meaningful once this exists).
+export const leadStatusEnum = pgEnum("lead_status", ["new", "contacted", "qualified", "unqualified", "converted", "lost"]);
+// CRM Batch 2 — "discovery" and "contract_sent" added between prospecting
+// and negotiation/won, matching the pipeline's Kanban columns.
+export const dealStageEnum = pgEnum("deal_stage", ["prospecting", "discovery", "proposal", "negotiation", "contract_sent", "won", "lost"]);
 export const activityRelatedTypeEnum = pgEnum("activity_related_type", ["lead", "contact", "account", "deal"]);
-export const activityTypeEnum = pgEnum("activity_type", ["call", "meeting", "task", "note"]);
-export const campaignStatusEnum = pgEnum("campaign_status", ["planned", "active", "completed", "cancelled"]);
+// CRM Batch 1 — "email"/"status_change"/"conversion" added for the
+// richer CRM timeline (conversion specifically logs lead->account/contact).
+export const activityTypeEnum = pgEnum("activity_type", ["call", "meeting", "task", "note", "email", "status_change", "conversion"]);
+// CRM Batch 1 — account type/status. Kept as enums (unlike lead/campaign
+// "source"/"type", which stay free text) since these drive UI badge
+// coloring and KPI bucketing, a closed fixed set rather than open-ended.
+export const accountTypeEnum = pgEnum("account_type", ["prospect", "customer", "partner", "vendor", "other"]);
+export const accountStatusEnum = pgEnum("account_status", ["active", "inactive", "churned"]);
+// CRM Batch 3 — "draft"/"paused" added alongside the pre-existing
+// "planned"/"cancelled" (0 rows existed, kept rather than dropped, same
+// dead-label tolerance as leadStatusEnum's history) so campaigns.status
+// matches the new spec's draft/active/paused/completed vocabulary.
+export const campaignStatusEnum = pgEnum("campaign_status", ["planned", "draft", "active", "paused", "completed", "cancelled"]);
+export const forecastPeriodTypeEnum = pgEnum("forecast_period_type", ["monthly", "quarterly", "annual"]);
 export const integrationProviderEnum = pgEnum("integration_provider", ["slack", "gmail", "zoom"]);
 export const integrationStatusEnum = pgEnum("integration_status", ["connected", "disconnected", "error"]);
 
-export const employmentStatusEnum = pgEnum("employment_status", ["active", "onboarding", "terminated"]);
+export const employmentStatusEnum = pgEnum("employment_status", [
+  "active",
+  "onboarding",
+  "terminated",
+  // HR Batch 1 — added alongside the employees table extension. New values
+  // on an existing enum need their own migration (Postgres can't use a
+  // value in the same transaction that adds it), so these are introduced
+  // in 0068 and used starting 0069, same two-step pattern as every other
+  // enum extension in this file (e.g. "task_comment" on resource_type).
+  "on_leave",
+  "notice_period",
+]);
 export const onboardingStatusEnum = pgEnum("onboarding_status", ["not_started", "in_progress", "complete"]);
+// HR Batch 1 — Employee Directory "Work Info" step.
+export const employmentTypeEnum = pgEnum("employment_type", ["full_time", "part_time", "contract", "intern", "consultant"]);
 
 // user_id is nullable and unreferenced (no FK, same as org_memberships.
 // userId — Neon has no local `auth.users` table to reference) because not
@@ -843,8 +959,30 @@ export const employees = pgTable(
     city: text("city"),
     state: text("state"),
     zipCode: text("zip_code"),
+    // HR Batch 1 (Employee Directory + Onboarding) — extending this table
+    // rather than building a parallel one on `people` (the PM Team
+    // Directory's resourcing entity). Migrating employees -> people would
+    // require retargeting 9 FKs across already-built HR Batch 2-4 modules
+    // (attendance, leave, compensation, performance, recruitment, cases,
+    // training, engagement) — out of scope for this batch, confirmed with
+    // Urvil. `people` stays untouched, PM keeps working exactly as before.
+    employeeCode: text("employee_code"),
+    personalEmail: text("personal_email"),
+    country: text("country").default("India"),
+    location: text("location"),
+    employmentType: employmentTypeEnum("employment_type").notNull().default("full_time"),
+    availableHoursPerWeek: integer("available_hours_per_week").notNull().default(40),
+    roles: jsonb("roles").notNull().default([]),
+    skills: jsonb("skills").notNull().default([]),
+    costRateHourly: numeric("cost_rate_hourly", { precision: 10, scale: 2, mode: "number" }),
+    currency: text("currency").default("INR"),
+    // HR-admin-only field (same "no employee self-service" boundary as
+    // compensation below) — never returned unless the caller has
+    // employee:view_full.
+    notes: text("notes"),
   },
-  () => [
+  (t) => [
+    uniqueIndex("employees_org_code_unique").on(t.orgId, t.employeeCode),
     pgPolicy("employees_isolation", {
       for: "all",
       to: authenticatedRole,
@@ -869,8 +1007,15 @@ export const onboardingWorkflows = pgTable(
       .notNull()
       .references(() => employees.id, { onDelete: "cascade" }),
     templateId: uuid("template_id").references(() => templates.id, { onDelete: "set null" }),
+    // Each step object: { step_id, title, description, category, owner_role,
+    // days_after_start, status: 'pending'|'in_progress'|'completed'|'skipped',
+    // completed_by, completed_at, notes }. Cloned from the template's
+    // structure.steps at assignment time so editing a template later
+    // doesn't retroactively change an in-flight employee's checklist.
     steps: jsonb("steps").notNull().default([]),
     status: onboardingStatusEnum("status").notNull().default("not_started"),
+    startedAt: timestamp("started_at", { withTimezone: true }),
+    completedAt: timestamp("completed_at", { withTimezone: true }),
   },
   () => [
     pgPolicy("onboarding_workflows_isolation", {
@@ -883,15 +1028,41 @@ export const onboardingWorkflows = pgTable(
 ).enableRLS();
 
 
-// --- HR: Attendance, Time Tracking & Leave Management (Prompt 5.2) ---
+// --- HR: Attendance, Time Tracking & Leave Management (Prompt 5.2,
+// restructured for self-service in HR Batch 2 — CLAUDE.md §11a) ---
 
-export const attendanceStatusEnum = pgEnum("attendance_status", ["present", "absent", "half_day", "remote"]);
-export const leaveRequestStatusEnum = pgEnum("leave_request_status", ["pending", "approved", "rejected"]);
+// "present"/"remote" are pre-Batch-2 leftovers — Postgres can't drop enum
+// values without recreating the type, and nothing references them anymore
+// (the 2 rows that used them were deleted in migration 0072), so they're
+// harmless dead labels rather than something worth a type-recreation
+// migration to clean up.
+export const attendanceStatusEnum = pgEnum("attendance_status", [
+  "present",
+  "absent",
+  "half_day",
+  "remote",
+  // HR Batch 2 additions
+  "checked_in",
+  "checked_out",
+  "on_leave",
+  "holiday",
+  "weekend",
+]);
+export const leaveRequestStatusEnum = pgEnum("leave_request_status", [
+  "pending",
+  "approved",
+  "rejected",
+  // HR Batch 2 — self-service cancellation (an employee can withdraw their
+  // own still-pending request).
+  "cancelled",
+]);
 
-// One row per employee per day, created by self-check-in (lib/api/attendance.ts
-// enforces the caller can only ever write their own employees.userId row —
-// there's no admin "record attendance for someone else" path, same
-// self-scoping as leave_requests below).
+// One row per employee per day. HR Batch 2 — self-service: an employee
+// checks themself in/out (lib/api/attendance.ts's requireAttendanceSelfAccess
+// enforces record_own + that employeeId resolves to the caller's own
+// employees.userId row), OR an HR admin with attendance:edit_any creates a
+// manual entry / edits any row (is_manual_entry + manual_entry_reason +
+// edited_by/edited_at trail preserve the distinction — see CLAUDE.md §11a).
 export const attendanceRecords = pgTable(
   "attendance_records",
   {
@@ -902,12 +1073,30 @@ export const attendanceRecords = pgTable(
     employeeId: uuid("employee_id")
       .notNull()
       .references(() => employees.id, { onDelete: "cascade" }),
-    date: date("date").notNull(),
-    checkIn: timestamp("check_in", { withTimezone: true }),
-    checkOut: timestamp("check_out", { withTimezone: true }),
-    status: attendanceStatusEnum("status").notNull().default("present"),
+    workDate: date("work_date").notNull(),
+    checkInTime: timestamp("check_in_time", { withTimezone: true }),
+    checkOutTime: timestamp("check_out_time", { withTimezone: true }),
+    totalMinutes: integer("total_minutes"),
+    status: attendanceStatusEnum("status").notNull().default("checked_in"),
+    checkInNote: text("check_in_note"),
+    checkOutNote: text("check_out_note"),
+    location: text("location"),
+    locationDetail: text("location_detail"),
+    // Captured server-side from request headers at check-in — never trusted
+    // from the client body.
+    ipAddress: text("ip_address"),
+    deviceInfo: text("device_info"),
+    isManualEntry: boolean("is_manual_entry").notNull().default(false),
+    manualEntryReason: text("manual_entry_reason"),
+    // No local FK target for actor ids anywhere in this schema (Neon has no
+    // real auth.users table — Supabase Auth owns that) — same unreferenced-
+    // uuid convention as orgMemberships.userId / compensationRecords.createdByUserId.
+    editedBy: uuid("edited_by"),
+    editedAt: timestamp("edited_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
-  () => [
+  (t) => [
+    uniqueIndex("attendance_records_org_employee_date_unique").on(t.orgId, t.employeeId, t.workDate),
     pgPolicy("attendance_records_isolation", {
       for: "all",
       to: authenticatedRole,
@@ -917,12 +1106,80 @@ export const attendanceRecords = pgTable(
   ],
 ).enableRLS();
 
-// Org-level policy definitions (e.g. "PTO", 15 days/year). accrualRule is
-// jsonb rather than a fixed set of columns — accrual schemes (annual grant,
-// monthly accrual, tenure-based) vary enough that a rigid schema would
-// need a migration per new scheme; today's balance math (lib/api/leave.ts)
-// only reads daysPerYear and treats accrualRule as opaque/display-only
-// until a real accrual engine is needed.
+// One row per org — check-in/out policy config (workday hours, weekend
+// days, late-arrival threshold). Singleton-per-org, so org_id is the PK
+// rather than a separate uuid id, same pattern as sso_configurations.
+export const attendanceSettings = pgTable(
+  "attendance_settings",
+  {
+    orgId: uuid("org_id")
+      .primaryKey()
+      .references(() => organizations.id, { onDelete: "cascade" }),
+    workdayStartTime: time("workday_start_time").notNull().default("09:00"),
+    workdayEndTime: time("workday_end_time").notNull().default("18:00"),
+    workdayHoursTarget: numeric("workday_hours_target", { precision: 4, scale: 2, mode: "number" }).notNull().default(8.0),
+    minHoursForFullDay: numeric("min_hours_for_full_day", { precision: 4, scale: 2, mode: "number" }).notNull().default(7.0),
+    minHoursForHalfDay: numeric("min_hours_for_half_day", { precision: 4, scale: 2, mode: "number" }).notNull().default(4.0),
+    weekendDays: jsonb("weekend_days").notNull().default(["saturday", "sunday"]),
+    requireLocation: boolean("require_location").notNull().default(false),
+    requireNoteOnLateCheckin: boolean("require_note_on_late_checkin").notNull().default(false),
+    lateCheckinThresholdMinutes: integer("late_checkin_threshold_minutes").notNull().default(15),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedBy: uuid("updated_by"),
+  },
+  () => [
+    pgPolicy("attendance_settings_isolation", {
+      for: "all",
+      to: authenticatedRole,
+      using: inUserOrgs,
+      withCheck: inUserOrgs,
+    }),
+  ],
+).enableRLS();
+
+// HR Batch 2 — Leave Management restructured for self-service (CLAUDE.md
+// §11a). Replaces Prompt 5.2's shape in place: leave_policies used to
+// double as "the type" (a policy was just a name + days/year); now a
+// leave_type is the category employees pick from (Annual/Sick/Casual/...)
+// and a leave_policy is the allotment rule attached to it — separated so
+// the same type can have different policies per department/employment
+// type later (applies_to) without duplicating the type's color/approval/
+// paid-ness metadata.
+export const leaveTypes = pgTable(
+  "leave_types",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    orgId: uuid("org_id")
+      .notNull()
+      .references(() => organizations.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    description: text("description"),
+    // DESIGN_SYSTEM.md token hex values, not arbitrary colors — swatches/
+    // bars render this directly, so it has to already match a token.
+    color: text("color").notNull().default("#2E62F0"),
+    requiresApproval: boolean("requires_approval").notNull().default(true),
+    isPaid: boolean("is_paid").notNull().default(true),
+    maxConsecutiveDays: integer("max_consecutive_days"),
+    isActive: boolean("is_active").notNull().default(true),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  () => [
+    pgPolicy("leave_types_isolation", {
+      for: "all",
+      to: authenticatedRole,
+      using: inUserOrgs,
+      withCheck: inUserOrgs,
+    }),
+  ],
+).enableRLS();
+
+// applies_to is a simple string filter ('all' | 'department:<id>' |
+// 'employment_type:<value>') rather than a join table — Batch 2 only
+// needs coarse targeting; a real eligibility-rules engine is future work.
+// accrual_method: only 'annual_lump_sum' has real logic (lazy-init a
+// leave_balances row with the full annual_allotment_days up front);
+// 'monthly_accrual' is accepted but not yet computed differently — TODO
+// once a real accrual scheduler exists.
 export const leavePolicies = pgTable(
   "leave_policies",
   {
@@ -930,12 +1187,56 @@ export const leavePolicies = pgTable(
     orgId: uuid("org_id")
       .notNull()
       .references(() => organizations.id, { onDelete: "cascade" }),
+    leaveTypeId: uuid("leave_type_id")
+      .notNull()
+      .references(() => leaveTypes.id, { onDelete: "cascade" }),
     name: text("name").notNull(),
-    daysPerYear: integer("days_per_year").notNull(),
-    accrualRule: jsonb("accrual_rule").notNull().default({}),
+    appliesTo: text("applies_to").notNull().default("all"),
+    annualAllotmentDays: numeric("annual_allotment_days", { precision: 5, scale: 2, mode: "number" }).notNull(),
+    accrualMethod: text("accrual_method").notNull().default("annual_lump_sum"),
+    carryForwardMaxDays: numeric("carry_forward_max_days", { precision: 5, scale: 2, mode: "number" }).notNull().default(0),
+    effectiveFrom: date("effective_from").notNull(),
+    isActive: boolean("is_active").notNull().default(true),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   () => [
     pgPolicy("leave_policies_isolation", {
+      for: "all",
+      to: authenticatedRole,
+      using: inUserOrgs,
+      withCheck: inUserOrgs,
+    }),
+  ],
+).enableRLS();
+
+// One row per employee/leave_type/year — lazily created on that
+// employee's first request against a type (see lib/api/leave.ts's
+// getOrCreateBalance) rather than pre-provisioned for every employee on
+// policy creation, so an employee who never takes that leave type never
+// accumulates rows that need annual rollover maintenance.
+export const leaveBalances = pgTable(
+  "leave_balances",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    orgId: uuid("org_id")
+      .notNull()
+      .references(() => organizations.id, { onDelete: "cascade" }),
+    employeeId: uuid("employee_id")
+      .notNull()
+      .references(() => employees.id, { onDelete: "cascade" }),
+    leaveTypeId: uuid("leave_type_id")
+      .notNull()
+      .references(() => leaveTypes.id, { onDelete: "cascade" }),
+    year: integer("year").notNull(),
+    allottedDays: numeric("allotted_days", { precision: 5, scale: 2, mode: "number" }).notNull(),
+    carriedForwardDays: numeric("carried_forward_days", { precision: 5, scale: 2, mode: "number" }).notNull().default(0),
+    usedDays: numeric("used_days", { precision: 5, scale: 2, mode: "number" }).notNull().default(0),
+    pendingDays: numeric("pending_days", { precision: 5, scale: 2, mode: "number" }).notNull().default(0),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    uniqueIndex("leave_balances_org_employee_type_year_unique").on(t.orgId, t.employeeId, t.leaveTypeId, t.year),
+    pgPolicy("leave_balances_isolation", {
       for: "all",
       to: authenticatedRole,
       using: inUserOrgs,
@@ -954,15 +1255,30 @@ export const leaveRequests = pgTable(
     employeeId: uuid("employee_id")
       .notNull()
       .references(() => employees.id, { onDelete: "cascade" }),
-    policyId: uuid("policy_id")
+    leaveTypeId: uuid("leave_type_id")
       .notNull()
-      .references(() => leavePolicies.id, { onDelete: "restrict" }),
+      .references(() => leaveTypes.id, { onDelete: "cascade" }),
     startDate: date("start_date").notNull(),
     endDate: date("end_date").notNull(),
+    // Weekday-exclusive count (excludes the org's attendance_settings.weekend_days)
+    // computed server-side at creation — never trusted from the client, same
+    // discipline as attendance's ip/device capture.
+    totalDays: numeric("total_days", { precision: 5, scale: 2, mode: "number" }).notNull(),
+    isHalfDay: boolean("is_half_day").notNull().default(false),
+    halfDayPeriod: text("half_day_period"),
+    reason: text("reason"),
     status: leaveRequestStatusEnum("status").notNull().default("pending"),
-    approvedBy: uuid("approved_by"),
+    requestedAt: timestamp("requested_at", { withTimezone: true }).notNull().defaultNow(),
+    // No local FK target — same unreferenced-uuid convention as
+    // attendance_records.edited_by (Neon has no real auth.users table).
+    reviewedBy: uuid("reviewed_by"),
+    reviewedAt: timestamp("reviewed_at", { withTimezone: true }),
+    reviewNote: text("review_note"),
+    cancelledAt: timestamp("cancelled_at", { withTimezone: true }),
+    cancellationReason: text("cancellation_reason"),
   },
-  () => [
+  (t) => [
+    check("leave_requests_end_after_start", sql`${t.endDate} >= ${t.startDate}`),
     pgPolicy("leave_requests_isolation", {
       for: "all",
       to: authenticatedRole,
@@ -973,15 +1289,18 @@ export const leaveRequests = pgTable(
 ).enableRLS();
 
 
-// --- HR: Payroll & Compensation (Prompt 5.3) ---
+// --- HR: Payroll & Compensation (Prompt 5.3, extended in HR Batch 2 Part 3
+// for payslip generation — CLAUDE.md §11a) ---
 //
 // Structured record-keeping only — NOT tax withholding, statutory
 // compliance calculations, or bank disbursement (region-specific
-// compliance logic is out of scope; see the UI's visible scope note in
-// app/(app)/hr/compensation). Highly sensitive: gated by
-// compensation:view_sensitive (HR admin, owner/admin only) OR the
-// employee's own record — never a manager by default, per the prompt's
-// explicit "not even their manager, unless explicitly granted."
+// compliance logic is permanently out of scope; see the UI's visible
+// scope note on the Compensation tab and /hr/payroll). Highly sensitive:
+// gated by compensation:view_sensitive (HR admin, owner/admin only) OR
+// the employee's own record — never a manager by default, per the
+// prompt's explicit "not even their manager, unless explicitly granted."
+// Zero self-service, unlike Attendance/Leave — this boundary is
+// deliberate and permanent, not a "not yet built" gap (see CLAUDE.md).
 export const compensationRecords = pgTable(
   "compensation_records",
   {
@@ -994,12 +1313,74 @@ export const compensationRecords = pgTable(
       .references(() => employees.id, { onDelete: "cascade" }),
     baseSalary: numeric("base_salary", { precision: 12, scale: 2, mode: "number" }).notNull(),
     currency: text("currency").notNull().default("USD"),
+    // HR Batch 2 — only 'monthly' has real payroll-generation math (see
+    // lib/api/payroll.ts's prorate function); 'biweekly'/'weekly'/'annual'
+    // are accepted and stored but generation treats anything non-monthly
+    // as a flat-rate period — TODO once a real per-frequency payroll
+    // calendar exists.
+    payFrequency: text("pay_frequency").notNull().default("monthly"),
     effectiveDate: date("effective_date").notNull(),
     bonus: jsonb("bonus"),
     benefits: jsonb("benefits"),
+    // HR Batch 1 additions — same table, no new "compensation_history"
+    // table (extends existing rather than duplicating, same reasoning as
+    // the employees table decision above).
+    endDate: date("end_date"),
+    reason: text("reason"),
+    notes: text("notes"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    createdByUserId: uuid("created_by_user_id"),
+    // HR Batch 2 — non-statutory manual deductions only (e.g. loan
+    // repayment) — never tax/PF/ESI, same jsonb-array shape as bonus/benefits.
+    deductions: jsonb("deductions"),
   },
   () => [
     pgPolicy("compensation_records_isolation", {
+      for: "all",
+      to: authenticatedRole,
+      using: inUserOrgs,
+      withCheck: inUserOrgs,
+    }),
+  ],
+).enableRLS();
+
+// Record-keeping payslip snapshots, generated from the applicable
+// compensation_records row for a given period — not real payroll
+// processing (no tax/statutory withholding, no bank disbursement). One
+// row per employee per exact period (unique constraint below) so
+// re-running generation for the same period is a no-op per employee
+// rather than a duplicate.
+export const payslipStatusEnum = pgEnum("payslip_status", ["draft", "finalized", "paid"]);
+
+export const payslipRecords = pgTable(
+  "payslip_records",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    orgId: uuid("org_id")
+      .notNull()
+      .references(() => organizations.id, { onDelete: "cascade" }),
+    employeeId: uuid("employee_id")
+      .notNull()
+      .references(() => employees.id, { onDelete: "cascade" }),
+    compensationRecordId: uuid("compensation_record_id").references(() => compensationRecords.id, { onDelete: "set null" }),
+    periodStart: date("period_start").notNull(),
+    periodEnd: date("period_end").notNull(),
+    grossAmount: numeric("gross_amount", { precision: 12, scale: 2, mode: "number" }).notNull(),
+    totalDeductions: numeric("total_deductions", { precision: 12, scale: 2, mode: "number" }).notNull().default(0),
+    // No tax calculation anywhere in this app — net_amount is purely
+    // gross minus whatever manual deductions are configured on the
+    // compensation record, never a tax/statutory computation.
+    netAmount: numeric("net_amount", { precision: 12, scale: 2, mode: "number" }).notNull(),
+    currency: text("currency").notNull().default("USD"),
+    status: payslipStatusEnum("status").notNull().default("draft"),
+    generatedAt: timestamp("generated_at", { withTimezone: true }).notNull().defaultNow(),
+    generatedBy: uuid("generated_by"),
+    paidAt: timestamp("paid_at", { withTimezone: true }),
+    notes: text("notes"),
+  },
+  (t) => [
+    uniqueIndex("payslip_records_org_employee_period_unique").on(t.orgId, t.employeeId, t.periodStart, t.periodEnd),
+    pgPolicy("payslip_records_isolation", {
       for: "all",
       to: authenticatedRole,
       using: inUserOrgs,
@@ -1016,23 +1397,76 @@ export const compensationRecords = pgTable(
 // HR-admin-only data-entry model as Attendance/Leave/Compensation: no
 // employee self-service login path for any of these five modules.
 
+// HR Batch 3 — restructured for the hybrid self+manager review model
+// (CLAUDE.md §11a: distinct from Attendance/Leave's full self-service and
+// Compensation's zero-self-service — a third pattern). "draft"/"submitted"
+// are pre-Batch-3 leftovers (0 real rows existed, but same
+// can't-drop-enum-values reasoning as Attendance/Leave's dead labels).
 export const performanceReviewStatusEnum = pgEnum("performance_review_status", [
   "draft",
   "submitted",
   "completed",
+  "not_started",
+  "self_assessment_pending",
+  "manager_assessment_pending",
 ]);
-export const jobPostingStatusEnum = pgEnum("job_posting_status", ["draft", "open", "closed"]);
+export const reviewCycleStatusEnum = pgEnum("review_cycle_status", ["draft", "active", "closed"]);
+export const finalRatingEnum = pgEnum("final_rating", ["exceeds", "meets", "needs_improvement", "unsatisfactory"]);
+export const okrStatusEnum = pgEnum("okr_status", ["active", "completed", "archived"]);
+
+export const jobPostingStatusEnum = pgEnum("job_posting_status", ["draft", "open", "on_hold", "closed", "filled"]);
 export const candidateStageEnum = pgEnum("candidate_stage", [
   "applied",
+  "screening",
   "interview",
   "offer",
   "hired",
   "rejected",
 ]);
-export const hrCaseStatusEnum = pgEnum("hr_case_status", ["open", "in_progress", "resolved", "closed"]);
+export const interviewTypeEnum = pgEnum("interview_type", ["video", "phone", "in_person"]);
+export const interviewStatusEnum = pgEnum("interview_status", ["scheduled", "completed", "cancelled", "no_show"]);
+export const interviewRecommendationEnum = pgEnum("interview_recommendation", ["strong_yes", "yes", "no", "strong_no"]);
 
-export const performanceReviews = pgTable(
-  "performance_reviews",
+// HR Batch 4 — restructured for genuine self-service: any employee can
+// raise a case, add a comment, or enroll/respond; HR admin (hr_case:manage
+// / training:manage / survey:manage) owns categories, courses, surveys,
+// and resolution workflow. See CLAUDE.md §11a for the full three-module
+// writeup, including why survey anonymity is enforced by never storing
+// employee_id on an anonymous response row (not by a boolean flag).
+export const hrCaseStatusEnum = pgEnum("hr_case_status", [
+  "open",
+  "in_progress",
+  "waiting_on_employee",
+  "resolved",
+  "closed",
+]);
+export const hrCasePriorityEnum = pgEnum("hr_case_priority", ["low", "normal", "high", "urgent"]);
+
+export const hrCaseCategories = pgTable(
+  "hr_case_categories",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    orgId: uuid("org_id")
+      .notNull()
+      .references(() => organizations.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    description: text("description"),
+    defaultAssigneeId: uuid("default_assignee_id").references(() => employees.id, { onDelete: "set null" }),
+    isActive: boolean("is_active").notNull().default(true),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  () => [
+    pgPolicy("hr_case_categories_isolation", {
+      for: "all",
+      to: authenticatedRole,
+      using: inUserOrgs,
+      withCheck: inUserOrgs,
+    }),
+  ],
+).enableRLS();
+
+export const hrCases = pgTable(
+  "hr_cases",
   {
     id: uuid("id").primaryKey().defaultRandom(),
     orgId: uuid("org_id")
@@ -1041,13 +1475,280 @@ export const performanceReviews = pgTable(
     employeeId: uuid("employee_id")
       .notNull()
       .references(() => employees.id, { onDelete: "cascade" }),
-    reviewerId: uuid("reviewer_id").references(() => employees.id, { onDelete: "set null" }),
-    period: text("period").notNull(),
-    ratings: jsonb("ratings").notNull().default({}),
-    comments: text("comments"),
-    status: performanceReviewStatusEnum("status").notNull().default("draft"),
+    categoryId: uuid("category_id").references(() => hrCaseCategories.id, { onDelete: "set null" }),
+    subject: text("subject").notNull(),
+    description: text("description").notNull(),
+    priority: hrCasePriorityEnum("priority").notNull().default("normal"),
+    status: hrCaseStatusEnum("status").notNull().default("open"),
+    assignedTo: uuid("assigned_to").references(() => employees.id, { onDelete: "set null" }),
+    isConfidential: boolean("is_confidential").notNull().default(false),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    resolvedAt: timestamp("resolved_at", { withTimezone: true }),
+    closedAt: timestamp("closed_at", { withTimezone: true }),
   },
   () => [
+    pgPolicy("hr_cases_isolation", {
+      for: "all",
+      to: authenticatedRole,
+      using: inUserOrgs,
+      withCheck: inUserOrgs,
+    }),
+  ],
+).enableRLS();
+
+export const hrCaseComments = pgTable(
+  "hr_case_comments",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    orgId: uuid("org_id")
+      .notNull()
+      .references(() => organizations.id, { onDelete: "cascade" }),
+    caseId: uuid("case_id")
+      .notNull()
+      .references(() => hrCases.id, { onDelete: "cascade" }),
+    authorId: uuid("author_id")
+      .notNull()
+      .references(() => employees.id, { onDelete: "cascade" }),
+    comment: text("comment").notNull(),
+    isInternalNote: boolean("is_internal_note").notNull().default(false),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  () => [
+    pgPolicy("hr_case_comments_isolation", {
+      for: "all",
+      to: authenticatedRole,
+      using: inUserOrgs,
+      withCheck: inUserOrgs,
+    }),
+  ],
+).enableRLS();
+
+export const trainingContentTypeEnum = pgEnum("training_content_type", ["link", "video", "document", "external"]);
+export const trainingEnrollmentStatusEnum = pgEnum("training_enrollment_status", [
+  "enrolled",
+  "in_progress",
+  "completed",
+]);
+
+export const trainingCourses = pgTable(
+  "training_courses",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    orgId: uuid("org_id")
+      .notNull()
+      .references(() => organizations.id, { onDelete: "cascade" }),
+    title: text("title").notNull(),
+    description: text("description"),
+    category: text("category"),
+    contentType: trainingContentTypeEnum("content_type").notNull().default("link"),
+    contentUrl: text("content_url"),
+    durationMinutes: integer("duration_minutes"),
+    requiredForRoles: jsonb("required_for_roles").notNull().default([]),
+    isActive: boolean("is_active").notNull().default(true),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    createdBy: uuid("created_by"),
+  },
+  () => [
+    pgPolicy("training_courses_isolation", {
+      for: "all",
+      to: authenticatedRole,
+      using: inUserOrgs,
+      withCheck: inUserOrgs,
+    }),
+  ],
+).enableRLS();
+
+export const trainingEnrollments = pgTable(
+  "training_enrollments",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    orgId: uuid("org_id")
+      .notNull()
+      .references(() => organizations.id, { onDelete: "cascade" }),
+    courseId: uuid("course_id")
+      .notNull()
+      .references(() => trainingCourses.id, { onDelete: "cascade" }),
+    employeeId: uuid("employee_id")
+      .notNull()
+      .references(() => employees.id, { onDelete: "cascade" }),
+    status: trainingEnrollmentStatusEnum("status").notNull().default("enrolled"),
+    enrolledAt: timestamp("enrolled_at", { withTimezone: true }).notNull().defaultNow(),
+    completedAt: timestamp("completed_at", { withTimezone: true }),
+    progressPercent: integer("progress_percent").notNull().default(0),
+  },
+  (t) => [
+    uniqueIndex("training_enrollments_course_employee_unique").on(t.courseId, t.employeeId),
+    pgPolicy("training_enrollments_isolation", {
+      for: "all",
+      to: authenticatedRole,
+      using: inUserOrgs,
+      withCheck: inUserOrgs,
+    }),
+  ],
+).enableRLS();
+
+export const surveyQuestionTypeEnum = pgEnum("survey_question_type", ["rating_1_5", "text", "multiple_choice"]);
+export const surveyStatusEnum = pgEnum("survey_status", ["draft", "active", "closed"]);
+
+export const engagementSurveys = pgTable(
+  "engagement_surveys",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    orgId: uuid("org_id")
+      .notNull()
+      .references(() => organizations.id, { onDelete: "cascade" }),
+    title: text("title").notNull(),
+    description: text("description"),
+    questions: jsonb("questions").notNull().default([]),
+    isAnonymous: boolean("is_anonymous").notNull().default(true),
+    status: surveyStatusEnum("status").notNull().default("draft"),
+    opensAt: timestamp("opens_at", { withTimezone: true }),
+    closesAt: timestamp("closes_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    createdBy: uuid("created_by"),
+  },
+  () => [
+    pgPolicy("engagement_surveys_isolation", {
+      for: "all",
+      to: authenticatedRole,
+      using: inUserOrgs,
+      withCheck: inUserOrgs,
+    }),
+  ],
+).enableRLS();
+
+// employeeId is NULL for every response to an is_anonymous=true survey —
+// not a boolean flag alongside a populated FK. There is no code path that
+// can write both employeeId and an answer to the same row for an
+// anonymous survey (see lib/api/surveys.ts submitResponse), so no query
+// against this table can ever join an anonymous answer back to a person.
+export const surveyResponses = pgTable(
+  "survey_responses",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    orgId: uuid("org_id")
+      .notNull()
+      .references(() => organizations.id, { onDelete: "cascade" }),
+    surveyId: uuid("survey_id")
+      .notNull()
+      .references(() => engagementSurveys.id, { onDelete: "cascade" }),
+    employeeId: uuid("employee_id").references(() => employees.id, { onDelete: "set null" }),
+    answers: jsonb("answers").notNull().default({}),
+    submittedAt: timestamp("submitted_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  () => [
+    pgPolicy("survey_responses_isolation", {
+      for: "all",
+      to: authenticatedRole,
+      using: inUserOrgs,
+      withCheck: inUserOrgs,
+    }),
+  ],
+).enableRLS();
+
+// Tracks which employee has responded to which survey, WITHOUT joining to
+// survey_responses.answers — this is what prevents a duplicate submission
+// on an anonymous survey without ever letting a query recover "employee X
+// said Y". Never select this table alongside surveyResponses.answers.
+export const surveyRespondents = pgTable(
+  "survey_respondents",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    orgId: uuid("org_id")
+      .notNull()
+      .references(() => organizations.id, { onDelete: "cascade" }),
+    surveyId: uuid("survey_id")
+      .notNull()
+      .references(() => engagementSurveys.id, { onDelete: "cascade" }),
+    employeeId: uuid("employee_id")
+      .notNull()
+      .references(() => employees.id, { onDelete: "cascade" }),
+    respondedAt: timestamp("responded_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    uniqueIndex("survey_respondents_survey_employee_unique").on(t.surveyId, t.employeeId),
+    pgPolicy("survey_respondents_isolation", {
+      for: "all",
+      to: authenticatedRole,
+      using: inUserOrgs,
+      withCheck: inUserOrgs,
+    }),
+  ],
+).enableRLS();
+
+// Org-level review period definition — a cycle groups every employee's
+// review for that quarter/year/probation window. No performance_reviews
+// row exists without a cycle_id (unlike the pre-Batch-3 flat "period"
+// text field, which had no structured lifecycle at all).
+export const reviewCycles = pgTable(
+  "review_cycles",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    orgId: uuid("org_id")
+      .notNull()
+      .references(() => organizations.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    cycleType: text("cycle_type").notNull().default("quarterly"),
+    selfAssessmentOpenDate: date("self_assessment_open_date"),
+    selfAssessmentDueDate: date("self_assessment_due_date"),
+    managerAssessmentDueDate: date("manager_assessment_due_date"),
+    status: reviewCycleStatusEnum("status").notNull().default("draft"),
+    appliesTo: text("applies_to").notNull().default("all"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    createdBy: uuid("created_by"),
+  },
+  () => [
+    pgPolicy("review_cycles_isolation", {
+      for: "all",
+      to: authenticatedRole,
+      using: inUserOrgs,
+      withCheck: inUserOrgs,
+    }),
+  ],
+).enableRLS();
+
+// Hybrid self+manager model: self_assessment is written by the employee
+// (review:submit_self + ownership check), manager_assessment + final_rating
+// by their manager (review:submit_manager + isManagerOf check) — two
+// distinct jsonb blobs rather than one shared "ratings" field specifically
+// so RLS/application-layer checks can gate them independently (an employee
+// can never write manager_assessment even by accident, since the two
+// self-assessment/manager-assessment PATCH routes are entirely separate
+// endpoints with separate permission checks — see app/api/reviews/[id]/*).
+export const performanceReviews = pgTable(
+  "performance_reviews",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    orgId: uuid("org_id")
+      .notNull()
+      .references(() => organizations.id, { onDelete: "cascade" }),
+    cycleId: uuid("cycle_id")
+      .notNull()
+      .references(() => reviewCycles.id, { onDelete: "cascade" }),
+    employeeId: uuid("employee_id")
+      .notNull()
+      .references(() => employees.id, { onDelete: "cascade" }),
+    reviewerId: uuid("reviewer_id").references(() => employees.id, { onDelete: "set null" }),
+    selfAssessment: jsonb("self_assessment").notNull().default({}),
+    managerAssessment: jsonb("manager_assessment").notNull().default({}),
+    finalRating: finalRatingEnum("final_rating"),
+    // Pre-Batch-3 leftover fields — "period" is superseded by cycle_id
+    // (the cycle carries the period name), "ratings"/"comments" by the
+    // self/manager assessment split above. Left in place rather than
+    // dropped: harmless unused columns, same reasoning as the dead enum
+    // labels above, and a drop-column migration buys nothing since there's
+    // no data in them to lose either way.
+    period: text("period"),
+    ratings: jsonb("ratings").default({}),
+    comments: text("comments"),
+    status: performanceReviewStatusEnum("status").notNull().default("not_started"),
+    selfSubmittedAt: timestamp("self_submitted_at", { withTimezone: true }),
+    managerSubmittedAt: timestamp("manager_submitted_at", { withTimezone: true }),
+    completedAt: timestamp("completed_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    uniqueIndex("performance_reviews_cycle_employee_unique").on(t.cycleId, t.employeeId),
     pgPolicy("performance_reviews_isolation", {
       for: "all",
       to: authenticatedRole,
@@ -1057,9 +1758,11 @@ export const performanceReviews = pgTable(
   ],
 ).enableRLS();
 
-// employeeId and teamId are both nullable — an OKR belongs to one or the
-// other (an individual's or a team's objective), never enforced at the DB
-// level since this app has no CHECK-constraint precedent elsewhere either.
+// employeeId and teamName are both nullable — an OKR belongs to one or the
+// other (an individual's or a team's objective). teamName is freetext
+// (not a teamId FK) per the Batch 3 spec — team_id stays as a pre-Batch-3
+// leftover column, unused by new code, same "harmless unused column"
+// reasoning as performance_reviews' period/ratings/comments above.
 export const okrs = pgTable(
   "okrs",
   {
@@ -1069,9 +1772,14 @@ export const okrs = pgTable(
       .references(() => organizations.id, { onDelete: "cascade" }),
     employeeId: uuid("employee_id").references(() => employees.id, { onDelete: "cascade" }),
     teamId: uuid("team_id").references(() => teams.id, { onDelete: "cascade" }),
+    teamName: text("team_name"),
+    cycleId: uuid("cycle_id").references(() => reviewCycles.id, { onDelete: "set null" }),
     objective: text("objective").notNull(),
     keyResults: jsonb("key_results").notNull().default([]),
     period: text("period").notNull(),
+    status: okrStatusEnum("status").notNull().default("active"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    createdBy: uuid("created_by"),
   },
   () => [
     pgPolicy("okrs_isolation", {
@@ -1092,8 +1800,19 @@ export const jobPostings = pgTable(
       .references(() => organizations.id, { onDelete: "cascade" }),
     title: text("title").notNull(),
     departmentId: uuid("department_id").references(() => departments.id, { onDelete: "set null" }),
+    employmentType: text("employment_type").notNull().default("full_time"),
+    location: text("location"),
     status: jobPostingStatusEnum("status").notNull().default("draft"),
     description: text("description"),
+    requirements: text("requirements"),
+    salaryRangeMin: numeric("salary_range_min", { precision: 12, scale: 2, mode: "number" }),
+    salaryRangeMax: numeric("salary_range_max", { precision: 12, scale: 2, mode: "number" }),
+    currency: text("currency").notNull().default("INR"),
+    hiringManagerId: uuid("hiring_manager_id").references(() => employees.id, { onDelete: "set null" }),
+    openedAt: timestamp("opened_at", { withTimezone: true }),
+    closedAt: timestamp("closed_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    createdBy: uuid("created_by"),
   },
   () => [
     pgPolicy("job_postings_isolation", {
@@ -1115,9 +1834,20 @@ export const candidates = pgTable(
     jobPostingId: uuid("job_posting_id")
       .notNull()
       .references(() => jobPostings.id, { onDelete: "cascade" }),
-    name: text("name").notNull(),
-    email: text("email"),
+    // DB column stays "name" (pre-Batch-3, zero rows to migrate) — mapped
+    // to fullName at the Drizzle field level so the API/UI surface matches
+    // the Batch 3 spec without a pointless rename-column migration.
+    fullName: text("name").notNull(),
+    email: text("email").notNull(),
+    phone: text("phone"),
+    resumeUrl: text("resume_url"),
+    source: text("source"),
     stage: candidateStageEnum("stage").notNull().default("applied"),
+    rating: integer("rating"),
+    notes: text("notes"),
+    rejectedReason: text("rejected_reason"),
+    appliedAt: timestamp("applied_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
   () => [
     pgPolicy("candidates_isolation", {
@@ -1129,116 +1859,30 @@ export const candidates = pgTable(
   ],
 ).enableRLS();
 
-export const hrCases = pgTable(
-  "hr_cases",
+// No candidate-facing portal in this phase (internal staff data entry
+// only, per the Batch 3 spec) — interviewer_id is the assignment
+// submit_feedback checks against (only the assigned interviewer can write
+// feedback/recommendation for their own interview).
+export const interviewSchedules = pgTable(
+  "interview_schedules",
   {
     id: uuid("id").primaryKey().defaultRandom(),
     orgId: uuid("org_id")
       .notNull()
       .references(() => organizations.id, { onDelete: "cascade" }),
-    employeeId: uuid("employee_id")
+    candidateId: uuid("candidate_id")
       .notNull()
-      .references(() => employees.id, { onDelete: "cascade" }),
-    category: text("category").notNull(),
-    description: text("description"),
-    status: hrCaseStatusEnum("status").notNull().default("open"),
-    assignedTo: uuid("assigned_to").references(() => employees.id, { onDelete: "set null" }),
+      .references(() => candidates.id, { onDelete: "cascade" }),
+    interviewerId: uuid("interviewer_id").references(() => employees.id, { onDelete: "set null" }),
+    scheduledAt: timestamp("scheduled_at", { withTimezone: true }),
+    interviewType: interviewTypeEnum("interview_type").notNull().default("video"),
+    status: interviewStatusEnum("status").notNull().default("scheduled"),
+    feedback: text("feedback"),
+    recommendation: interviewRecommendationEnum("recommendation"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   () => [
-    pgPolicy("hr_cases_isolation", {
-      for: "all",
-      to: authenticatedRole,
-      using: inUserOrgs,
-      withCheck: inUserOrgs,
-    }),
-  ],
-).enableRLS();
-
-export const trainingCourses = pgTable(
-  "training_courses",
-  {
-    id: uuid("id").primaryKey().defaultRandom(),
-    orgId: uuid("org_id")
-      .notNull()
-      .references(() => organizations.id, { onDelete: "cascade" }),
-    title: text("title").notNull(),
-    content: jsonb("content").notNull().default({}),
-    requiredForRole: text("required_for_role"),
-  },
-  () => [
-    pgPolicy("training_courses_isolation", {
-      for: "all",
-      to: authenticatedRole,
-      using: inUserOrgs,
-      withCheck: inUserOrgs,
-    }),
-  ],
-).enableRLS();
-
-export const trainingCompletions = pgTable(
-  "training_completions",
-  {
-    id: uuid("id").primaryKey().defaultRandom(),
-    orgId: uuid("org_id")
-      .notNull()
-      .references(() => organizations.id, { onDelete: "cascade" }),
-    employeeId: uuid("employee_id")
-      .notNull()
-      .references(() => employees.id, { onDelete: "cascade" }),
-    courseId: uuid("course_id")
-      .notNull()
-      .references(() => trainingCourses.id, { onDelete: "cascade" }),
-    completedAt: timestamp("completed_at", { withTimezone: true }).notNull().defaultNow(),
-  },
-  () => [
-    pgPolicy("training_completions_isolation", {
-      for: "all",
-      to: authenticatedRole,
-      using: inUserOrgs,
-      withCheck: inUserOrgs,
-    }),
-  ],
-).enableRLS();
-
-export const engagementSurveys = pgTable(
-  "engagement_surveys",
-  {
-    id: uuid("id").primaryKey().defaultRandom(),
-    orgId: uuid("org_id")
-      .notNull()
-      .references(() => organizations.id, { onDelete: "cascade" }),
-    title: text("title").notNull(),
-    questions: jsonb("questions").notNull().default([]),
-  },
-  () => [
-    pgPolicy("engagement_surveys_isolation", {
-      for: "all",
-      to: authenticatedRole,
-      using: inUserOrgs,
-      withCheck: inUserOrgs,
-    }),
-  ],
-).enableRLS();
-
-// employeeId nullable — an anonymous response records no employee at all
-// rather than a real id with `anonymous: true` stapled on, so an
-// accidental read path can't de-anonymize it by joining on employeeId.
-export const surveyResponses = pgTable(
-  "survey_responses",
-  {
-    id: uuid("id").primaryKey().defaultRandom(),
-    orgId: uuid("org_id")
-      .notNull()
-      .references(() => organizations.id, { onDelete: "cascade" }),
-    surveyId: uuid("survey_id")
-      .notNull()
-      .references(() => engagementSurveys.id, { onDelete: "cascade" }),
-    employeeId: uuid("employee_id").references(() => employees.id, { onDelete: "set null" }),
-    answers: jsonb("answers").notNull().default({}),
-    anonymous: boolean("anonymous").notNull().default(false),
-  },
-  () => [
-    pgPolicy("survey_responses_isolation", {
+    pgPolicy("interview_schedules_isolation", {
       for: "all",
       to: authenticatedRole,
       using: inUserOrgs,
@@ -1401,6 +2045,11 @@ export const people = pgTable(
 // Zoho CRM's standard modules. ownerId is a bare uuid with no FK, same as
 // goals.ownerId/tasks.assigneeId — Neon has no local `auth.users` table to
 // reference. accounts is defined first since contacts/leads reference it.
+// CRM Batch 1 — extended in place with the full Zoho-style field set.
+// ownerId stays a bare uuid (no FK) — same as goals.ownerId/tasks.assigneeId,
+// Neon has no local auth.users table to reference. parentAccountId is
+// self-referencing with no FK enforcement, same TODO-later precedent as
+// employees.managerId.
 export const accounts = pgTable(
   "accounts",
   {
@@ -1411,7 +2060,27 @@ export const accounts = pgTable(
     name: text("name").notNull(),
     industry: text("industry"),
     website: text("website"),
+    phone: text("phone"),
+    email: text("email"),
+    addressLine1: text("address_line1"),
+    addressLine2: text("address_line2"),
+    city: text("city"),
+    state: text("state"),
+    country: text("country").default("India"),
+    postalCode: text("postal_code"),
+    type: accountTypeEnum("type").notNull().default("prospect"),
+    status: accountStatusEnum("status").notNull().default("active"),
+    annualRevenue: numeric("annual_revenue", { precision: 15, scale: 2, mode: "number" }),
+    currency: text("currency").notNull().default("INR"),
+    employeeCountRange: text("employee_count_range"),
     ownerId: uuid("owner_id"),
+    parentAccountId: uuid("parent_account_id"),
+    tags: jsonb("tags").notNull().default([]),
+    customFields: jsonb("custom_fields").notNull().default({}),
+    notes: text("notes"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+    createdBy: uuid("created_by"),
   },
   () => [
     pgPolicy("accounts_isolation", {
@@ -1423,6 +2092,10 @@ export const accounts = pgTable(
   ],
 ).enableRLS();
 
+// fullName/jobTitle rename the DB columns (name/title) at the ORM level
+// only, same "field name vs DB column name divergence" pattern as
+// candidates.fullName (HR Batch 3) — 0 rows existed, no migration needed
+// to actually rename the column.
 export const contacts = pgTable(
   "contacts",
   {
@@ -1431,11 +2104,28 @@ export const contacts = pgTable(
       .notNull()
       .references(() => organizations.id, { onDelete: "cascade" }),
     accountId: uuid("account_id").references(() => accounts.id, { onDelete: "set null" }),
-    name: text("name").notNull(),
+    fullName: text("name").notNull(),
     email: text("email"),
     phone: text("phone"),
-    title: text("title"),
+    mobile: text("mobile"),
+    jobTitle: text("title"),
+    department: text("department"),
+    isPrimaryContact: boolean("is_primary_contact").notNull().default(false),
+    isDecisionMaker: boolean("is_decision_maker").notNull().default(false),
+    mailingAddress: text("mailing_address"),
+    city: text("city"),
+    state: text("state"),
+    country: text("country").default("India"),
     ownerId: uuid("owner_id"),
+    source: text("source"),
+    convertedFromLeadId: uuid("converted_from_lead_id"),
+    tags: jsonb("tags").notNull().default([]),
+    customFields: jsonb("custom_fields").notNull().default({}),
+    notes: text("notes"),
+    lastContactedAt: timestamp("last_contacted_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+    createdBy: uuid("created_by"),
   },
   () => [
     pgPolicy("contacts_isolation", {
@@ -1448,8 +2138,10 @@ export const contacts = pgTable(
 ).enableRLS();
 
 // convertedAccountId/convertedContactId are set by the explicit "convert"
-// action (lib/api/leadConversion.ts) — never automatic — and exist purely
+// action (lib/api/crm.ts) — never automatic — and exist purely
 // for traceability (so a converted lead still shows what it became).
+// fullName/companyName rename name/company at the ORM level only, same
+// pattern as contacts.fullName above.
 export const leads = pgTable(
   "leads",
   {
@@ -1457,15 +2149,27 @@ export const leads = pgTable(
     orgId: uuid("org_id")
       .notNull()
       .references(() => organizations.id, { onDelete: "cascade" }),
-    name: text("name").notNull(),
-    company: text("company"),
+    fullName: text("name").notNull(),
+    companyName: text("company"),
     email: text("email"),
     phone: text("phone"),
-    source: text("source"),
+    jobTitle: text("job_title"),
+    source: text("source").default("manual"),
+    sourceDetail: text("source_detail"),
     status: leadStatusEnum("status").notNull().default("new"),
+    score: integer("score"),
+    scoreReasoning: text("score_reasoning"),
     ownerId: uuid("owner_id"),
+    convertedAt: timestamp("converted_at", { withTimezone: true }),
     convertedAccountId: uuid("converted_account_id").references(() => accounts.id, { onDelete: "set null" }),
     convertedContactId: uuid("converted_contact_id").references(() => contacts.id, { onDelete: "set null" }),
+    lostReason: text("lost_reason"),
+    tags: jsonb("tags").notNull().default([]),
+    customFields: jsonb("custom_fields").notNull().default({}),
+    notes: text("notes"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+    createdBy: uuid("created_by"),
     // Prompt 6.3 — which campaign this lead came from, for ROI visibility.
     // A single FK (not the prompt's jsonb/join-table options) since a lead
     // has exactly one originating campaign in practice — same shape as
@@ -1482,6 +2186,14 @@ export const leads = pgTable(
   ],
 ).enableRLS();
 
+// CRM Batch 2 — extended in place with the full pipeline field set.
+// accountId/contactId (renamed primaryContactId at the field level, DB
+// column stays "contact_id") are now nullable — a deal can exist before
+// an account is locked in, same "not every deal needs everything up
+// front" reasoning as leads. stageChangedAt/probability drive the
+// Kanban's stale-badge and forecast math; both are only ever written by
+// the transactional stage-change path in lib/api/crm.ts, never a plain
+// field edit, so they stay trustworthy for velocity reporting.
 export const deals = pgTable(
   "deals",
   {
@@ -1489,19 +2201,61 @@ export const deals = pgTable(
     orgId: uuid("org_id")
       .notNull()
       .references(() => organizations.id, { onDelete: "cascade" }),
-    accountId: uuid("account_id")
-      .notNull()
-      .references(() => accounts.id, { onDelete: "cascade" }),
-    contactId: uuid("contact_id").references(() => contacts.id, { onDelete: "set null" }),
     name: text("name").notNull(),
-    value: numeric("value", { precision: 12, scale: 2, mode: "number" }),
-    currency: text("currency").notNull().default("USD"),
-    stage: dealStageEnum("stage").notNull().default("prospecting"),
+    accountId: uuid("account_id").references(() => accounts.id, { onDelete: "set null" }),
+    primaryContactId: uuid("contact_id").references(() => contacts.id, { onDelete: "set null" }),
     ownerId: uuid("owner_id"),
+    stage: dealStageEnum("stage").notNull().default("prospecting"),
+    probability: integer("probability").default(10),
+    value: numeric("value", { precision: 15, scale: 2, mode: "number" }),
+    currency: text("currency").notNull().default("INR"),
+    recurringRevenue: numeric("recurring_revenue", { precision: 15, scale: 2, mode: "number" }),
+    recurringFrequency: text("recurring_frequency"),
     expectedCloseDate: date("expected_close_date"),
+    actualCloseDate: date("actual_close_date"),
+    source: text("source"),
+    convertedFromLeadId: uuid("converted_from_lead_id"),
+    campaignId: uuid("campaign_id").references(() => campaigns.id, { onDelete: "set null" }),
+    lostReason: text("lost_reason"),
+    wonNotes: text("won_notes"),
+    nextStep: text("next_step"),
+    nextStepDueDate: date("next_step_due_date"),
+    tags: jsonb("tags").notNull().default([]),
+    customFields: jsonb("custom_fields").notNull().default({}),
+    notes: text("notes"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+    createdBy: uuid("created_by"),
+    stageChangedAt: timestamp("stage_changed_at", { withTimezone: true }).notNull().defaultNow(),
   },
   () => [
     pgPolicy("deals_isolation", {
+      for: "all",
+      to: authenticatedRole,
+      using: inUserOrgs,
+      withCheck: inUserOrgs,
+    }),
+  ],
+).enableRLS();
+
+export const dealStageHistory = pgTable(
+  "deal_stage_history",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    orgId: uuid("org_id")
+      .notNull()
+      .references(() => organizations.id, { onDelete: "cascade" }),
+    dealId: uuid("deal_id")
+      .notNull()
+      .references(() => deals.id, { onDelete: "cascade" }),
+    fromStage: dealStageEnum("from_stage"),
+    toStage: dealStageEnum("to_stage").notNull(),
+    changedAt: timestamp("changed_at", { withTimezone: true }).notNull().defaultNow(),
+    changedBy: uuid("changed_by"),
+    durationInPreviousStageMinutes: integer("duration_in_previous_stage_minutes"),
+  },
+  () => [
+    pgPolicy("deal_stage_history_isolation", {
       for: "all",
       to: authenticatedRole,
       using: inUserOrgs,
@@ -1515,6 +2269,11 @@ export const deals = pgTable(
 // Postgres FKs can't target more than one table. Isolation still holds
 // because every write goes through withOrgContext/requirePermission with
 // org_id supplied explicitly, same as every other org-scoped table.
+// CRM Batch 1 — extended in place with subject/description/outcome/
+// duration/performedBy so this doubles as the spec's "crm_activities"
+// timeline; dueDate/completed are pre-Batch-1 leftovers (0 rows existed,
+// kept nullable rather than dropped, same dead-column tolerance as
+// performance_reviews' legacy fields from HR Batch 3).
 export const activities = pgTable(
   "activities",
   {
@@ -1525,6 +2284,12 @@ export const activities = pgTable(
     relatedType: activityRelatedTypeEnum("related_type").notNull(),
     relatedId: uuid("related_id").notNull(),
     type: activityTypeEnum("type").notNull(),
+    subject: text("subject"),
+    description: text("description"),
+    outcome: text("outcome"),
+    activityDate: timestamp("activity_date", { withTimezone: true }).defaultNow(),
+    durationMinutes: integer("duration_minutes"),
+    performedBy: uuid("performed_by"),
     notes: text("notes"),
     dueDate: date("due_date"),
     completed: boolean("completed").notNull().default(false),
@@ -1540,10 +2305,12 @@ export const activities = pgTable(
   ],
 ).enableRLS();
 
-// Prompt 6.3 — campaigns. "type" is free text (email/event/ad/webinar/...)
-// same treatment as leads.source, not an enum — open-ended, not a fixed
-// workflow. Attribution is leads.campaignId (see above), not a jsonb
-// array or join table.
+// CRM Batch 3 — extended in place with the full campaign field set.
+// "type"/"channel" stay free text (same treatment as leads.source) —
+// open-ended, not a fixed workflow. Metrics (leads/deals/revenue/ROI) are
+// never stored here — always computed live from leads.campaignId /
+// deals.campaignId at read time (lib/api/crm.ts's campaignMetrics), same
+// "no stale snapshot" reasoning forecasts already had.
 export const campaigns = pgTable(
   "campaigns",
   {
@@ -1552,10 +2319,22 @@ export const campaigns = pgTable(
       .notNull()
       .references(() => organizations.id, { onDelete: "cascade" }),
     name: text("name").notNull(),
-    type: text("type"),
-    status: campaignStatusEnum("status").notNull().default("planned"),
+    type: text("type").default("other"),
+    status: campaignStatusEnum("status").notNull().default("draft"),
+    description: text("description"),
     startDate: date("start_date"),
     endDate: date("end_date"),
+    budgetAllocated: numeric("budget_allocated", { precision: 12, scale: 2, mode: "number" }),
+    budgetSpent: numeric("budget_spent", { precision: 12, scale: 2, mode: "number" }).notNull().default(0),
+    currency: text("currency").notNull().default("INR"),
+    targetAudience: text("target_audience"),
+    channel: text("channel"),
+    ownerId: uuid("owner_id"),
+    tags: jsonb("tags").notNull().default([]),
+    notes: text("notes"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+    createdBy: uuid("created_by"),
   },
   () => [
     pgPolicy("campaigns_isolation", {
@@ -1567,25 +2346,41 @@ export const campaigns = pgTable(
   ],
 ).enableRLS();
 
-// Prompt 6.3 — forecasts. Deliberately stores only the target (quota) per
-// period; the "computed rollup" (actual pipeline value by stage) is never
-// stored here — it's queried live from `deals` grouped by
-// expected_close_date/stage at read time, per the prompt's explicit "no AI
-// needed... not a prediction" framing. period is free text (e.g. "2026-Q3"
-// or "2026-07") rather than a date, since a forecast period is a bucket
-// label, not a single point in time.
-export const forecasts = pgTable(
-  "forecasts",
+// CRM Batch 3 — replaces the old flat `forecasts` table (period + bare
+// target_value, no period_type/range/owner) with forecast_targets. Still
+// deliberately stores ONLY the target — the forecast itself (pipeline/
+// weighted/won/gap) is always computed live from `deals` at read time
+// (lib/api/crm.ts's computeForecast), never snapshotted, so it can never
+// go stale. unique(org_id, period, owner_id): a non-null owner_id gives
+// each rep at most one target per period. NOTE: Postgres treats every
+// NULL as distinct for uniqueness purposes, so this does NOT actually
+// stop two org-wide (owner_id IS NULL) targets for the same period from
+// coexisting — enforcing "at most one org-wide target per period" would
+// need a partial unique index (`WHERE owner_id IS NULL`). Not added yet;
+// the API layer (lib/api/crm.ts) is responsible for not creating a
+// duplicate org-wide target until that's added.
+export const forecastTargets = pgTable(
+  "forecast_targets",
   {
     id: uuid("id").primaryKey().defaultRandom(),
     orgId: uuid("org_id")
       .notNull()
       .references(() => organizations.id, { onDelete: "cascade" }),
     period: text("period").notNull(),
-    targetValue: numeric("target_value", { precision: 12, scale: 2, mode: "number" }),
+    periodType: forecastPeriodTypeEnum("period_type").notNull(),
+    periodStart: date("period_start").notNull(),
+    periodEnd: date("period_end").notNull(),
+    targetValue: numeric("target_value", { precision: 15, scale: 2, mode: "number" }).notNull(),
+    currency: text("currency").notNull().default("INR"),
+    ownerId: uuid("owner_id"),
+    department: text("department"),
+    notes: text("notes"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    createdBy: uuid("created_by"),
   },
-  () => [
-    pgPolicy("forecasts_isolation", {
+  (t) => [
+    uniqueIndex("forecast_targets_org_period_owner_unique").on(t.orgId, t.period, t.ownerId),
+    pgPolicy("forecast_targets_isolation", {
       for: "all",
       to: authenticatedRole,
       using: inUserOrgs,

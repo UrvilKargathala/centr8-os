@@ -1,184 +1,428 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { useOrg } from "@/lib/context/OrgContext";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
-import { Input } from "@/components/ui/Input";
+import { Modal } from "@/components/ui/Modal";
+import { Input, Select, Field } from "@/components/ui/Input";
+import { DealStageBadge } from "@/components/ui/Badge";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/Table";
-import { Empty, EmptyHeader, EmptyMedia, EmptyTitle, EmptyDescription } from "@/components/ui/Empty";
-import { DEAL_STAGES, DEAL_STAGE_LABELS } from "@/lib/constants";
+import { AiButton, AiSuggestionCard, useAiCall } from "@/components/ui/AiTouchpoint";
+import { fmtMoney, isStale } from "../deals/page";
 
-type Deal = { id: string; value: number | null; currency: string; stage: (typeof DEAL_STAGES)[number]; expectedCloseDate: string | null };
-type Forecast = { id: string; period: string; targetValue: number | null };
+type PeriodType = "monthly" | "quarterly" | "annual";
+type Deal = {
+  id: string;
+  name: string;
+  accountId: string | null;
+  ownerId: string | null;
+  stage: string;
+  probability: number | null;
+  value: number | null;
+  currency: string;
+  expectedCloseDate: string | null;
+  stageChangedAt: string;
+};
+type Forecast = {
+  period: string;
+  target_value: number;
+  pipeline_value: number;
+  weighted_value: number;
+  committed_value: number;
+  won_value: number;
+  gap: number;
+  deals_count: number;
+  deals: Deal[];
+};
+type ByRep = { owner_id: string; owner_name: string; target_value: number; won_value: number; weighted_value: number; pipeline_value: number; gap: number };
+type TrendPoint = { period: string; target: number; won: number; weighted: number; pipeline: number };
+type Account = { id: string; name: string };
+type Employee = { id: string; fullName: string };
 
-const OPEN_STAGES = DEAL_STAGES.filter((s) => s !== "won" && s !== "lost");
-
-function formatCurrency(value: number) {
-  return new Intl.NumberFormat(undefined, { style: "currency", currency: "USD" }).format(value);
+function isoDate(d: Date) {
+  return d.toISOString().slice(0, 10);
 }
 
-// Deliberately client-side: the rollup (pipeline value by stage/period) is
-// never stored — computed live from GET /api/deals, grouped by
-// expectedCloseDate's YYYY-MM and stage. Only the per-period target is
-// persisted (forecasts table). See db/schema.ts's comment on `forecasts`.
+// Mirrors buildPeriods' bucketing in app/api/crm/forecasts/trend/route.ts, but
+// only for the current period (no need to duplicate a full N-period loop here).
+function currentPeriod(periodType: PeriodType) {
+  const now = new Date();
+  if (periodType === "monthly") {
+    const start = new Date(now.getFullYear(), now.getMonth(), 1);
+    const end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+    return { period: `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`, start: isoDate(start), end: isoDate(end) };
+  }
+  if (periodType === "quarterly") {
+    const q = Math.floor(now.getMonth() / 3);
+    const start = new Date(now.getFullYear(), q * 3, 1);
+    const end = new Date(now.getFullYear(), q * 3 + 3, 0);
+    return { period: `Q${q + 1} ${now.getFullYear()}`, start: isoDate(start), end: isoDate(end) };
+  }
+  return { period: `${now.getFullYear()}`, start: isoDate(new Date(now.getFullYear(), 0, 1)), end: isoDate(new Date(now.getFullYear(), 11, 31)) };
+}
+
 export default function ForecastsPage() {
+  const router = useRouter();
   const { selectedOrgId, can, loading: orgLoading } = useOrg();
-  const [deals, setDeals] = useState<Deal[]>([]);
-  const [forecasts, setForecasts] = useState<Forecast[]>([]);
+  const [periodType, setPeriodType] = useState<PeriodType>("monthly");
+  const [ownerId, setOwnerId] = useState("");
+  const [forecast, setForecast] = useState<Forecast | null>(null);
+  const [byRep, setByRep] = useState<ByRep[]>([]);
+  const [trend, setTrend] = useState<TrendPoint[]>([]);
+  const [accounts, setAccounts] = useState<Account[]>([]);
+  const [employees, setEmployees] = useState<Employee[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [savingPeriod, setSavingPeriod] = useState<string | null>(null);
+  const [showTarget, setShowTarget] = useState(false);
 
-  const canEdit = can("forecast", "update") || can("forecast", "create");
+  const canSetTarget = can("forecast", "set_target");
+  const period = useMemo(() => currentPeriod(periodType), [periodType]);
 
-  function loadAll() {
+  function load() {
     if (!selectedOrgId) return;
     setLoading(true);
-    setError(null);
+    const forecastParams = new URLSearchParams({
+      org_id: selectedOrgId,
+      period_start: period.start,
+      period_end: period.end,
+      period: period.period,
+    });
+    if (ownerId) forecastParams.set("owner_id", ownerId);
     Promise.all([
-      fetch(`/api/deals?org_id=${selectedOrgId}`).then((r) => r.json()),
-      fetch(`/api/forecasts?org_id=${selectedOrgId}`).then((r) => r.json()),
+      fetch(`/api/crm/forecasts?${forecastParams}`).then((r) => r.json()),
+      fetch(`/api/crm/forecasts/by-rep?org_id=${selectedOrgId}&period_start=${period.start}&period_end=${period.end}&period=${period.period}`).then((r) => r.json()),
+      fetch(`/api/crm/forecasts/trend?org_id=${selectedOrgId}&period_type=${periodType}&count=6`).then((r) => r.json()),
+      fetch(`/api/crm/accounts?org_id=${selectedOrgId}`).then((r) => r.json()),
+      fetch(`/api/employees?org_id=${selectedOrgId}`).then((r) => r.json()),
     ])
-      .then(([dealsBody, forecastsBody]) => {
-        if (!dealsBody.data) throw new Error(dealsBody.error ?? "Failed to load deals");
-        setDeals(dealsBody.data);
-        setForecasts(forecastsBody.data ?? []);
+      .then(([f, r, t, a, e]) => {
+        setForecast(f.data ?? null);
+        setByRep(r.data ?? []);
+        setTrend(t.data ?? []);
+        setAccounts(a.data ?? []);
+        setEmployees(e.data ?? []);
       })
-      .catch((err) => setError(err instanceof Error ? err.message : "Failed to load forecasts"))
       .finally(() => setLoading(false));
   }
+  useEffect(load, [selectedOrgId, periodType, ownerId]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  useEffect(loadAll, [selectedOrgId]);
+  const accountName = (id: string | null) => accounts.find((a) => a.id === id)?.name ?? "No account";
+  const employeeName = (id: string | null) => employees.find((e) => e.id === id)?.fullName ?? "Unassigned";
 
-  const { periods, byPeriodStage, totalsByPeriod } = useMemo(() => {
-    const grouped: Record<string, Record<string, number>> = {};
-    for (const d of deals) {
-      if (!d.expectedCloseDate || !OPEN_STAGES.includes(d.stage as (typeof OPEN_STAGES)[number])) continue;
-      const period = d.expectedCloseDate.slice(0, 7);
-      grouped[period] ??= {};
-      grouped[period][d.stage] = (grouped[period][d.stage] ?? 0) + (d.value ?? 0);
-    }
-    const totals: Record<string, number> = {};
-    for (const [period, byStage] of Object.entries(grouped)) {
-      totals[period] = Object.values(byStage).reduce((a, b) => a + b, 0);
-    }
-    const allPeriods = new Set([...Object.keys(grouped), ...forecasts.map((f) => f.period)]);
-    return { periods: [...allPeriods].sort(), byPeriodStage: grouped, totalsByPeriod: totals };
-  }, [deals, forecasts]);
+  const sortedDeals = useMemo(() => [...(forecast?.deals ?? [])].sort((a, b) => Number(b.value ?? 0) - Number(a.value ?? 0)), [forecast]);
+  const sortedByRep = useMemo(() => [...byRep].sort((a, b) => a.gap - b.gap), [byRep]);
+  const maxTrend = Math.max(1, ...trend.map((t) => Math.max(t.target, t.won + t.weighted, t.pipeline)));
 
-  async function saveTarget(period: string, targetValue: number | null) {
-    setSavingPeriod(period);
-    const existing = forecasts.find((f) => f.period === period);
-    const res = await fetch(existing ? `/api/forecasts/${existing.id}` : "/api/forecasts", {
-      method: existing ? "PATCH" : "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(existing ? { target_value: targetValue } : { org_id: selectedOrgId, period, target_value: targetValue }),
-    });
-    setSavingPeriod(null);
-    if (res.ok) loadAll();
-  }
+  const analyzeAI = useAiCall<string>("Analyst", "analyze_forecast");
+  const actionsAI = useAiCall<{ actions: { action: string; deal_name: string; reasoning: string }[] }>("Planner", "suggest_pipeline_actions");
 
-  if (orgLoading || loading) return <p className="text-body text-neutral-600">Loading forecasts…</p>;
+  if (orgLoading || loading) return <p className="text-body text-neutral-600">Loading…</p>;
   if (!selectedOrgId) return <p className="text-body text-neutral-600">No organization selected.</p>;
-  if (error) return <p className="rounded-md bg-danger-100 p-3 text-body text-danger-600">{error}</p>;
+  if (!can("forecast", "read")) return <p className="text-body text-neutral-600">You don&apos;t have access to forecasts.</p>;
+  if (!forecast) return <p className="text-body text-neutral-600">No forecast data.</p>;
+
+  const dealByName = (name: string) => sortedDeals.find((d) => d.name === name);
+  const openDeals = sortedDeals.filter((d) => d.stage !== "won" && d.stage !== "lost");
+  const staleNames = openDeals.filter((d) => isStale(d.stageChangedAt)).map((d) => d.name);
+  const overdueNames = openDeals.filter((d) => d.expectedCloseDate && new Date(d.expectedCloseDate) < new Date()).map((d) => d.name);
+  const negotiationNames = openDeals.filter((d) => d.stage === "negotiation" || d.stage === "contract_sent").map((d) => d.name);
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-display font-semibold text-neutral-950">Sales Forecasts</h1>
-        <p className="text-body text-neutral-600">
-          Open pipeline value by stage and expected close month — a computed rollup, not a prediction.
-        </p>
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <h1 className="text-h2 font-semibold text-neutral-950">Sales Forecasts</h1>
+          <p className="text-body text-neutral-600">Pipeline health and revenue targets.</p>
+        </div>
+        <div className="flex items-center gap-2">
+          <Field label="Owner">
+            <Select value={ownerId} onChange={(e) => setOwnerId(e.target.value)}>
+              <option value="">All reps</option>
+              {employees.map((e) => (
+                <option key={e.id} value={e.id}>
+                  {e.fullName}
+                </option>
+              ))}
+            </Select>
+          </Field>
+          <div className="flex w-fit gap-1 rounded-md border border-neutral-300 p-0.5">
+            {(["monthly", "quarterly", "annual"] as const).map((v) => (
+              <button
+                key={v}
+                onClick={() => setPeriodType(v)}
+                className={`rounded-sm px-3 py-1 text-small font-medium capitalize ${periodType === v ? "bg-danger-600 text-neutral-50" : "text-neutral-600"}`}
+              >
+                {v}
+              </button>
+            ))}
+          </div>
+        </div>
       </div>
 
-      {periods.length === 0 ? (
-        <Empty>
-          <EmptyHeader>
-            <EmptyMedia variant="icon">
-              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M12 2a10 10 0 100 20 10 10 0 000-20zm0 5v5l3 3" />
-              </svg>
-            </EmptyMedia>
-            <EmptyTitle>No forecastable deals yet</EmptyTitle>
-            <EmptyDescription>Deals need an expected close date to show up here.</EmptyDescription>
-          </EmptyHeader>
-        </Empty>
-      ) : (
-        <Card padding="sm">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Period</TableHead>
-                {OPEN_STAGES.map((s) => (
-                  <TableHead key={s}>{DEAL_STAGE_LABELS[s]}</TableHead>
-                ))}
-                <TableHead>Total pipeline</TableHead>
-                <TableHead>Target</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {periods.map((period) => (
-                <TableRow key={period}>
-                  <TableCell className="font-medium text-neutral-950">{period}</TableCell>
-                  {OPEN_STAGES.map((s) => (
-                    <TableCell key={s} className="text-neutral-600">
-                      {byPeriodStage[period]?.[s] ? formatCurrency(byPeriodStage[period][s]) : "—"}
-                    </TableCell>
-                  ))}
-                  <TableCell className="font-medium text-neutral-950">{formatCurrency(totalsByPeriod[period] ?? 0)}</TableCell>
-                  <TableCell>
-                    <TargetCell
-                      value={forecasts.find((f) => f.period === period)?.targetValue ?? null}
-                      canEdit={canEdit}
-                      saving={savingPeriod === period}
-                      onSave={(v) => saveTarget(period, v)}
-                    />
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+      <div className="grid grid-cols-2 gap-4 sm:grid-cols-5">
+        <Card padding="sm" color="danger">
+          <p className="text-caption text-neutral-600">Target ({forecast.period})</p>
+          {forecast.target_value === 0 ? (
+            <>
+              <p className="text-body-medium text-neutral-600">No target set</p>
+              {canSetTarget && (
+                <Button variant="secondary" className="mt-1" onClick={() => setShowTarget(true)}>
+                  + Set Target
+                </Button>
+              )}
+            </>
+          ) : (
+            <p className="text-h3 font-semibold text-neutral-950">{fmtMoney(forecast.target_value, "INR")}</p>
+          )}
         </Card>
+        <Card padding="sm">
+          <p className="text-caption text-neutral-600">Won</p>
+          <p className="text-h3 font-semibold text-neutral-950">{fmtMoney(forecast.won_value, "INR")}</p>
+        </Card>
+        <Card padding="sm">
+          <p className="text-caption text-neutral-600">Weighted Pipeline</p>
+          <p className="text-h3 font-semibold text-neutral-950">{fmtMoney(forecast.weighted_value, "INR")}</p>
+        </Card>
+        <Card padding="sm">
+          <p className="text-caption text-neutral-600">Total Pipeline</p>
+          <p className="text-h3 font-semibold text-neutral-950">{fmtMoney(forecast.pipeline_value, "INR")}</p>
+        </Card>
+        <Card padding="sm">
+          <p className="text-caption text-neutral-600">Gap to Target</p>
+          <p className={`text-h3 font-semibold ${forecast.gap <= 0 ? "text-success-600" : "text-danger-600"}`}>{fmtMoney(forecast.gap, "INR")}</p>
+        </Card>
+      </div>
+
+      <div className="flex flex-wrap gap-2">
+        <AiButton
+          label="Analyze forecast"
+          loading={analyzeAI.loading}
+          onClick={() =>
+            analyzeAI.run({
+              target_value: forecast.target_value,
+              won_value: forecast.won_value,
+              weighted_value: forecast.weighted_value,
+              gap: forecast.gap,
+              period: forecast.period,
+              top_deal_names: sortedDeals.slice(0, 3).map((d) => d.name),
+            })
+          }
+        />
+        <AiButton
+          label="Suggest pipeline actions"
+          loading={actionsAI.loading}
+          onClick={() => actionsAI.run({ stale_deal_names: staleNames, overdue_deal_names: overdueNames, negotiation_deal_names: negotiationNames })}
+        />
+      </div>
+      {analyzeAI.result && (
+        <AiSuggestionCard onAccept={() => analyzeAI.setResult(null)} onReject={() => analyzeAI.setResult(null)}>
+          <p className="text-body text-neutral-950">{analyzeAI.result}</p>
+        </AiSuggestionCard>
+      )}
+      {actionsAI.result && (
+        <AiSuggestionCard onAccept={() => actionsAI.setResult(null)} onReject={() => actionsAI.setResult(null)}>
+          <div className="space-y-2">
+            {actionsAI.result.actions.map((a, i) => {
+              const deal = dealByName(a.deal_name);
+              return (
+                <div key={i} className="rounded-sm border border-neutral-200 p-2">
+                  <p className="text-body-medium font-medium text-neutral-950">{a.action}</p>
+                  {deal ? (
+                    <button className="text-small text-danger-600 underline" onClick={() => router.push(`/crm/deals/${deal.id}`)}>
+                      {a.deal_name}
+                    </button>
+                  ) : (
+                    <p className="text-small text-neutral-600">{a.deal_name}</p>
+                  )}
+                  <p className="text-caption text-neutral-500">{a.reasoning}</p>
+                </div>
+              );
+            })}
+          </div>
+        </AiSuggestionCard>
+      )}
+
+      <Card>
+        <h3 className="text-body-medium font-semibold text-neutral-950">Target vs. Won vs. Weighted — last 6 periods</h3>
+        <div className="mt-3 flex flex-wrap gap-3 text-caption text-neutral-600">
+          <span className="flex items-center gap-1">
+            <span className="inline-block h-2 w-2 rounded-full bg-neutral-400" /> Target
+          </span>
+          <span className="flex items-center gap-1">
+            <span className="inline-block h-2 w-2 rounded-full bg-danger-600" /> Won
+          </span>
+          <span className="flex items-center gap-1">
+            <span className="inline-block h-2 w-2 rounded-full bg-danger-300" /> Weighted
+          </span>
+        </div>
+        <div className="mt-3 space-y-3">
+          {trend.map((t) => (
+            <div key={t.period} className="space-y-1">
+              <div className="flex items-center justify-between text-caption text-neutral-600">
+                <span>{t.period}</span>
+                <span>{fmtMoney(t.target, "INR")} target</span>
+              </div>
+              <div className="relative h-4 rounded-sm bg-neutral-200">
+                <div className="absolute inset-y-0 left-0 flex">
+                  <div className="h-4 rounded-l-sm bg-danger-600" style={{ width: `${(t.won / maxTrend) * 100}%` }} />
+                  <div className="h-4 bg-danger-300" style={{ width: `${(t.weighted / maxTrend) * 100}%` }} />
+                </div>
+                {t.target > 0 && <div className="absolute inset-y-0 w-0.5 bg-neutral-950" style={{ left: `${Math.min(100, (t.target / maxTrend) * 100)}%` }} />}
+              </div>
+            </div>
+          ))}
+        </div>
+      </Card>
+
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <Card>
+          <h3 className="mb-3 text-body-medium font-semibold text-neutral-950">Deals closing this period</h3>
+          {sortedDeals.length === 0 ? (
+            <p className="text-small text-neutral-600">No deals expected to close in this period.</p>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Deal</TableHead>
+                  <TableHead>Value</TableHead>
+                  <TableHead>Stage</TableHead>
+                  <TableHead>Prob.</TableHead>
+                  <TableHead>Close</TableHead>
+                  <TableHead>Owner</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {sortedDeals.map((d) => (
+                  <TableRow key={d.id} className="cursor-pointer" onClick={() => router.push(`/crm/deals/${d.id}`)}>
+                    <TableCell>
+                      <p className="font-medium text-neutral-950">{d.name}</p>
+                      <p className="text-caption text-neutral-500">{accountName(d.accountId)}</p>
+                    </TableCell>
+                    <TableCell>{fmtMoney(d.value, d.currency)}</TableCell>
+                    <TableCell>
+                      <DealStageBadge stage={d.stage} />
+                    </TableCell>
+                    <TableCell>{d.probability ?? 0}%</TableCell>
+                    <TableCell>{d.expectedCloseDate ?? "—"}</TableCell>
+                    <TableCell>{employeeName(d.ownerId)}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
+        </Card>
+
+        {!ownerId && (
+          <Card>
+            <h3 className="mb-3 text-body-medium font-semibold text-neutral-950">By rep</h3>
+            {sortedByRep.length === 0 ? (
+              <p className="text-small text-neutral-600">No reps found.</p>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Rep</TableHead>
+                    <TableHead>Target</TableHead>
+                    <TableHead>Won</TableHead>
+                    <TableHead>Weighted</TableHead>
+                    <TableHead>Pipeline</TableHead>
+                    <TableHead>Gap</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {sortedByRep.map((r) => (
+                    <TableRow key={r.owner_id} className="cursor-pointer" onClick={() => setOwnerId(r.owner_id)}>
+                      <TableCell>{r.owner_name}</TableCell>
+                      <TableCell>{fmtMoney(r.target_value, "INR")}</TableCell>
+                      <TableCell>{fmtMoney(r.won_value, "INR")}</TableCell>
+                      <TableCell>{fmtMoney(r.weighted_value, "INR")}</TableCell>
+                      <TableCell>{fmtMoney(r.pipeline_value, "INR")}</TableCell>
+                      <TableCell className={r.gap <= 0 ? "text-success-600" : "text-danger-600"}>{fmtMoney(r.gap, "INR")}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            )}
+          </Card>
+        )}
+      </div>
+
+      {showTarget && (
+        <SetTargetModal
+          orgId={selectedOrgId}
+          period={period}
+          periodType={periodType}
+          ownerId={ownerId || null}
+          onClose={() => setShowTarget(false)}
+          onSaved={() => {
+            setShowTarget(false);
+            load();
+          }}
+        />
       )}
     </div>
   );
 }
 
-function TargetCell({
-  value,
-  canEdit,
-  saving,
-  onSave,
+function SetTargetModal({
+  orgId,
+  period,
+  periodType,
+  ownerId,
+  onClose,
+  onSaved,
 }: {
-  value: number | null;
-  canEdit: boolean;
-  saving: boolean;
-  onSave: (value: number | null) => void;
+  orgId: string;
+  period: { period: string; start: string; end: string };
+  periodType: PeriodType;
+  ownerId: string | null;
+  onClose: () => void;
+  onSaved: () => void;
 }) {
-  const [draft, setDraft] = useState(value != null ? String(value) : "");
+  const [targetValue, setTargetValue] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  if (!canEdit) return <span className="text-neutral-600">{value != null ? formatCurrency(value) : "—"}</span>;
+  async function save() {
+    setSaving(true);
+    setError(null);
+    const res = await fetch("/api/crm/forecasts/targets", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        org_id: orgId,
+        period: period.period,
+        period_type: periodType,
+        period_start: period.start,
+        period_end: period.end,
+        target_value: Number(targetValue),
+        owner_id: ownerId,
+      }),
+    });
+    const body = await res.json();
+    setSaving(false);
+    if (!res.ok) return setError(body.error ?? "Failed to set target");
+    onSaved();
+  }
 
   return (
-    <div className="flex items-center gap-1.5">
-      <Input
-        type="number"
-        min="0"
-        step="0.01"
-        className="w-28"
-        value={draft}
-        onChange={(e) => setDraft(e.target.value)}
-        placeholder="Set target"
-        disabled={saving}
-      />
-      <Button
-        variant="secondary"
-        onClick={() => onSave(draft ? Number(draft) : null)}
-        disabled={saving || draft === (value != null ? String(value) : "")}
-      >
-        {saving ? "…" : "Save"}
-      </Button>
-    </div>
+    <Modal onClose={onClose}>
+      <h2 className="text-h3 font-semibold text-neutral-950">Set Target — {period.period}</h2>
+      <div className="mt-4 space-y-3">
+        <Field label="Target value">
+          <Input type="number" value={targetValue} onChange={(e) => setTargetValue(e.target.value)} />
+        </Field>
+        {error && <p className="text-small text-danger-600">{error}</p>}
+        <div className="flex gap-2 pt-2">
+          <Button onClick={save} disabled={saving || !targetValue}>
+            {saving ? "Saving…" : "Save Target"}
+          </Button>
+          <Button variant="secondary" onClick={onClose}>
+            Cancel
+          </Button>
+        </div>
+      </div>
+    </Modal>
   );
 }

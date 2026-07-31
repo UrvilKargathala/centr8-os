@@ -70,3 +70,33 @@ export function requireLeaveApproveAccess(db: OrgScopedDb, userId: string, orgId
 export function requireCompensationViewAccess(db: OrgScopedDb, userId: string, orgId: string) {
   return requirePermission(db, userId, orgId, "compensation", "view_sensitive");
 }
+
+// HR Batch 1 — server-side field trimming for employee:read vs
+// employee:view_full. Everyone with employee:read (owner/admin/member/
+// viewer, Prompt 5.1) sees PM-relevant fields only; view_full (owner/admin,
+// migration 0070) additionally unlocks personal/sensitive fields — DOB,
+// addresses, cost rate, notes. Trimming happens here, not in the UI, so a
+// direct API call from a non-view_full role never receives the fields
+// regardless of what the client renders.
+type Employee = typeof employees.$inferSelect;
+const FULL_ONLY_FIELDS = [
+  "personalEmail",
+  "dateOfBirth",
+  "gender",
+  "maritalStatus",
+  "nationality",
+  "address",
+  "city",
+  "state",
+  "zipCode",
+  "costRateHourly",
+  "currency",
+  "notes",
+] as const satisfies readonly (keyof Employee)[];
+
+export function trimEmployeeFields(row: Employee, canViewFull: boolean): Employee {
+  if (canViewFull) return row;
+  const trimmed: Record<string, unknown> = { ...row };
+  for (const field of FULL_ONLY_FIELDS) delete trimmed[field];
+  return trimmed as Employee;
+}

@@ -3,8 +3,14 @@ import { eq } from "drizzle-orm";
 import { withOrgContext } from "@/db/withOrgContext";
 import { hrCases } from "@/db/schema";
 import { ApiError, handleApiError, requireUserId } from "@/lib/api/helpers";
-import { requirePermission } from "@/lib/api/permissions";
+import { requireCaseCreateAccess, requireCaseManageAccess } from "@/lib/api/hrCases";
 
+// Org-wide case list — requires hr_case:manage. Confidential cases are
+// always redacted here (subject/description hidden, lock flag set) even
+// for manage-holders — full content is only ever returned by
+// GET /api/hr-cases/[id], which enforces "manage-holder OR the case's own
+// raiser" per case, not a blanket "any admin can list all confidential
+// content" grant.
 export async function GET(req: NextRequest) {
   try {
     const userId = await requireUserId(req);
@@ -12,8 +18,13 @@ export async function GET(req: NextRequest) {
     if (!orgId) throw new ApiError(400, "org_id is required");
 
     const rows = await withOrgContext(userId, async (db) => {
-      await requirePermission(db, userId, orgId, "hr_case", "read");
-      return db.select().from(hrCases).where(eq(hrCases.orgId, orgId));
+      await requireCaseManageAccess(db, userId, orgId);
+      const cases = await db.select().from(hrCases).where(eq(hrCases.orgId, orgId));
+      return cases.map((c) =>
+        c.isConfidential
+          ? { ...c, subject: "Confidential case", description: null, categoryId: null }
+          : c,
+      );
     });
 
     return NextResponse.json({ data: rows });
@@ -26,21 +37,22 @@ export async function POST(req: NextRequest) {
   try {
     const userId = await requireUserId(req);
     const body = await req.json();
-    if (!body.org_id || !body.employee_id || !body.category) {
-      throw new ApiError(400, "org_id, employee_id, and category are required");
+    if (!body.org_id || !body.employee_id || !body.subject || !body.description) {
+      throw new ApiError(400, "org_id, employee_id, subject, and description are required");
     }
 
     const [row] = await withOrgContext(userId, async (db) => {
-      await requirePermission(db, userId, body.org_id, "hr_case", "create");
+      await requireCaseCreateAccess(db, userId, body.org_id);
       return db
         .insert(hrCases)
         .values({
           orgId: body.org_id,
           employeeId: body.employee_id,
-          category: body.category,
-          description: body.description ?? null,
-          status: body.status ?? undefined,
-          assignedTo: body.assigned_to ?? null,
+          categoryId: body.category_id ?? null,
+          subject: body.subject,
+          description: body.description,
+          priority: body.priority ?? undefined,
+          isConfidential: body.is_confidential ?? undefined,
         })
         .returning();
     });

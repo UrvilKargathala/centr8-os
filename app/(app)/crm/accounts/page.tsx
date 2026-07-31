@@ -1,157 +1,272 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { useOrg } from "@/lib/context/OrgContext";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Modal } from "@/components/ui/Modal";
-import { Input, Field } from "@/components/ui/Input";
+import { Input, Select, Field } from "@/components/ui/Input";
+import { AccountTypeBadge, AccountStatusBadge } from "@/components/ui/Badge";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/Table";
-import { Empty, EmptyHeader, EmptyMedia, EmptyTitle, EmptyDescription } from "@/components/ui/Empty";
+import { Empty, EmptyHeader, EmptyTitle, EmptyDescription } from "@/components/ui/Empty";
+import { ACCOUNT_TYPES, ACCOUNT_STATUSES } from "@/lib/constants";
 
-type Account = { id: string; name: string; industry: string | null; website: string | null };
+type Account = {
+  id: string;
+  name: string;
+  website: string | null;
+  industry: string | null;
+  type: string;
+  status: string;
+  annualRevenue: number | null;
+  currency: string;
+  ownerId: string | null;
+};
+type Contact = { id: string; accountId: string | null };
+type Employee = { id: string; fullName: string };
 
 export default function AccountsPage() {
+  const router = useRouter();
   const { selectedOrgId, can, loading: orgLoading } = useOrg();
   const [accounts, setAccounts] = useState<Account[]>([]);
+  const [contacts, setContacts] = useState<Contact[]>([]);
+  const [employees, setEmployees] = useState<Employee[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [search, setSearch] = useState("");
+  const [type, setType] = useState("");
+  const [status, setStatus] = useState("");
+  const [industry, setIndustry] = useState("");
+  const [ownerId, setOwnerId] = useState("");
   const [showNew, setShowNew] = useState(false);
 
-  function loadAll() {
+  const canCreate = can("account", "create");
+
+  function load() {
     if (!selectedOrgId) return;
     setLoading(true);
-    setError(null);
-    fetch(`/api/accounts?org_id=${selectedOrgId}`)
-      .then((r) => r.json())
-      .then((body) => {
-        if (!body.data) throw new Error(body.error ?? "Failed to load accounts");
-        setAccounts(body.data);
+    const params = new URLSearchParams({ org_id: selectedOrgId });
+    if (type) params.set("type", type);
+    if (status) params.set("status", status);
+    if (industry) params.set("industry", industry);
+    if (ownerId) params.set("owner_id", ownerId);
+    if (search) params.set("search", search);
+    Promise.all([
+      fetch(`/api/crm/accounts?${params}`).then((r) => r.json()),
+      fetch(`/api/crm/contacts?org_id=${selectedOrgId}`).then((r) => r.json()),
+      fetch(`/api/employees?org_id=${selectedOrgId}`).then((r) => r.json()),
+    ])
+      .then(([accBody, contBody, empBody]) => {
+        setAccounts(accBody.data ?? []);
+        setContacts(contBody.data ?? []);
+        setEmployees(empBody.data ?? []);
       })
-      .catch((err) => setError(err instanceof Error ? err.message : "Failed to load accounts"))
       .finally(() => setLoading(false));
   }
 
-  useEffect(loadAll, [selectedOrgId]);
+  useEffect(load, [selectedOrgId, type, status, industry, ownerId, search]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  if (orgLoading || loading) return <p className="text-body text-neutral-600">Loading accounts…</p>;
+  const employeeName = (id: string | null) => employees.find((e) => e.id === id)?.fullName ?? "Unassigned";
+  const contactCount = (accountId: string) => contacts.filter((c) => c.accountId === accountId).length;
+
+  const kpis = useMemo(
+    () => ({
+      total: accounts.length,
+      customers: accounts.filter((a) => a.type === "customer").length,
+      prospects: accounts.filter((a) => a.type === "prospect").length,
+    }),
+    [accounts],
+  );
+
+  if (orgLoading || loading) return <p className="text-body text-neutral-600">Loading…</p>;
   if (!selectedOrgId) return <p className="text-body text-neutral-600">No organization selected.</p>;
-  if (error) return <p className="rounded-md bg-danger-100 p-3 text-body text-danger-600">{error}</p>;
+  if (!can("account", "read")) return <p className="text-body text-neutral-600">You don&apos;t have access to accounts.</p>;
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <h1 className="text-display font-semibold text-neutral-950">Accounts</h1>
-        <div className="flex items-center gap-3">
-          <span className="text-body text-neutral-600">{accounts.length} total</span>
-          {can("account", "create") && <Button onClick={() => setShowNew(true)}>+ New Account</Button>}
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-h2 font-semibold text-neutral-950">Accounts</h1>
+          <p className="text-body text-neutral-600">Your companies and organizations.</p>
         </div>
+        <div className="flex items-center gap-2">
+          <Input placeholder="Search accounts…" value={search} onChange={(e) => setSearch(e.target.value)} />
+          {canCreate && <Button onClick={() => setShowNew(true)}>+ New Account</Button>}
+        </div>
+      </div>
+
+      <div className="grid grid-cols-3 gap-4">
+        <Card padding="sm" color="danger">
+          <p className="text-caption text-neutral-600">Total Accounts</p>
+          <p className="text-h3 font-semibold text-neutral-950">{kpis.total}</p>
+        </Card>
+        <Card padding="sm">
+          <p className="text-caption text-neutral-600">Customers</p>
+          <p className="text-h3 font-semibold text-neutral-950">{kpis.customers}</p>
+        </Card>
+        <Card padding="sm">
+          <p className="text-caption text-neutral-600">Prospects</p>
+          <p className="text-h3 font-semibold text-neutral-950">{kpis.prospects}</p>
+        </Card>
+      </div>
+
+      <div className="flex flex-wrap items-end gap-3">
+        <Field label="Type">
+          <Select value={type} onChange={(e) => setType(e.target.value)}>
+            <option value="">All</option>
+            {ACCOUNT_TYPES.map((t) => (
+              <option key={t} value={t}>
+                {t}
+              </option>
+            ))}
+          </Select>
+        </Field>
+        <Field label="Status">
+          <Select value={status} onChange={(e) => setStatus(e.target.value)}>
+            <option value="">All</option>
+            {ACCOUNT_STATUSES.map((s) => (
+              <option key={s} value={s}>
+                {s}
+              </option>
+            ))}
+          </Select>
+        </Field>
+        <Field label="Industry">
+          <Input value={industry} onChange={(e) => setIndustry(e.target.value)} placeholder="e.g. Technology" />
+        </Field>
+        <Field label="Owner">
+          <Select value={ownerId} onChange={(e) => setOwnerId(e.target.value)}>
+            <option value="">All</option>
+            {employees.map((e) => (
+              <option key={e.id} value={e.id}>
+                {e.fullName}
+              </option>
+            ))}
+          </Select>
+        </Field>
+        <Button
+          variant="secondary"
+          onClick={() => {
+            setType("");
+            setStatus("");
+            setIndustry("");
+            setOwnerId("");
+            setSearch("");
+          }}
+        >
+          Clear all
+        </Button>
       </div>
 
       {accounts.length === 0 ? (
         <Empty>
           <EmptyHeader>
-            <EmptyMedia variant="icon">
-              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
-              </svg>
-            </EmptyMedia>
-            <EmptyTitle>No accounts yet</EmptyTitle>
-            <EmptyDescription>Accounts are created directly, or automatically when a lead is converted.</EmptyDescription>
+            <EmptyTitle>No accounts found</EmptyTitle>
+            <EmptyDescription>Try adjusting filters, or add your first account.</EmptyDescription>
           </EmptyHeader>
         </Empty>
       ) : (
-        <Card padding="sm">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Name</TableHead>
-                <TableHead>Industry</TableHead>
-                <TableHead>Website</TableHead>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Name</TableHead>
+              <TableHead>Industry</TableHead>
+              <TableHead>Type</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead>Contacts</TableHead>
+              <TableHead>Annual Revenue</TableHead>
+              <TableHead>Owner</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {accounts.map((a) => (
+              <TableRow key={a.id} className="cursor-pointer" onClick={() => router.push(`/crm/accounts/${a.id}`)}>
+                <TableCell>
+                  <p className="font-medium text-neutral-950">{a.name}</p>
+                  {a.website && <p className="text-caption text-neutral-500">{a.website}</p>}
+                </TableCell>
+                <TableCell>{a.industry ?? "—"}</TableCell>
+                <TableCell>
+                  <AccountTypeBadge type={a.type} />
+                </TableCell>
+                <TableCell>
+                  <AccountStatusBadge status={a.status} />
+                </TableCell>
+                <TableCell>{contactCount(a.id)}</TableCell>
+                <TableCell>{a.annualRevenue !== null ? `${a.currency} ${a.annualRevenue.toLocaleString()}` : "—"}</TableCell>
+                <TableCell>{employeeName(a.ownerId)}</TableCell>
               </TableRow>
-            </TableHeader>
-            <TableBody>
-              {accounts.map((a) => (
-                <TableRow key={a.id}>
-                  <TableCell className="font-medium text-neutral-950">{a.name}</TableCell>
-                  <TableCell className="text-neutral-600">{a.industry ?? "—"}</TableCell>
-                  <TableCell className="text-neutral-600">{a.website ?? "—"}</TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </Card>
+            ))}
+          </TableBody>
+        </Table>
       )}
 
       {showNew && (
-        <Modal onClose={() => setShowNew(false)}>
-          <NewAccountForm
-            orgId={selectedOrgId}
-            onClose={() => setShowNew(false)}
-            onCreated={() => {
-              setShowNew(false);
-              loadAll();
-            }}
-          />
-        </Modal>
+        <NewAccountModal
+          orgId={selectedOrgId}
+          onClose={() => setShowNew(false)}
+          onSaved={() => {
+            setShowNew(false);
+            load();
+          }}
+        />
       )}
     </div>
   );
 }
 
-function NewAccountForm({ orgId, onClose, onCreated }: { orgId: string; onClose: () => void; onCreated: () => void }) {
+export function NewAccountModal({
+  orgId,
+  onClose,
+  onSaved,
+}: {
+  orgId: string;
+  onClose: () => void;
+  onSaved: (id: string) => void;
+}) {
   const [name, setName] = useState("");
   const [industry, setIndustry] = useState("");
   const [website, setWebsite] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    if (!name) return;
+  async function save() {
     setSaving(true);
     setError(null);
-
-    const res = await fetch("/api/accounts", {
+    const res = await fetch("/api/crm/accounts", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ org_id: orgId, name, industry: industry || null, website: website || null }),
     });
     const body = await res.json();
-    if (!res.ok) {
-      setSaving(false);
-      setError(body.error ?? "Failed to create account");
-      return;
-    }
-
     setSaving(false);
-    onCreated();
+    if (!res.ok) return setError(body.error ?? "Failed to create account");
+    onSaved(body.data.id);
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      <h2 className="text-h2 font-semibold text-neutral-950">New Account</h2>
-
-      {error && <p className="rounded-md bg-danger-100 p-3 text-body text-danger-600">{error}</p>}
-
-      <Field label="Name">
-        <Input className="w-full" value={name} onChange={(e) => setName(e.target.value)} autoFocus />
-      </Field>
-      <Field label="Industry">
-        <Input className="w-full" value={industry} onChange={(e) => setIndustry(e.target.value)} />
-      </Field>
-      <Field label="Website">
-        <Input className="w-full" value={website} onChange={(e) => setWebsite(e.target.value)} />
-      </Field>
-
-      <div className="flex justify-end gap-3 border-t border-neutral-200 pt-4">
-        <Button type="button" variant="secondary" onClick={onClose}>
-          Cancel
-        </Button>
-        <Button type="submit" disabled={saving || !name}>
-          {saving ? "Creating…" : "Create Account"}
-        </Button>
+    <Modal onClose={onClose}>
+      <h2 className="text-h3 font-semibold text-neutral-950">New Account</h2>
+      <div className="mt-4 space-y-3">
+        <Field label="Name">
+          <Input value={name} onChange={(e) => setName(e.target.value)} />
+        </Field>
+        <Field label="Industry">
+          <Input value={industry} onChange={(e) => setIndustry(e.target.value)} />
+        </Field>
+        <Field label="Website">
+          <Input value={website} onChange={(e) => setWebsite(e.target.value)} />
+        </Field>
+        {error && <p className="text-small text-danger-600">{error}</p>}
+        <div className="flex gap-2 pt-2">
+          <Button onClick={save} disabled={saving || !name}>
+            {saving ? "Saving…" : "Create Account"}
+          </Button>
+          <Button variant="secondary" onClick={onClose}>
+            Cancel
+          </Button>
+        </div>
       </div>
-    </form>
+    </Modal>
   );
 }

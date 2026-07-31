@@ -1,249 +1,535 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { useOrg } from "@/lib/context/OrgContext";
+import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Modal } from "@/components/ui/Modal";
 import { Input, Select, Field } from "@/components/ui/Input";
-import { Empty, EmptyHeader, EmptyMedia, EmptyTitle, EmptyDescription } from "@/components/ui/Empty";
-import { DealBoard, type Deal } from "@/components/DealBoard";
-import { ActivityTimeline } from "@/components/ActivityTimeline";
-import { DEAL_STAGES } from "@/lib/constants";
+import { Badge } from "@/components/ui/Badge";
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/Table";
+import { Empty, EmptyHeader, EmptyTitle, EmptyDescription } from "@/components/ui/Empty";
+import { useToast } from "@/components/ui/Toast";
 
-type RawDeal = {
+const STAGES = ["prospecting", "discovery", "proposal", "negotiation", "contract_sent"] as const;
+export const STAGE_LABEL: Record<string, string> = {
+  prospecting: "Prospecting",
+  discovery: "Discovery",
+  proposal: "Proposal",
+  negotiation: "Negotiation",
+  contract_sent: "Contract Sent",
+  won: "Won",
+  lost: "Lost",
+};
+export const STAGE_BADGE_COLOR: Record<string, "neutral" | "info" | "warning" | "danger" | "success"> = {
+  prospecting: "neutral",
+  discovery: "info",
+  proposal: "info",
+  negotiation: "warning",
+  contract_sent: "warning",
+  won: "success",
+  lost: "danger",
+};
+
+export type Deal = {
   id: string;
-  accountId: string;
-  contactId: string | null;
   name: string;
+  accountId: string | null;
+  primaryContactId: string | null;
+  ownerId: string | null;
+  stage: string;
+  probability: number | null;
   value: number | null;
   currency: string;
-  stage: (typeof DEAL_STAGES)[number];
   expectedCloseDate: string | null;
+  stageChangedAt: string;
+  nextStep: string | null;
 };
 type Account = { id: string; name: string };
-type Contact = { id: string; name: string; accountId: string | null };
+type Contact = { id: string; fullName: string; accountId: string | null };
+type Employee = { id: string; fullName: string };
+type StageStat = { stage: string; count: number; total_value: number; avg_days_in_stage: number };
+type PipelineStats = {
+  stages: StageStat[];
+  total_pipeline_value: number;
+  weighted_pipeline_value: number;
+  avg_deal_cycle_days: number;
+  win_rate_percent: number;
+};
+
+export function isStale(stageChangedAt: string) {
+  return (Date.now() - new Date(stageChangedAt).getTime()) / 86400000 > 14;
+}
+function daysInStage(stageChangedAt: string) {
+  return Math.floor((Date.now() - new Date(stageChangedAt).getTime()) / 86400000);
+}
+export function fmtMoney(value: number | null, currency: string) {
+  if (value === null) return "—";
+  return new Intl.NumberFormat("en-IN", { style: "currency", currency, maximumFractionDigits: 0 }).format(value);
+}
 
 export default function DealsPage() {
+  const router = useRouter();
   const { selectedOrgId, can, loading: orgLoading } = useOrg();
-  const [deals, setDeals] = useState<RawDeal[]>([]);
+  const { show: showToast } = useToast();
+  const [deals, setDeals] = useState<Deal[]>([]);
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [contacts, setContacts] = useState<Contact[]>([]);
+  const [employees, setEmployees] = useState<Employee[]>([]);
+  const [stats, setStats] = useState<PipelineStats | null>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [view, setView] = useState<"kanban" | "table" | "forecast">("kanban");
+  const [search, setSearch] = useState("");
   const [showNew, setShowNew] = useState(false);
-  const [openDealId, setOpenDealId] = useState<string | null>(null);
+  const [newDefaults, setNewDefaults] = useState<{ stage: string; accountId?: string } | null>(null);
+  const [sortKey, setSortKey] = useState<keyof Deal>("name");
+  const [sortDir, setSortDir] = useState<1 | -1>(1);
 
-  const canEdit = can("deal", "update");
+  const canCreate = can("deal", "create");
 
-  function loadAll() {
+  function load() {
     if (!selectedOrgId) return;
     setLoading(true);
-    setError(null);
     Promise.all([
-      fetch(`/api/deals?org_id=${selectedOrgId}`).then((r) => r.json()),
-      fetch(`/api/accounts?org_id=${selectedOrgId}`).then((r) => r.json()),
-      fetch(`/api/contacts?org_id=${selectedOrgId}`).then((r) => r.json()),
+      fetch(`/api/crm/deals?org_id=${selectedOrgId}`).then((r) => r.json()),
+      fetch(`/api/crm/accounts?org_id=${selectedOrgId}`).then((r) => r.json()),
+      fetch(`/api/crm/contacts?org_id=${selectedOrgId}`).then((r) => r.json()),
+      fetch(`/api/employees?org_id=${selectedOrgId}`).then((r) => r.json()),
+      fetch(`/api/crm/deals/pipeline-stats?org_id=${selectedOrgId}`).then((r) => r.json()),
     ])
-      .then(([dealsBody, accountsBody, contactsBody]) => {
-        if (!dealsBody.data) throw new Error(dealsBody.error ?? "Failed to load deals");
-        setDeals(dealsBody.data);
-        setAccounts(accountsBody.data ?? []);
-        setContacts(contactsBody.data ?? []);
+      .then(([d, a, c, e, s]) => {
+        setDeals(d.data ?? []);
+        setAccounts(a.data ?? []);
+        setContacts(c.data ?? []);
+        setEmployees(e.data ?? []);
+        setStats(s.data ?? null);
       })
-      .catch((err) => setError(err instanceof Error ? err.message : "Failed to load deals"))
       .finally(() => setLoading(false));
   }
+  useEffect(load, [selectedOrgId]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  useEffect(loadAll, [selectedOrgId]);
+  const accountName = (id: string | null) => accounts.find((a) => a.id === id)?.name ?? "No account";
+  const employeeName = (id: string | null) => employees.find((e) => e.id === id)?.fullName ?? "Unassigned";
 
-  const accountName = (id: string) => accounts.find((a) => a.id === id)?.name ?? "Unknown account";
-
-  const boardDeals: Deal[] = useMemo(
-    () =>
-      deals.map((d) => ({
-        id: d.id,
-        name: d.name,
-        accountName: accountName(d.accountId),
-        value: d.value,
-        currency: d.currency,
-        stage: d.stage,
-        expectedCloseDate: d.expectedCloseDate,
-      })),
-    [deals, accounts],
+  const filteredDeals = useMemo(
+    () => deals.filter((d) => (search ? d.name.toLowerCase().includes(search.toLowerCase()) : true)),
+    [deals, search],
   );
 
-  async function handleStageChange(dealId: string, stage: string) {
-    setDeals((prev) => prev.map((d) => (d.id === dealId ? { ...d, stage: stage as RawDeal["stage"] } : d)));
-    const res = await fetch(`/api/deals/${dealId}`, {
+  const kpis = useMemo(() => {
+    const startOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
+    const startOfNextMonth = new Date(new Date().getFullYear(), new Date().getMonth() + 1, 1);
+    const closingThisMonth = deals.filter((d) => {
+      if (!d.expectedCloseDate || d.stage === "won" || d.stage === "lost") return false;
+      const dt = new Date(d.expectedCloseDate);
+      return dt >= startOfMonth && dt < startOfNextMonth;
+    }).length;
+    return {
+      openPipeline: stats?.total_pipeline_value ?? 0,
+      weighted: stats?.weighted_pipeline_value ?? 0,
+      closingThisMonth,
+      winRate: stats?.win_rate_percent ?? 0,
+      avgCycle: stats?.avg_deal_cycle_days ?? 0,
+    };
+  }, [deals, stats]);
+
+  async function moveStage(id: string, stage: string) {
+    const prev = deals;
+    setDeals((cur) => cur.map((d) => (d.id === id ? { ...d, stage, stageChangedAt: new Date().toISOString() } : d)));
+    const res = await fetch(`/api/crm/deals/${id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ stage }),
     });
-    if (!res.ok) loadAll();
+    if (!res.ok) {
+      setDeals(prev);
+      showToast("Failed to move deal", "error");
+    } else {
+      load();
+    }
   }
 
-  if (orgLoading || loading) return <p className="text-body text-neutral-600">Loading deals…</p>;
-  if (!selectedOrgId) return <p className="text-body text-neutral-600">No organization selected.</p>;
-  if (error) return <p className="rounded-md bg-danger-100 p-3 text-body text-danger-600">{error}</p>;
+  function sortedDeals() {
+    return [...filteredDeals].sort((a, b) => {
+      const av = a[sortKey] ?? "";
+      const bv = b[sortKey] ?? "";
+      if (av < bv) return -1 * sortDir;
+      if (av > bv) return 1 * sortDir;
+      return 0;
+    });
+  }
+  function toggleSort(key: keyof Deal) {
+    if (sortKey === key) setSortDir((d) => (d === 1 ? -1 : 1));
+    else {
+      setSortKey(key);
+      setSortDir(1);
+    }
+  }
 
-  const openDeal = deals.find((d) => d.id === openDealId);
+  if (orgLoading || loading) return <p className="text-body text-neutral-600">Loading…</p>;
+  if (!selectedOrgId) return <p className="text-body text-neutral-600">No organization selected.</p>;
+  if (!can("deal", "read")) return <p className="text-body text-neutral-600">You don&apos;t have access to deals.</p>;
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <h1 className="text-display font-semibold text-neutral-950">Deals / Pipeline</h1>
-        <div className="flex items-center gap-3">
-          <span className="text-body text-neutral-600">{deals.length} total</span>
-          {can("deal", "create") && accounts.length > 0 && <Button onClick={() => setShowNew(true)}>+ New Deal</Button>}
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-h2 font-semibold text-neutral-950">Deals</h1>
+          <p className="text-body text-neutral-600">Manage your sales pipeline.</p>
+        </div>
+        <div className="flex items-center gap-2">
+          <Input placeholder="Search deals…" value={search} onChange={(e) => setSearch(e.target.value)} />
+          {canCreate && (
+            <Button
+              onClick={() => {
+                setNewDefaults({ stage: "prospecting" });
+                setShowNew(true);
+              }}
+            >
+              + New Deal
+            </Button>
+          )}
         </div>
       </div>
 
-      {accounts.length === 0 ? (
+      <div className="grid grid-cols-2 gap-4 sm:grid-cols-5">
+        <Card padding="sm" color="danger">
+          <p className="text-caption text-neutral-600">Open Pipeline</p>
+          <p className="text-h3 font-semibold text-neutral-950">{fmtMoney(kpis.openPipeline, "INR")}</p>
+        </Card>
+        <Card padding="sm">
+          <p className="text-caption text-neutral-600">Weighted Pipeline</p>
+          <p className="text-h3 font-semibold text-neutral-950">{fmtMoney(kpis.weighted, "INR")}</p>
+        </Card>
+        <Card padding="sm">
+          <p className="text-caption text-neutral-600">Closing This Month</p>
+          <p className="text-h3 font-semibold text-neutral-950">{kpis.closingThisMonth}</p>
+        </Card>
+        <Card padding="sm">
+          <p className="text-caption text-neutral-600">Win Rate</p>
+          <p className="text-h3 font-semibold text-neutral-950">{Math.round(kpis.winRate)}%</p>
+        </Card>
+        <Card padding="sm">
+          <p className="text-caption text-neutral-600">Avg Deal Cycle</p>
+          <p className="text-h3 font-semibold text-neutral-950">{Math.round(kpis.avgCycle)} days</p>
+        </Card>
+      </div>
+
+      <div className="flex w-fit gap-1 rounded-md border border-neutral-300 p-0.5">
+        {(["kanban", "table", "forecast"] as const).map((v) => (
+          <button
+            key={v}
+            onClick={() => setView(v)}
+            className={`rounded-sm px-3 py-1 text-small font-medium capitalize ${view === v ? "bg-danger-600 text-neutral-50" : "text-neutral-600"}`}
+          >
+            {v}
+          </button>
+        ))}
+      </div>
+
+      {filteredDeals.length === 0 && view !== "forecast" ? (
         <Empty>
           <EmptyHeader>
-            <EmptyMedia variant="icon">
-              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
-              </svg>
-            </EmptyMedia>
-            <EmptyTitle>No accounts yet</EmptyTitle>
-            <EmptyDescription>A deal needs an account — create one on the Accounts page first.</EmptyDescription>
+            <EmptyTitle>No deals found</EmptyTitle>
+            <EmptyDescription>Try adjusting your search, or add your first deal.</EmptyDescription>
           </EmptyHeader>
         </Empty>
+      ) : view === "kanban" ? (
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
+          {STAGES.map((s) => {
+            const stat = stats?.stages.find((st) => st.stage === s);
+            return (
+              <div
+                key={s}
+                className="min-h-[12rem] rounded-md border border-neutral-300 bg-neutral-100 p-2"
+                onDragOver={(e) => e.preventDefault()}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  const id = e.dataTransfer.getData("text/plain");
+                  if (id) moveStage(id, s);
+                }}
+              >
+                <p className="mb-1 text-caption font-semibold uppercase text-neutral-600">{STAGE_LABEL[s]}</p>
+                <p className="mb-2 text-caption text-neutral-500">
+                  {stat?.count ?? 0} deals · {fmtMoney(stat?.total_value ?? 0, "INR")}
+                </p>
+                <div className="space-y-2">
+                  {filteredDeals
+                    .filter((d) => d.stage === s)
+                    .map((deal) => (
+                      <div
+                        key={deal.id}
+                        draggable
+                        onDragStart={(e) => e.dataTransfer.setData("text/plain", deal.id)}
+                        onClick={() => router.push(`/crm/deals/${deal.id}`)}
+                        className="cursor-pointer rounded-sm border border-neutral-300 bg-neutral-50 p-2 text-body shadow-sm hover:shadow-md"
+                      >
+                        <p className="font-medium text-neutral-950">{deal.name}</p>
+                        <p className="text-caption text-neutral-500">{accountName(deal.accountId)}</p>
+                        <p className="mt-1 text-body-medium font-semibold text-neutral-950">{fmtMoney(deal.value, deal.currency)}</p>
+                        <div className="mt-1 flex items-center justify-between text-caption text-neutral-500">
+                          <span className={deal.expectedCloseDate && new Date(deal.expectedCloseDate) < new Date() ? "text-danger-600" : ""}>
+                            {deal.expectedCloseDate ?? "No date"}
+                          </span>
+                          <span>{employeeName(deal.ownerId)}</span>
+                        </div>
+                        <div className="mt-1 flex items-center gap-1">
+                          <Badge color="neutral">{deal.probability ?? 0}%</Badge>
+                          {isStale(deal.stageChangedAt) && <Badge color="warning">Stale</Badge>}
+                        </div>
+                      </div>
+                    ))}
+                </div>
+                {canCreate && (
+                  <button
+                    className="mt-2 w-full rounded-sm border border-dashed border-neutral-400 py-1 text-caption text-neutral-600 hover:bg-neutral-200"
+                    onClick={() => {
+                      setNewDefaults({ stage: s });
+                      setShowNew(true);
+                    }}
+                  >
+                    + Add deal
+                  </button>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      ) : view === "table" ? (
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead onClick={() => toggleSort("name")} className="cursor-pointer">
+                Deal
+              </TableHead>
+              <TableHead onClick={() => toggleSort("value")} className="cursor-pointer">
+                Value
+              </TableHead>
+              <TableHead>Stage</TableHead>
+              <TableHead>Probability</TableHead>
+              <TableHead onClick={() => toggleSort("expectedCloseDate")} className="cursor-pointer">
+                Expected Close
+              </TableHead>
+              <TableHead>Days in Stage</TableHead>
+              <TableHead>Owner</TableHead>
+              <TableHead>Next Step</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {sortedDeals().map((deal) => (
+              <TableRow key={deal.id} className="cursor-pointer" onClick={() => router.push(`/crm/deals/${deal.id}`)}>
+                <TableCell>
+                  <p className="font-medium text-neutral-950">{deal.name}</p>
+                  <p className="text-caption text-neutral-500">{accountName(deal.accountId)}</p>
+                </TableCell>
+                <TableCell>{fmtMoney(deal.value, deal.currency)}</TableCell>
+                <TableCell>
+                  <Badge color={STAGE_BADGE_COLOR[deal.stage] ?? "neutral"}>{STAGE_LABEL[deal.stage] ?? deal.stage}</Badge>
+                </TableCell>
+                <TableCell>{deal.probability ?? 0}%</TableCell>
+                <TableCell>{deal.expectedCloseDate ?? "—"}</TableCell>
+                <TableCell>{daysInStage(deal.stageChangedAt)}d</TableCell>
+                <TableCell>{employeeName(deal.ownerId)}</TableCell>
+                <TableCell className="max-w-[160px] truncate">{deal.nextStep ?? "—"}</TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
       ) : (
-        <DealBoard deals={boardDeals} canEdit={canEdit} onDealClick={setOpenDealId} onStageChange={handleStageChange} />
+        <ForecastView deals={deals} stats={stats} />
       )}
 
-      {showNew && (
-        <Modal onClose={() => setShowNew(false)}>
-          <NewDealForm
-            orgId={selectedOrgId}
-            accounts={accounts}
-            contacts={contacts}
-            onClose={() => setShowNew(false)}
-            onCreated={() => {
-              setShowNew(false);
-              loadAll();
-            }}
-          />
-        </Modal>
-      )}
-
-      {openDeal && (
-        <Modal onClose={() => setOpenDealId(null)} maxWidth="max-w-2xl">
-          <div className="space-y-4">
-            <div>
-              <h2 className="text-h2 font-semibold text-neutral-950">{openDeal.name}</h2>
-              <p className="text-small text-neutral-600">{accountName(openDeal.accountId)}</p>
-            </div>
-            <ActivityTimeline orgId={selectedOrgId} relatedType="deal" relatedId={openDeal.id} canEdit={can("activity", "create")} />
-            <div className="flex justify-end border-t border-neutral-200 pt-4">
-              <Button variant="secondary" onClick={() => setOpenDealId(null)}>
-                Close
-              </Button>
-            </div>
-          </div>
-        </Modal>
+      {showNew && newDefaults && (
+        <NewDealModal
+          orgId={selectedOrgId}
+          accounts={accounts}
+          contacts={contacts}
+          employees={employees}
+          defaults={newDefaults}
+          onClose={() => setShowNew(false)}
+          onSaved={() => {
+            setShowNew(false);
+            load();
+          }}
+        />
       )}
     </div>
   );
 }
 
-function NewDealForm({
+function ForecastView({ deals, stats }: { deals: Deal[]; stats: PipelineStats | null }) {
+  const shades = ["bg-danger-200", "bg-danger-300", "bg-danger-400", "bg-danger-500", "bg-danger-600"];
+  const totalOpen = stats?.total_pipeline_value ?? 0;
+  const openStages = stats?.stages ?? [];
+
+  const byMonth = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const d of deals) {
+      if (d.stage === "won" || d.stage === "lost") continue;
+      const key = d.expectedCloseDate ? d.expectedCloseDate.slice(0, 7) : "No date set";
+      map.set(key, (map.get(key) ?? 0) + Number(d.value ?? 0));
+    }
+    return Array.from(map.entries()).sort(([a], [b]) => a.localeCompare(b));
+  }, [deals]);
+  const maxMonth = Math.max(1, ...byMonth.map(([, v]) => v));
+
+  return (
+    <div className="space-y-6">
+      <Card>
+        <h3 className="text-body-medium font-semibold text-neutral-950">Pipeline by Stage</h3>
+        <div className="mt-3 flex h-6 w-full overflow-hidden rounded-sm">
+          {openStages.map((s, i) => (
+            <div
+              key={s.stage}
+              className={shades[i % shades.length]}
+              style={{ width: totalOpen > 0 ? `${(s.total_value / totalOpen) * 100}%` : 0 }}
+              title={`${STAGE_LABEL[s.stage]}: ${fmtMoney(s.total_value, "INR")}`}
+            />
+          ))}
+        </div>
+        <div className="mt-3 flex flex-wrap gap-3 text-caption text-neutral-600">
+          {openStages.map((s, i) => (
+            <span key={s.stage} className="flex items-center gap-1">
+              <span className={`inline-block h-2 w-2 rounded-full ${shades[i % shades.length]}`} />
+              {STAGE_LABEL[s.stage]}: {fmtMoney(s.total_value, "INR")}
+            </span>
+          ))}
+        </div>
+      </Card>
+
+      <Card>
+        <h3 className="text-body-medium font-semibold text-neutral-950">Expected Close by Month</h3>
+        <div className="mt-3 space-y-2">
+          {byMonth.map(([month, value]) => (
+            <div key={month} className="flex items-center gap-2">
+              <span className="w-24 shrink-0 text-caption text-neutral-600">{month}</span>
+              <div className="h-4 flex-1 rounded-sm bg-neutral-200">
+                <div className="h-4 rounded-sm bg-danger-600" style={{ width: `${(value / maxMonth) * 100}%` }} />
+              </div>
+              <span className="w-24 shrink-0 text-right text-caption text-neutral-600">{fmtMoney(value, "INR")}</span>
+            </div>
+          ))}
+        </div>
+      </Card>
+    </div>
+  );
+}
+
+export function NewDealModal({
   orgId,
   accounts,
   contacts,
+  employees,
+  defaults,
   onClose,
-  onCreated,
+  onSaved,
 }: {
   orgId: string;
   accounts: Account[];
   contacts: Contact[];
+  employees: Employee[];
+  defaults: { stage: string; accountId?: string };
   onClose: () => void;
-  onCreated: () => void;
+  onSaved: () => void;
 }) {
   const [name, setName] = useState("");
-  const [accountId, setAccountId] = useState(accounts[0]?.id ?? "");
+  const [accountId, setAccountId] = useState(defaults.accountId ?? "");
   const [contactId, setContactId] = useState("");
   const [value, setValue] = useState("");
+  const [currency, setCurrency] = useState("INR");
   const [expectedCloseDate, setExpectedCloseDate] = useState("");
+  const [stage] = useState(defaults.stage);
+  const [ownerId, setOwnerId] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const eligibleContacts = contacts.filter((c) => c.accountId === accountId);
+  const filteredContacts = accountId ? contacts.filter((c) => c.accountId === accountId) : contacts;
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    if (!name || !accountId) return;
+  async function save() {
     setSaving(true);
     setError(null);
-
-    const res = await fetch("/api/deals", {
+    const res = await fetch("/api/crm/deals", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         org_id: orgId,
-        account_id: accountId,
-        contact_id: contactId || null,
         name,
+        account_id: accountId || null,
+        primary_contact_id: contactId || null,
         value: value ? Number(value) : null,
+        currency,
         expected_close_date: expectedCloseDate || null,
+        stage,
+        owner_id: ownerId || null,
       }),
     });
     const body = await res.json();
-    if (!res.ok) {
-      setSaving(false);
-      setError(body.error ?? "Failed to create deal");
-      return;
-    }
-
     setSaving(false);
-    onCreated();
+    if (!res.ok) return setError(body.error ?? "Failed to create deal");
+    onSaved();
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      <h2 className="text-h2 font-semibold text-neutral-950">New Deal</h2>
-
-      {error && <p className="rounded-md bg-danger-100 p-3 text-body text-danger-600">{error}</p>}
-
-      <Field label="Name">
-        <Input className="w-full" value={name} onChange={(e) => setName(e.target.value)} autoFocus />
-      </Field>
-      <Field label="Account">
-        <Select className="w-full" value={accountId} onChange={(e) => { setAccountId(e.target.value); setContactId(""); }}>
-          {accounts.map((a) => (
-            <option key={a.id} value={a.id}>
-              {a.name}
-            </option>
-          ))}
-        </Select>
-      </Field>
-      <Field label="Contact">
-        <Select className="w-full" value={contactId} onChange={(e) => setContactId(e.target.value)}>
-          <option value="">No contact</option>
-          {eligibleContacts.map((c) => (
-            <option key={c.id} value={c.id}>
-              {c.name}
-            </option>
-          ))}
-        </Select>
-      </Field>
-      <Field label="Value (USD)">
-        <Input type="number" min="0" step="0.01" className="w-full" value={value} onChange={(e) => setValue(e.target.value)} />
-      </Field>
-      <Field label="Expected close date">
-        <Input type="date" className="w-full" value={expectedCloseDate} onChange={(e) => setExpectedCloseDate(e.target.value)} />
-      </Field>
-
-      <div className="flex justify-end gap-3 border-t border-neutral-200 pt-4">
-        <Button type="button" variant="secondary" onClick={onClose}>
-          Cancel
-        </Button>
-        <Button type="submit" disabled={saving || !name || !accountId}>
-          {saving ? "Creating…" : "Create Deal"}
-        </Button>
+    <Modal onClose={onClose}>
+      <h2 className="text-h3 font-semibold text-neutral-950">New Deal</h2>
+      <div className="mt-4 space-y-3">
+        <Field label="Deal name">
+          <Input value={name} onChange={(e) => setName(e.target.value)} />
+        </Field>
+        {!defaults.accountId && (
+          <Field label="Account">
+            <Select value={accountId} onChange={(e) => setAccountId(e.target.value)}>
+              <option value="">No account</option>
+              {accounts.map((a) => (
+                <option key={a.id} value={a.id}>
+                  {a.name}
+                </option>
+              ))}
+            </Select>
+          </Field>
+        )}
+        <Field label="Primary contact">
+          <Select value={contactId} onChange={(e) => setContactId(e.target.value)}>
+            <option value="">No contact</option>
+            {filteredContacts.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.fullName}
+              </option>
+            ))}
+          </Select>
+        </Field>
+        <div className="grid grid-cols-2 gap-3">
+          <Field label="Value">
+            <Input type="number" value={value} onChange={(e) => setValue(e.target.value)} />
+          </Field>
+          <Field label="Currency">
+            <Input value={currency} onChange={(e) => setCurrency(e.target.value)} />
+          </Field>
+        </div>
+        <Field label="Expected close date">
+          <Input type="date" value={expectedCloseDate} onChange={(e) => setExpectedCloseDate(e.target.value)} />
+        </Field>
+        <Field label="Owner">
+          <Select value={ownerId} onChange={(e) => setOwnerId(e.target.value)}>
+            <option value="">Unassigned</option>
+            {employees.map((e) => (
+              <option key={e.id} value={e.id}>
+                {e.fullName}
+              </option>
+            ))}
+          </Select>
+        </Field>
+        {error && <p className="text-small text-danger-600">{error}</p>}
+        <div className="flex gap-2 pt-2">
+          <Button onClick={save} disabled={saving || !name}>
+            {saving ? "Saving…" : "Create Deal"}
+          </Button>
+          <Button variant="secondary" onClick={onClose}>
+            Cancel
+          </Button>
+        </div>
       </div>
-    </form>
+    </Modal>
   );
 }

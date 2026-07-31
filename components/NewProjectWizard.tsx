@@ -1,14 +1,14 @@
 "use client";
 
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Modal } from "@/components/ui/Modal";
 import { Button } from "@/components/ui/Button";
 import { Input, Textarea, Select, Field } from "@/components/ui/Input";
 import { AiBanner } from "@/components/ui/AiBanner";
+import { AiButton, AiSuggestionCard, useAiCall } from "@/components/ui/AiTouchpoint";
 import { DonutChart } from "@/components/ui/DonutChart";
 import { PROJECT_STATUSES } from "@/lib/constants";
 import { generateAI } from "@/lib/ai/generate";
-import type { mockResponses } from "@/lib/ai/mockResponses";
 
 type StepIndex = 0 | 1 | 2 | 3;
 const STEP_TITLES = ["Overview", "Budget & Timeline", "Team & Resources", "Documents & Attachments"] as const;
@@ -277,98 +277,6 @@ function Stepper({ current }: { current: StepIndex }) {
       })}
     </div>
   );
-}
-
-// ─────────────────────────────────────────────────────────────
-// Shared AI helpers
-// ─────────────────────────────────────────────────────────────
-
-function AiIcon() {
-  return (
-    <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M12 2l1.7 4.6L18 8.3l-4.3 1.7L12 14.6l-1.7-4.6L6 8.3l4.3-1.7L12 2zm7 12l.9 2.4 2.4.9-2.4.9-.9 2.4-.9-2.4-2.4-.9 2.4-.9.9-2.4z" />
-    </svg>
-  );
-}
-
-function AiButton({ label, onClick, loading }: { label: string; onClick: () => void; loading: boolean }) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      disabled={loading}
-      className="inline-flex items-center gap-1.5 rounded-md border border-ai-600 px-2.5 py-1 text-small font-medium text-ai-600 hover:bg-ai-100 disabled:opacity-60"
-    >
-      {loading ? (
-        <svg className="h-3.5 w-3.5 animate-spin" fill="none" viewBox="0 0 24 24">
-          <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" opacity="0.25" />
-          <path d="M22 12a10 10 0 00-10-10" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
-        </svg>
-      ) : (
-        <AiIcon />
-      )}
-      <span>{loading ? "Thinking…" : label}</span>
-    </button>
-  );
-}
-
-// Generic inline suggestion card. Renders provisional banner + preview
-// (children) + Accept / Reject / Edit. Simple value flows pass allowEdit=false.
-function AiSuggestionCard({
-  reasoning,
-  onAccept,
-  onReject,
-  onEdit,
-  children,
-}: {
-  reasoning?: string;
-  onAccept: () => void;
-  onReject: () => void;
-  onEdit?: () => void;
-  children: ReactNode;
-}) {
-  return (
-    <div className="mt-2 space-y-2 overflow-hidden rounded-md border border-ai-600/40">
-      <AiBanner />
-      <div className="space-y-2 px-4 pb-3">
-        {children}
-        {reasoning && <p className="text-small text-neutral-600">{reasoning}</p>}
-        <div className="flex gap-2 pt-1">
-          <Button type="button" onClick={onAccept}>
-            Accept
-          </Button>
-          {onEdit && (
-            <Button type="button" variant="secondary" onClick={onEdit}>
-              Edit
-            </Button>
-          )}
-          <Button type="button" variant="secondary" onClick={onReject}>
-            Reject
-          </Button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-type AiAgent = keyof typeof mockResponses;
-
-// Small hook to manage a per-touchpoint AI call — loading, result, error.
-function useAiCall<T>(agent: AiAgent, task: string) {
-  const [loading, setLoading] = useState(false);
-  const [result, setResult] = useState<T | null>(null);
-
-  async function run(ctx: Record<string, unknown>) {
-    setLoading(true);
-    setResult(null);
-    try {
-      const r = (await generateAI(agent, task, ctx)) as T;
-      setResult(r);
-    } finally {
-      setLoading(false);
-    }
-  }
-  return { loading, result, setResult, run };
 }
 
 // ─────────────────────────────────────────────────────────────

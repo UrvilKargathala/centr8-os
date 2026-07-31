@@ -19,6 +19,7 @@ const TYPE_LABEL: Record<(typeof ACTIVITY_TYPES)[number], string> = {
   meeting: "Meeting",
   task: "Task",
   note: "Note",
+  email: "Email",
 };
 
 // Attaches to any CRM entity via relatedType/relatedId — generic on

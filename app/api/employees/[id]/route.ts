@@ -3,7 +3,8 @@ import { eq } from "drizzle-orm";
 import { withOrgContext } from "@/db/withOrgContext";
 import { employees } from "@/db/schema";
 import { ApiError, handleApiError, requireUserId } from "@/lib/api/helpers";
-import { requirePermission } from "@/lib/api/permissions";
+import { hasPermission, requirePermission } from "@/lib/api/permissions";
+import { trimEmployeeFields } from "@/lib/api/employees";
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -16,7 +17,8 @@ export async function GET(req: NextRequest, { params }: Params) {
       const [existing] = await db.select().from(employees).where(eq(employees.id, id));
       if (!existing) return undefined;
       await requirePermission(db, userId, existing.orgId, "employee", "read");
-      return existing;
+      const canViewFull = await hasPermission(db, userId, existing.orgId, "employee", "view_full");
+      return trimEmployeeFields(existing, canViewFull);
     });
     if (!row) throw new ApiError(404, "Employee not found");
 
@@ -86,6 +88,18 @@ export async function PATCH(req: NextRequest, { params }: Params) {
           city: body.city === undefined ? undefined : body.city,
           state: body.state === undefined ? undefined : body.state,
           zipCode: body.zip_code === undefined ? undefined : body.zip_code,
+          // HR Batch 1 fields
+          employeeCode: body.employee_code === undefined ? undefined : body.employee_code,
+          personalEmail: body.personal_email === undefined ? undefined : body.personal_email,
+          country: body.country === undefined ? undefined : body.country,
+          location: body.location === undefined ? undefined : body.location,
+          employmentType: body.employment_type ?? undefined,
+          availableHoursPerWeek: body.available_hours_per_week === undefined ? undefined : body.available_hours_per_week,
+          roles: body.roles === undefined ? undefined : body.roles,
+          skills: body.skills === undefined ? undefined : body.skills,
+          costRateHourly: body.cost_rate_hourly === undefined ? undefined : body.cost_rate_hourly,
+          currency: body.currency === undefined ? undefined : body.currency,
+          notes: body.notes === undefined ? undefined : body.notes,
         })
         .where(eq(employees.id, id))
         .returning();

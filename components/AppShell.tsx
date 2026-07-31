@@ -8,6 +8,7 @@ import { createClient } from "@/lib/supabase/client";
 import { generateAI } from "@/lib/ai/generate";
 import { AiBanner } from "@/components/ui/AiBanner";
 import { ToastProvider } from "@/components/ui/Toast";
+import { AttendanceWidget } from "@/components/hr/AttendanceWidget";
 
 // icons reused across items that share a shape.
 const ICON = {
@@ -59,15 +60,16 @@ const NAV_SECTIONS: NavSection[] = [
     icon: ICON.users,
     items: [
       { href: "/hr/dashboard", label: "Dashboard", icon: ICON.dashboard },
-      { href: "/hr/directory", label: "Employee Directory", icon: ICON.users },
+      { href: "/hr/employees", label: "Employee Directory", icon: ICON.users },
+      { href: "/hr/onboarding", label: "Onboarding", icon: ICON.checklist },
       { href: "/hr/attendance", label: "Attendance & Time", icon: ICON.gauge },
       { href: "/hr/leave", label: "Leave", icon: ICON.doc },
       { href: "/hr/payroll", label: "Payroll", icon: ICON.currency },
       { href: "/hr/reviews", label: "Reviews & OKRs", icon: ICON.target },
       { href: "/hr/recruitment", label: "Recruitment", icon: ICON.users },
       { href: "/hr/cases", label: "Cases & Helpdesk", icon: ICON.chat },
-      { href: "/hr/learning", label: "Learning (LMS)", icon: ICON.doc },
-      { href: "/hr/engagement", label: "Engagement", icon: ICON.heart },
+      { href: "/hr/training", label: "Learning (LMS)", icon: ICON.doc },
+      { href: "/hr/surveys", label: "Engagement", icon: ICON.heart },
       { href: "/hr/holidays", label: "Holidays", icon: ICON.doc },
     ],
   },
@@ -75,11 +77,13 @@ const NAV_SECTIONS: NavSection[] = [
     title: "CRM",
     icon: ICON.wallet,
     items: [
+      { href: "/crm", label: "Dashboard", icon: ICON.dashboard },
       { href: "/crm/leads", label: "Leads", icon: ICON.target },
       { href: "/crm/contacts", label: "Contacts", icon: ICON.users },
       { href: "/crm/accounts", label: "Accounts", icon: ICON.folder },
-      { href: "/crm/deals", label: "Deals", icon: ICON.wallet },
-      { href: "/crm/forecasts", label: "Forecasts", icon: ICON.gauge },
+      { href: "/crm/activities", label: "Activities", icon: ICON.checklist },
+      { href: "/crm/deals", label: "Deals / Pipeline", icon: ICON.wallet },
+      { href: "/crm/forecasts", label: "Sales Forecasts", icon: ICON.gauge },
       { href: "/crm/campaigns", label: "Campaigns", icon: ICON.sparkle },
     ],
   },
@@ -565,6 +569,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 )}
               </div>
             )}
+
+            <AttendanceWidget />
 
             <button
               type="button"
