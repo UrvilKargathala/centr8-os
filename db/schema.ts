@@ -525,6 +525,13 @@ export const resourceTypeEnum = pgEnum("resource_type", [
   // but review:submit_manager is manager-tier only).
   "review",
   "okr",
+  // AI Assistant build-out (Sprint Plans, Documents) — see PermissionAction
+  // comment below for why no new actions were needed. "Ask AI" and
+  // "Recommendations" need no resourceType: conversations are user-scoped
+  // by RLS alone (any authenticated user), and recommendations are computed
+  // live with no persisted row to gate.
+  "sprint_plan",
+  "document",
 ]);
 export const permissionActionEnum = pgEnum("permission_action", [
   "create",
@@ -2444,6 +2451,150 @@ export const taskAttachments = pgTable(
   },
   () => [
     pgPolicy("task_attachments_isolation", {
+      for: "all",
+      to: authenticatedRole,
+      using: inUserOrgs,
+      withCheck: inUserOrgs,
+    }),
+  ],
+).enableRLS();
+
+// --- AI Assistant build-out: Sprint Plans, Ask AI, Documents (FR-9.x/
+// FR-10.x/FR-11.x). Recommendations needs no table — computed live from
+// existing data on every request, per the build spec. ---
+
+export const sprintPlanStatusEnum = pgEnum("sprint_plan_status", ["pending", "approved", "rejected", "expired"]);
+export const aiMessageRoleEnum = pgEnum("ai_message_role", ["user", "assistant"]);
+export const documentTypeEnum = pgEnum("document_type", [
+  "prd",
+  "sop",
+  "meeting_summary",
+  "release_notes",
+  "bug_report",
+  "test_cases",
+  "client_update",
+  "executive_summary",
+]);
+export const documentStatusEnum = pgEnum("document_status", ["draft", "reviewed", "finalized"]);
+
+// Planner agent's autonomous sprint planning (FR-9.x), Tier 1 — Approve to
+// Act (CLAUDE.md §4): the AI only ever proposes a plan here; a real sprint +
+// its tasks get written on explicit human approval (see
+// app/api/ai/sprint-plans/[id]/approve/route.ts), never auto-applied.
+export const sprintPlanProposals = pgTable(
+  "sprint_plan_proposals",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    orgId: uuid("org_id")
+      .notNull()
+      .references(() => organizations.id, { onDelete: "cascade" }),
+    projectId: uuid("project_id")
+      .notNull()
+      .references(() => projects.id, { onDelete: "cascade" }),
+    sprintName: text("sprint_name").notNull(),
+    proposedStartDate: date("proposed_start_date"),
+    proposedEndDate: date("proposed_end_date"),
+    proposedTasks: jsonb("proposed_tasks").notNull().default([]),
+    capacityAnalysis: jsonb("capacity_analysis").notNull().default({}),
+    reasoning: text("reasoning"),
+    status: sprintPlanStatusEnum("status").notNull().default("pending"),
+    decidedBy: uuid("decided_by"),
+    decidedAt: timestamp("decided_at", { withTimezone: true }),
+    rejectionReason: text("rejection_reason"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  () => [
+    pgPolicy("sprint_plan_proposals_isolation", {
+      for: "all",
+      to: authenticatedRole,
+      using: inUserOrgs,
+      withCheck: inUserOrgs,
+    }),
+  ],
+).enableRLS();
+
+// Ask AI (FR-11.x, workspace memory / RAG Q&A). No dedicated resourceType —
+// any authenticated user can use it, scoped to their own conversations by
+// RLS (userId = auth.uid()) same as the org-scope everywhere else, rather
+// than a role-permission-grid entry.
+const ownConversation = sql`user_id = auth.uid()`;
+export const aiConversations = pgTable(
+  "ai_conversations",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    orgId: uuid("org_id")
+      .notNull()
+      .references(() => organizations.id, { onDelete: "cascade" }),
+    userId: uuid("user_id").notNull(),
+    title: text("title"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  () => [
+    pgPolicy("ai_conversations_isolation", {
+      for: "all",
+      to: authenticatedRole,
+      using: sql`${inUserOrgs} and ${ownConversation}`,
+      withCheck: sql`${inUserOrgs} and ${ownConversation}`,
+    }),
+  ],
+).enableRLS();
+
+const ownConversationMessage = sql`
+  exists (
+    select 1 from ai_conversations c
+    where c.id = ai_messages.conversation_id and c.user_id = auth.uid()
+  )
+`;
+export const aiMessages = pgTable(
+  "ai_messages",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    orgId: uuid("org_id")
+      .notNull()
+      .references(() => organizations.id, { onDelete: "cascade" }),
+    conversationId: uuid("conversation_id")
+      .notNull()
+      .references(() => aiConversations.id, { onDelete: "cascade" }),
+    role: aiMessageRoleEnum("role").notNull(),
+    content: text("content").notNull(),
+    citations: jsonb("citations").notNull().default([]),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  () => [
+    pgPolicy("ai_messages_isolation", {
+      for: "all",
+      to: authenticatedRole,
+      using: sql`${inUserOrgs} and ${ownConversationMessage}`,
+      withCheck: sql`${inUserOrgs} and ${ownConversationMessage}`,
+    }),
+  ],
+).enableRLS();
+
+// Writer agent's generative documentation engine (FR-10.x). "draft ->
+// reviewed -> finalized" is a one-way lifecycle — finalizing is
+// deliberately irreversible (locks further edits), matching the PRD.
+export const generatedDocuments = pgTable(
+  "generated_documents",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    orgId: uuid("org_id")
+      .notNull()
+      .references(() => organizations.id, { onDelete: "cascade" }),
+    docType: documentTypeEnum("doc_type").notNull(),
+    title: text("title").notNull(),
+    content: text("content").notNull(),
+    contextSource: jsonb("context_source").notNull().default({}),
+    status: documentStatusEnum("status").notNull().default("draft"),
+    reviewedBy: uuid("reviewed_by"),
+    reviewedAt: timestamp("reviewed_at", { withTimezone: true }),
+    finalizedBy: uuid("finalized_by"),
+    finalizedAt: timestamp("finalized_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    createdBy: uuid("created_by"),
+  },
+  () => [
+    pgPolicy("generated_documents_isolation", {
       for: "all",
       to: authenticatedRole,
       using: inUserOrgs,

@@ -701,6 +701,20 @@
       "when": 1785311153445,
       "tag": "0098_seed_crm_batch3_permissions",
       "breakpoints": true
+    },
+    {
+      "idx": 99,
+      "version": "7",
+      "when": 1785490264520,
+      "tag": "0099_ai_assistant_tables",
+      "breakpoints": true
+    },
+    {
+      "idx": 100,
+      "version": "7",
+      "when": 1785490337353,
+      "tag": "0100_seed_ai_assistant_permissions",
+      "breakpoints": true
     }
   ]
 }

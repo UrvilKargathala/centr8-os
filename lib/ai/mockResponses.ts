@@ -191,6 +191,54 @@ Follow-ups:
         reasoning: `Tailored for ${type} — direct, low-pressure ask with a clear next step.`,
       };
     },
+    // AI Assistant — /ai/documents "+ Generate Document". One distinct
+    // markdown template per doc_type so a demo doesn't read as the same
+    // content wearing eight different headings.
+    generate_document: (ctx: MockContext) => {
+      const docType = (ctx.doc_type as string) || "prd";
+      const projectName = (ctx.project_name as string) || "the project";
+      const context = (ctx.context as string) || "";
+      const contextNote = context ? `\n\n> Additional context: ${context}` : "";
+      const today = (ctx.today as string) || "2026-07-31";
+
+      const templates: Record<string, () => { title: string; content: string }> = {
+        prd: () => ({
+          title: `${projectName} — Product Requirements Document`,
+          content: `# ${projectName} — PRD${contextNote}\n\n## Summary\n${projectName} addresses a clear gap for its target users by shipping a focused first release rather than a broad feature set. This document defines scope, success criteria, and what is explicitly out of bounds for v1.\n\n## Problem statement\nUsers currently rely on manual or fragmented workarounds. The cost shows up as lost time, inconsistent output, and reduced trust in the process.\n\n## Goals\n- Ship a working v1 within the current quarter\n- Validate the core workflow with real usage, not just internal review\n- Keep the surface area small enough to iterate weekly\n\n## Non-goals\n- Full feature parity with adjacent tools\n- Enterprise-only configuration options\n- Anything requiring a new paid infrastructure dependency\n\n## User stories\n1. As a user, I want to complete the core task in under two minutes so that I don't abandon the flow.\n2. As an admin, I want visibility into who did what so that I can audit activity later.\n3. As a stakeholder, I want a clear signal of progress so that I don't need to ask for status updates.\n\n## Success metrics\n- Adoption: 60%+ of the target audience uses the feature within 30 days of launch\n- Quality: fewer than 3 critical bugs reported in the first two weeks\n- Satisfaction: qualitative feedback trends positive in the first round of check-ins\n\n## Open questions\n- Final rollout sequencing (all-at-once vs. phased)\n- Whether a settings/config surface is needed for v1 or can wait\n\n*Generated ${today} — provisional, review before treating as final scope.*`,
+        }),
+        sop: () => ({
+          title: `${projectName} — Standard Operating Procedure`,
+          content: `# ${projectName} — SOP${contextNote}\n\n## Purpose\nThis procedure standardizes how this workflow is carried out so outcomes stay consistent regardless of who runs it.\n\n## Scope\nApplies to anyone responsible for executing or reviewing this process within the team.\n\n## Prerequisites\n- Access to the relevant system/tool\n- Familiarity with the underlying data or request format\n\n## Procedure\n1. Confirm the request meets the intake criteria before starting.\n2. Gather the required inputs and verify they're current.\n3. Execute the core steps in order — do not skip validation checks.\n4. Record the outcome in the shared log for traceability.\n5. Flag any exception immediately rather than working around it silently.\n\n## Exceptions\nIf a step cannot be completed as written, stop and escalate rather than improvising — note the blocker in the log so the SOP itself can be corrected if it's genuinely wrong.\n\n## Review cadence\nThis SOP should be reviewed each quarter, or immediately after any incident traced back to this process.\n\n*Generated ${today} — provisional, review before treating as the source of truth.*`,
+        }),
+        meeting_summary: () => ({
+          title: `${projectName} — Meeting Summary`,
+          content: `# ${projectName} — Meeting Summary${contextNote}\n\n**Date:** ${today}\n\n## Attendees\nCore team members present; notes reflect the discussion as captured.\n\n## Discussion points\n- Reviewed current progress against the plan; broadly on track with a couple of open risks.\n- Discussed the highest-priority blocker and agreed an owner to chase it down this week.\n- Raised a scope question that needs a decision before the next milestone.\n\n## Decisions made\n- Proceed with the current approach; revisit only if the open risk materializes.\n- Owner assigned for the blocker with a follow-up checkpoint.\n\n## Action items\n1. Follow up on the blocked item and report back by end of week.\n2. Get a decision on the open scope question before next sync.\n3. Update the shared plan to reflect any changes agreed today.\n\n## Next meeting\nStandard cadence continues; ad-hoc sync if the blocker isn't cleared in time.\n\n*Generated ${today} — provisional, review before circulating.*`,
+        }),
+        release_notes: () => ({
+          title: `${projectName} — Release Notes`,
+          content: `# ${projectName} — Release Notes${contextNote}\n\n**Release date:** ${today}\n\n## What's new\n- Shipped the core workflow end to end, covering the primary use case identified in planning.\n- Added supporting UI so the feature is discoverable without documentation.\n\n## Improvements\n- Tightened the flow based on internal testing feedback ahead of release.\n- Cleaned up rough edges in error handling so failures surface clearly instead of failing silently.\n\n## Fixes\n- Resolved edge cases found during QA that could otherwise cause inconsistent state.\n\n## Known issues\n- A small number of edge cases remain open and are tracked for a follow-up release.\n\n## Upgrade notes\nNo action required — this release is backward compatible with existing data.\n\n*Generated ${today} — provisional, review before publishing externally.*`,
+        }),
+        bug_report: () => ({
+          title: `${projectName} — Bug Report`,
+          content: `# ${projectName} — Bug Report${contextNote}\n\n## Summary\nA reproducible defect was identified affecting the core workflow under specific conditions.\n\n## Environment\n- Production / current release\n- Affects the primary user-facing flow\n\n## Steps to reproduce\n1. Start from the relevant screen in a clean state.\n2. Perform the action that triggers the defect.\n3. Observe the incorrect behavior instead of the expected result.\n\n## Expected behavior\nThe action should complete and reflect the correct state without requiring a workaround.\n\n## Actual behavior\nThe action either fails silently, produces an incorrect result, or leaves the system in an inconsistent state.\n\n## Severity\nMedium — affects a real user path but has a known workaround in the meantime.\n\n## Suggested next step\nAssign to the owning area for triage and reproduction confirmation before scheduling a fix.\n\n*Generated ${today} — provisional, verify repro before filing upstream.*`,
+        }),
+        test_cases: () => ({
+          title: `${projectName} — Test Cases`,
+          content: `# ${projectName} — Test Cases${contextNote}\n\n## Scope\nCovers the primary happy path plus the most likely edge cases for this feature.\n\n## Test case 1 — Happy path\n**Steps:** Complete the flow with valid inputs.\n**Expected:** Flow completes successfully and the result is visible immediately.\n\n## Test case 2 — Missing required input\n**Steps:** Attempt to complete the flow with a required field left blank.\n**Expected:** A clear validation error is shown; nothing is submitted.\n\n## Test case 3 — Permission boundary\n**Steps:** Attempt the action as a role that should not have access.\n**Expected:** Action is blocked server-side, not just hidden in the UI.\n\n## Test case 4 — Concurrent edit\n**Steps:** Two users attempt to modify the same record at once.\n**Expected:** The system resolves the conflict predictably rather than silently dropping one change.\n\n## Test case 5 — Empty state\n**Steps:** Load the feature with no existing data.\n**Expected:** A clear empty state is shown, not a blank or broken screen.\n\n*Generated ${today} — provisional, expand with real edge cases before sign-off.*`,
+        }),
+        client_update: () => ({
+          title: `${projectName} — Client Update`,
+          content: `# ${projectName} — Status Update${contextNote}\n\nHi team,\n\nHere's where things stand on ${projectName} as of ${today}.\n\n## Progress\nWork is proceeding on schedule against the agreed plan. The core functionality is in place and moving through internal review.\n\n## What's next\nWe're focused on final polish and validation before the next milestone. No changes to the agreed timeline at this stage.\n\n## Anything we need from you\nNothing urgent right now — we'll flag directly if that changes.\n\nHappy to jump on a call if useful, otherwise the next update will land at the usual cadence.\n\nBest,\nThe team\n\n*Generated ${today} — provisional, review tone and specifics before sending.*`,
+        }),
+        executive_summary: () => ({
+          title: `${projectName} — Executive Summary`,
+          content: `# ${projectName} — Executive Summary${contextNote}\n\n## Overview\n${projectName} is progressing against plan, with the core delivery on track and no unresolved blockers requiring executive attention at this time.\n\n## Key metrics\n- Delivery: on schedule against the current milestone\n- Risk: low — no unresolved critical blockers\n- Team health: capacity is within normal range\n\n## Highlights\n- Core workstream reached its planned checkpoint this period.\n- No budget or timeline overruns to report.\n\n## Risks to watch\n- Standard execution risk; nothing elevated beyond normal delivery variance.\n\n## Recommendation\nContinue as planned — no executive intervention needed this cycle. Revisit if a material change in scope or timeline emerges.\n\n*Generated ${today} — provisional, verify figures before board/exec circulation.*`,
+        }),
+      };
+
+      const build = templates[docType] ?? templates.prd;
+      return build();
+    },
   },
   Analyst: {
     suggest_priority: (ctx: MockContext) => {
@@ -238,6 +286,208 @@ Follow-ups:
         return "The most common gap right now is unassigned tasks — 4 across active projects. Once ownership is set, the delivery forecast tightens by roughly a week per project.";
       }
       return "Nothing jumps out as urgent — the portfolio is small enough that a quick scan of the Projects page will show you everything material. Ask me about a specific project, budget, or team member for a sharper read.";
+    },
+    // AI Assistant — /ai/ask full conversation flow. Richer than the older
+    // `ask` above: returns citations and reads conversation_history so a
+    // follow-up ("what about the second one?") lands on-topic.
+    ask_ai: (ctx: MockContext) => {
+      const q = ((ctx.question as string) || "").toLowerCase();
+      const history = (ctx.conversation_history as { role: string; content: string }[]) || [];
+      const isFollowUp = history.length > 0;
+      const followUpPrefix = isFollowUp ? "Following up on that — " : "";
+
+      // Small-talk gets a small-talk answer instead of falling through to
+      // the "nothing specific jumps out" catch-all, which read as broken
+      // when someone just said hi.
+      if (/^(hi|hello|hey|yo|sup)\b/.test(q.trim())) {
+        return { answer: "Hi! I can help with anything in this workspace — overdue work, at-risk projects, team capacity, budgets, or your CRM pipeline. What would you like to know?", citations: [] };
+      }
+      if (q.includes("good morning")) {
+        return { answer: "Good morning! Here to help — ask me about overdue work, at-risk projects, team capacity, or anything else in the workspace.", citations: [] };
+      }
+      if (q.includes("good night") || q.includes("goodnight")) {
+        return { answer: "Good night! Nothing urgent needs your attention right now that I can see — feel free to pick this back up tomorrow.", citations: [] };
+      }
+      if (q.includes("good afternoon") || q.includes("good evening")) {
+        return { answer: "Hello! Let me know if you'd like a read on overdue work, at-risk projects, team capacity, or budgets.", citations: [] };
+      }
+      if (q.includes("how are you")) {
+        return { answer: "Doing well, thanks for asking! Ready whenever you want a read on the workspace — overdue work, at-risk projects, or team capacity.", citations: [] };
+      }
+      if (/^(thanks|thank you|thx|ty)\b/.test(q.trim())) {
+        return { answer: "Anytime — let me know if anything else comes up.", citations: [] };
+      }
+      if (/^(bye|goodbye|see ya|see you)\b/.test(q.trim())) {
+        return { answer: "See you! I'll be here whenever you need a read on the workspace.", citations: [] };
+      }
+
+      if (q.includes("overdue") || q.includes("late")) {
+        return {
+          answer: `${followUpPrefix}**Two tasks are overdue** this week, both on the **Website relaunch** project and both unassigned. Reassigning them to the project lead typically clears the backlog within **48 hours**.`,
+          citations: [
+            { source_type: "project", source_title: "Website relaunch", excerpt: "2 overdue tasks, both unassigned." },
+            { source_type: "task", source_title: "Update hero copy", excerpt: "Due 3 days ago, no assignee." },
+          ],
+        };
+      }
+      if (q.includes("risk") || q.includes("at risk")) {
+        return {
+          answer: `${followUpPrefix}**Demo Project** is the one to watch — it has **2 blocked tasks** and no health scan in the last week. Everything else in the portfolio looks **on track**.`,
+          citations: [{ source_type: "project", source_title: "Demo Project", excerpt: "2 blocked tasks, last health scan 8 days ago." }],
+        };
+      }
+      if (q.includes("overload") || q.includes("capacity") || q.includes("who")) {
+        return {
+          answer: `${followUpPrefix}**One person is over-allocated** this sprint — assigned roughly **46 hours** of estimated work against a **40-hour week**. Everyone else is under **90% utilization**.`,
+          citations: [{ source_type: "employee", source_title: "Team capacity", excerpt: "46h assigned vs 40h/week available." }],
+        };
+      }
+      if (q.includes("budget") || q.includes("spend")) {
+        return {
+          answer: `${followUpPrefix}Portfolio is **on-budget** overall: Demo Project has burned about **25%** of its allocated budget against **20%** of tasks complete, so pacing is roughly in line.`,
+          citations: [{ source_type: "project", source_title: "Demo Project", excerpt: "25% of budget spent, 20% of tasks done." }],
+        };
+      }
+      if (q.includes("decision") || q.includes("decided") || q.includes("why")) {
+        return {
+          answer: `${followUpPrefix}The most recent recorded decision was to scope the **Website relaunch** to a **single-phase launch** rather than splitting it — noted to keep the timeline inside this quarter.`,
+          citations: [{ source_type: "decision_log", source_title: "Website relaunch scope call", excerpt: "Single-phase launch chosen over phased rollout." }],
+        };
+      }
+      if (q.includes("meeting") || q.includes("standup") || q.includes("sync")) {
+        return {
+          answer: `${followUpPrefix}The most recent **sprint review** covered progress on the current sprint's top-priority tasks and flagged **one dependency** waiting on design assets.`,
+          citations: [{ source_type: "meeting_note", source_title: "Sprint review", excerpt: "One task blocked pending design assets." }],
+        };
+      }
+      if (q.includes("skill") || q.includes("who knows") || q.includes("expert")) {
+        return {
+          answer: `${followUpPrefix}A few people on the team have **frontend** and **design-system** experience listed on their profile — worth checking the **Team Directory**'s skill tags for the closest match to what you need.`,
+          citations: [{ source_type: "employee", source_title: "Team Directory", excerpt: "Skill tags recorded per person." }],
+        };
+      }
+      if (q.includes("deal") || q.includes("pipeline") || q.includes("crm")) {
+        return {
+          answer: `${followUpPrefix}Pipeline is **healthy** — most open deals are in early stages with **no deals stalled** past two weeks in the same stage right now.`,
+          citations: [{ source_type: "project", source_title: "CRM Pipeline", excerpt: "No deals stale >14 days in current stage." }],
+        };
+      }
+      if (q.includes("leave") || q.includes("attendance") || q.includes("hr")) {
+        return {
+          answer: `${followUpPrefix}There's **nothing unusual** in attendance right now — no flagged anomalies, and any pending leave requests are visible on the **Leave Management** approvals tab.`,
+          citations: [{ source_type: "employee", source_title: "Attendance & Leave", excerpt: "No anomalies flagged this period." }],
+        };
+      }
+      return {
+        answer: `${followUpPrefix}Nothing specific jumps out for that — try asking about **overdue work**, **at-risk projects**, **team capacity**, **budgets**, or **CRM pipeline** for a sharper answer.`,
+        citations: [],
+      };
+    },
+    // AI Assistant — Executive dashboard + /ai/recommendations.
+    generate_recommendations: (ctx: MockContext) => {
+      const overdueTasks = Number(ctx.overdue_tasks_count) || 0;
+      const overAllocated = (ctx.over_allocated_members as string[]) || [];
+      const atRiskDeals = (ctx.at_risk_deal_names as string[]) || [];
+      const pendingLeave = Number(ctx.pending_leave_requests) || 0;
+      const pendingPlans = Number(ctx.pending_sprint_plans) || 0;
+      const projectNames = (ctx.at_risk_project_names as string[]) || [];
+
+      const recs: Array<{
+        id: string;
+        priority: "critical" | "high" | "medium";
+        title: string;
+        description: string;
+        category: "project" | "hr" | "crm" | "capacity";
+        action_type: "review" | "approve" | "investigate" | "reassign";
+        linked_entity_type?: string;
+        linked_entity_id?: string;
+        reasoning: string;
+      }> = [];
+
+      if (overdueTasks > 0) {
+        recs.push({
+          id: "overdue-tasks",
+          priority: overdueTasks > 3 ? "critical" : "high",
+          title: `${overdueTasks} task${overdueTasks === 1 ? "" : "s"} overdue`,
+          description: "Unassigned or stalled tasks are pushing past their due dates across active projects.",
+          category: "project",
+          action_type: "review",
+          linked_entity_type: "tasks",
+          reasoning: "Overdue tasks compound — the longer they sit, the more they push downstream dependencies.",
+        });
+      }
+      for (const name of projectNames.slice(0, 2)) {
+        recs.push({
+          id: `project-risk-${name}`,
+          priority: "high",
+          title: `${name} shows risk signals`,
+          description: "Blocked tasks or a stale health scan suggest this project needs a closer look this week.",
+          category: "project",
+          action_type: "investigate",
+          linked_entity_type: "project",
+          reasoning: "Projects with blocked work and no recent health scan are the most common source of missed deadlines.",
+        });
+      }
+      for (const name of overAllocated.slice(0, 2)) {
+        recs.push({
+          id: `capacity-${name}`,
+          priority: "medium",
+          title: `${name} is over-allocated`,
+          description: "Assigned estimated hours exceed their available capacity for the current sprint.",
+          category: "capacity",
+          action_type: "reassign",
+          linked_entity_type: "employee",
+          reasoning: "Sustained over-allocation is a leading indicator of missed sprint commitments and burnout risk.",
+        });
+      }
+      for (const name of atRiskDeals.slice(0, 2)) {
+        recs.push({
+          id: `deal-${name}`,
+          priority: "medium",
+          title: `${name} deal has gone stale`,
+          description: "No stage movement or logged activity in over two weeks.",
+          category: "crm",
+          action_type: "investigate",
+          linked_entity_type: "deal",
+          reasoning: "Deals stalled this long rarely self-recover without a direct follow-up.",
+        });
+      }
+      if (pendingLeave > 0) {
+        recs.push({
+          id: "pending-leave",
+          priority: "medium",
+          title: `${pendingLeave} leave request${pendingLeave === 1 ? "" : "s"} awaiting approval`,
+          description: "Pending leave requests sitting past a few days can affect the requester's planning.",
+          category: "hr",
+          action_type: "approve",
+          linked_entity_type: "leave",
+          reasoning: "Leave requests are time-sensitive by nature — delayed approval is a common source of employee friction.",
+        });
+      }
+      if (pendingPlans > 0) {
+        recs.push({
+          id: "pending-sprint-plans",
+          priority: "high",
+          title: `${pendingPlans} sprint plan${pendingPlans === 1 ? "" : "s"} awaiting approval`,
+          description: "AI-proposed sprint plans are queued for review — approving unblocks the next sprint's kickoff.",
+          category: "project",
+          action_type: "approve",
+          linked_entity_type: "sprint_plan",
+          reasoning: "An unapproved plan blocks the whole team from starting the next sprint on schedule.",
+        });
+      }
+      if (recs.length === 0) {
+        recs.push({
+          id: "all-clear",
+          priority: "medium",
+          title: "No urgent items right now",
+          description: "Projects, capacity, and pipeline all look healthy based on current data.",
+          category: "project",
+          action_type: "review",
+          reasoning: "No overdue tasks, over-allocated people, stale deals, or pending approvals were found.",
+        });
+      }
+      return { recommendations: recs.slice(0, 8) };
     },
     recommend_members_for_role: (ctx: MockContext) => {
       const role = ((ctx.role as string) || "team member").toLowerCase();
@@ -754,6 +1004,60 @@ Follow-ups:
         expected_impact: "Typically a 10-15% lift in engagement from the better-performing variant.",
       });
       return { improvements: improvements.slice(0, 3) };
+    },
+    // AI Assistant — /ai/sprint-plans "Generate New Plan".
+    generate_sprint_plan: (ctx: MockContext) => {
+      const projectName = (ctx.project_name as string) || "this project";
+      const backlog = (ctx.backlog_tasks as { id: string; title: string; estimate: number | null; priority: string }[]) || [];
+      const members = (ctx.team_members as { id: string; name: string; available_hours_per_week: number }[]) || [];
+
+      const totalCapacity = members.reduce((sum, m) => sum + (m.available_hours_per_week || 0), 0);
+      const sorted = [...backlog].sort((a, b) => {
+        const order: Record<string, number> = { urgent: 0, high: 1, medium: 2, low: 3 };
+        return (order[a.priority] ?? 2) - (order[b.priority] ?? 2);
+      });
+
+      // Round-robin assignment against remaining capacity, filling
+      // highest-priority backlog first until capacity runs out.
+      const remaining = members.map((m) => ({ ...m, remaining: m.available_hours_per_week }));
+      const tasks: { title: string; assignee_name: string; estimate: number; priority: string }[] = [];
+      let totalEstimated = 0;
+      for (const t of sorted) {
+        const estimate = t.estimate ?? 4;
+        const candidate = remaining.filter((m) => m.remaining > 0).sort((a, b) => b.remaining - a.remaining)[0];
+        if (!candidate) break;
+        candidate.remaining -= estimate;
+        totalEstimated += estimate;
+        tasks.push({ title: t.title, assignee_name: candidate.name, estimate, priority: t.priority });
+        if (tasks.length >= 10) break;
+      }
+
+      const utilizationPercent = totalCapacity > 0 ? Math.round((totalEstimated / totalCapacity) * 100) : 0;
+      const overAllocated = remaining.filter((m) => m.remaining < 0).map((m) => m.name);
+      const warnings = overAllocated.length
+        ? [`${overAllocated.join(", ")} ${overAllocated.length === 1 ? "is" : "are"} carrying more than their available hours — consider redistributing before approving.`]
+        : utilizationPercent > 100
+        ? ["Total estimated work exceeds total team capacity for this sprint window."]
+        : [];
+
+      const now = new Date((ctx.today as string) || "2026-07-31");
+      const start = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 3);
+      const end = new Date(start.getFullYear(), start.getMonth(), start.getDate() + 14);
+      const iso = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+
+      return {
+        sprint_name: `${projectName} — Sprint ${iso(start).slice(5)}`,
+        start_date: iso(start),
+        end_date: iso(end),
+        tasks,
+        capacity_analysis: {
+          total_capacity: totalCapacity,
+          total_estimated: totalEstimated,
+          utilization_percent: utilizationPercent,
+          warnings,
+        },
+        reasoning: `Pulled ${sorted.length} open backlog item${sorted.length === 1 ? "" : "s"} for ${projectName}, prioritized urgent/high first, and assigned each to whoever had the most remaining capacity at that point. Utilization lands at ${utilizationPercent}% of the team's ${totalCapacity}h/week across ${members.length} member${members.length === 1 ? "" : "s"}.${warnings.length ? " Review the flagged over-allocation before approving." : " No one is over-allocated at this split."}`,
+      };
     },
   },
   Monitor: {

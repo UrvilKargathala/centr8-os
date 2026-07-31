@@ -3,8 +3,9 @@
 import { useEffect, useState } from "react";
 import { useOrg } from "@/lib/context/OrgContext";
 import { StatTile } from "@/components/ui/StatTile";
-import { Badge, projectStatusColor } from "@/components/ui/Badge";
+import { Badge, projectStatusColor, cardAccentClass } from "@/components/ui/Badge";
 import { Card } from "@/components/ui/Card";
+import { Button } from "@/components/ui/Button";
 import { PROJECT_STATUSES } from "@/lib/constants";
 
 type Project = { id: string; name: string; status: string };
@@ -14,20 +15,20 @@ type HealthSnapshot = {
   aiSummary: string;
   signals: { overdueTasks: number; blockedTasks: number };
 };
-
-// Prompt 0.4 explicitly wants this hardcoded — the Analyst agent that would
-// generate real recommendations is Phase 2.7, not built yet. Kept as a
-// clearly-labeled placeholder rather than pretending it's live.
-const MOCK_RECOMMENDATIONS = [
-  "Review overdue tasks in at-risk projects before end of week.",
-  "Re-balance sprint capacity — one project is carrying most of the urgent-priority load.",
-  "Two projects have no health scan yet — run one to get visibility.",
-];
+type Recommendation = {
+  id: string;
+  priority: "critical" | "high" | "medium";
+  title: string;
+  description: string;
+  category: string;
+  action_type: string;
+};
 
 export default function ExecutivePage() {
   const { selectedOrgId, loading: orgLoading } = useOrg();
   const [projects, setProjects] = useState<Project[]>([]);
   const [health, setHealth] = useState<HealthSnapshot[]>([]);
+  const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -39,11 +40,13 @@ export default function ExecutivePage() {
     Promise.all([
       fetch(`/api/projects?org_id=${selectedOrgId}`).then((r) => r.json()),
       fetch(`/api/ai/project-health?org_id=${selectedOrgId}`).then((r) => r.json()),
+      fetch(`/api/ai/recommendations?org_id=${selectedOrgId}`).then((r) => r.json()),
     ])
-      .then(([projectsBody, healthBody]) => {
+      .then(([projectsBody, healthBody, recBody]) => {
         if (!projectsBody.data) throw new Error(projectsBody.error ?? "Failed to load projects");
         setProjects(projectsBody.data);
         setHealth(healthBody.data ?? []);
+        setRecommendations(recBody.data ?? []);
       })
       .catch((err) => setError(err instanceof Error ? err.message : "Failed to load executive dashboard"))
       .finally(() => setLoading(false));
@@ -115,22 +118,39 @@ export default function ExecutivePage() {
       </section>
 
       <section className="space-y-3">
-        <div>
+        <div className="flex items-center justify-between">
           <h2 className="text-h3 font-semibold text-neutral-800">Recommended actions</h2>
-          <p className="text-small text-neutral-600">
-            Placeholder content — becomes real Analyst-agent output in a later phase (Prompt 2.7).
-          </p>
+          <Button href="/ai/recommendations" variant="secondary">
+            View all →
+          </Button>
         </div>
-        <ul className="space-y-2">
-          {MOCK_RECOMMENDATIONS.map((rec, i) => (
-            <li key={i} className="flex items-start gap-3 border-l-4 border-ai-600 bg-ai-100 px-4 py-3">
-              <span className="mt-0.5 shrink-0 rounded-sm bg-ai-600 px-1.5 py-0.5 text-caption font-medium uppercase tracking-wide text-neutral-50">
-                AI
-              </span>
-              <span className="text-body text-neutral-800">{rec}</span>
-            </li>
-          ))}
-        </ul>
+        {recommendations.length === 0 ? (
+          <p className="text-small text-neutral-600">No open recommendations.</p>
+        ) : (
+          <div className="space-y-2">
+            {[...recommendations]
+              .sort((a, b) => {
+                const order = { critical: 0, high: 1, medium: 2 };
+                return order[a.priority] - order[b.priority];
+              })
+              .slice(0, 5)
+              .map((r) => (
+                <Card
+                  key={r.id}
+                  padding="sm"
+                  className={cardAccentClass(r.priority === "critical" ? "danger" : r.priority === "high" ? "warning" : "neutral")}
+                >
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="truncate text-body-medium font-medium text-neutral-950">{r.title}</p>
+                      <p className="truncate text-small text-neutral-600">{r.description}</p>
+                    </div>
+                    <Badge color="ai">{r.priority}</Badge>
+                  </div>
+                </Card>
+              ))}
+          </div>
+        )}
       </section>
     </div>
   );

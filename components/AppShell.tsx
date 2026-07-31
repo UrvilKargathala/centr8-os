@@ -5,10 +5,14 @@ import { useEffect, useRef, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { useOrg } from "@/lib/context/OrgContext";
 import { createClient } from "@/lib/supabase/client";
-import { generateAI } from "@/lib/ai/generate";
-import { AiBanner } from "@/components/ui/AiBanner";
 import { ToastProvider } from "@/components/ui/Toast";
 import { AttendanceWidget } from "@/components/hr/AttendanceWidget";
+import {
+  ChatInput,
+  HeroEmptyState,
+  MessageList,
+  useAskAiConversation,
+} from "@/components/ai/AskAiChat";
 
 // icons reused across items that share a shape.
 const ICON = {
@@ -111,10 +115,10 @@ const NAV_SECTIONS: NavSection[] = [
     items: [
       { href: "/ai/create-project", label: "AI Draft", icon: ICON.bolt },
       { href: "/health", label: "Health Monitoring", icon: ICON.heart },
-      { href: "/ai/sprint-plans", label: "Sprint Plans", icon: ICON.checklist, comingSoon: true },
-      { href: "/ai/ask", label: "Ask AI", icon: ICON.sparkle, comingSoon: true },
-      { href: "/ai/documents", label: "Documents", icon: ICON.doc, comingSoon: true },
-      { href: "/ai/recommendations", label: "Recommendations", icon: ICON.sparkle, comingSoon: true },
+      { href: "/ai/sprint-plans", label: "Sprint Plans", icon: ICON.checklist },
+      { href: "/ai/ask", label: "Ask AI", icon: ICON.sparkle },
+      { href: "/ai/documents", label: "Documents", icon: ICON.doc },
+      { href: "/ai/recommendations", label: "Recommendations", icon: ICON.sparkle },
     ],
   },
   {
@@ -694,67 +698,43 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <main className="min-w-0 flex-1 overflow-y-auto overflow-x-hidden p-4 sm:p-6 lg:p-8">{children}</main>
       </div>
 
-      {askOpen && <AskAiDialog onClose={() => setAskOpen(false)} />}
+      {askOpen && <AskAiDialog onClose={() => setAskOpen(false)} orgId={selectedOrgId} />}
     </div>
     </ToastProvider>
   );
 }
 
-function AskAiDialog({ onClose }: { onClose: () => void }) {
-  const [q, setQ] = useState("");
-  const [answer, setAnswer] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
-
-  async function ask() {
-    if (!q.trim()) return;
-    setLoading(true);
-    setAnswer(null);
-    const a = (await generateAI("Analyst", "ask", { question: q })) as string;
-    setAnswer(a);
-    setLoading(false);
-  }
+function AskAiDialog({ onClose, orgId }: { onClose: () => void; orgId: string | null }) {
+  const { conversationId, messages, sending, streamingId, sendMessage, sendStarter } = useAskAiConversation(orgId);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center bg-neutral-950/40 p-4 pt-24" onClick={onClose}>
+    <div className="fixed inset-0 z-50 flex justify-end bg-neutral-950/40" onClick={onClose}>
       <div
-        className="w-full max-w-xl space-y-3 rounded-lg bg-neutral-50 p-6 shadow-lg"
+        className="flex h-full w-[440px] max-w-full flex-col bg-neutral-50 shadow-lg"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center gap-2">
-          <Icon path={ICON.sparkle} className="h-5 w-5 text-ai-600" />
-          <h2 className="font-heading text-h3 font-semibold text-neutral-950">Ask AI</h2>
-        </div>
-
-        <textarea
-          autoFocus
-          rows={3}
-          value={q}
-          onChange={(e) => setQ(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) ask();
-          }}
-          placeholder="Ask about overdue tasks, budgets, team gaps, or anything in this workspace…"
-          className="w-full rounded-md border border-neutral-300 bg-neutral-50 px-3 py-2 text-body focus:border-primary-600 focus:outline-none"
-        />
-
-        <div className="flex items-center justify-between">
-          <p className="text-caption text-neutral-500">⌘ + Enter to send</p>
-          <button
-            type="button"
-            onClick={ask}
-            disabled={loading || !q.trim()}
-            className="rounded-md bg-primary-600 px-3 py-1.5 text-small font-medium text-neutral-50 hover:bg-primary-700 disabled:opacity-60"
-          >
-            {loading ? "Thinking…" : "Ask"}
-          </button>
-        </div>
-
-        {answer && (
-          <div className="space-y-2 overflow-hidden rounded-md border border-ai-600/40">
-            <AiBanner />
-            <p className="whitespace-pre-wrap px-4 pb-3 text-body text-neutral-800">{answer}</p>
+        <div className="flex items-center justify-between border-b border-neutral-300 p-4">
+          <div className="flex items-center gap-2">
+            <Icon path={ICON.sparkle} className="h-5 w-5 text-ai-600" />
+            <h2 className="font-heading text-h3 font-semibold text-neutral-950">Ask AI</h2>
           </div>
+          <div className="flex items-center gap-3">
+            <Link href="/ai/ask" className="text-small text-primary-700 underline" onClick={onClose}>
+              Open full page
+            </Link>
+            <button type="button" onClick={onClose} aria-label="Close" className="text-neutral-500 hover:text-neutral-800">
+              <Icon path="M6 18L18 6M6 6l12 12" className="h-4 w-4" />
+            </button>
+          </div>
+        </div>
+
+        {!conversationId ? (
+          <HeroEmptyState compact onPick={(text) => sendStarter(text)} />
+        ) : (
+          <MessageList messages={messages} sending={sending} streamingId={streamingId} />
         )}
+
+        {conversationId && <ChatInput disabled={sending} onSend={(text) => sendMessage(text)} />}
       </div>
     </div>
   );

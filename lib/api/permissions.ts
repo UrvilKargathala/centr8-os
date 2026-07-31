@@ -55,7 +55,12 @@ export type ResourceType =
   // HR Batch 3 — Performance Reviews & OKRs hybrid self+manager model,
   // split out of the old "performance" (see db/schema.ts's comment).
   | "review"
-  | "okr";
+  | "okr"
+  // AI Assistant build-out — Sprint Plans (Tier 1 approve-to-act) and
+  // Documents (draft -> reviewed -> finalized). "Ask AI" and
+  // "Recommendations" need no resourceType here (see db/schema.ts).
+  | "sprint_plan"
+  | "document";
 
 export type PermissionAction =
   | "create"
