@@ -204,6 +204,7 @@ export default function AccountsPage() {
       {showNew && (
         <NewAccountModal
           orgId={selectedOrgId}
+          employees={employees}
           onClose={() => setShowNew(false)}
           onSaved={() => {
             setShowNew(false);
@@ -217,16 +218,24 @@ export default function AccountsPage() {
 
 export function NewAccountModal({
   orgId,
+  employees,
   onClose,
   onSaved,
 }: {
   orgId: string;
+  employees: Employee[];
   onClose: () => void;
   onSaved: (id: string) => void;
 }) {
   const [name, setName] = useState("");
   const [industry, setIndustry] = useState("");
   const [website, setWebsite] = useState("");
+  const [phone, setPhone] = useState("");
+  const [email, setEmail] = useState("");
+  const [type, setType] = useState<string>("prospect");
+  const [status, setStatus] = useState<string>("active");
+  const [annualRevenue, setAnnualRevenue] = useState("");
+  const [ownerId, setOwnerId] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -236,7 +245,18 @@ export function NewAccountModal({
     const res = await fetch("/api/crm/accounts", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ org_id: orgId, name, industry: industry || null, website: website || null }),
+      body: JSON.stringify({
+        org_id: orgId,
+        name,
+        industry: industry || null,
+        website: website || null,
+        phone: phone || null,
+        email: email || null,
+        type,
+        status,
+        annual_revenue: annualRevenue ? Number(annualRevenue) : null,
+        owner_id: ownerId || null,
+      }),
     });
     const body = await res.json();
     setSaving(false);
@@ -249,14 +269,53 @@ export function NewAccountModal({
       <h2 className="text-h3 font-semibold text-neutral-950">New Account</h2>
       <div className="mt-4 space-y-3">
         <Field label="Name">
-          <Input value={name} onChange={(e) => setName(e.target.value)} />
+          <Input className="w-full" value={name} onChange={(e) => setName(e.target.value)} />
         </Field>
-        <Field label="Industry">
-          <Input value={industry} onChange={(e) => setIndustry(e.target.value)} />
-        </Field>
-        <Field label="Website">
-          <Input value={website} onChange={(e) => setWebsite(e.target.value)} />
-        </Field>
+        <div className="grid grid-cols-2 gap-3">
+          <Field label="Industry">
+            <Input value={industry} onChange={(e) => setIndustry(e.target.value)} />
+          </Field>
+          <Field label="Website">
+            <Input value={website} onChange={(e) => setWebsite(e.target.value)} />
+          </Field>
+          <Field label="Phone">
+            <Input value={phone} onChange={(e) => setPhone(e.target.value)} />
+          </Field>
+          <Field label="Email">
+            <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
+          </Field>
+          <Field label="Type">
+            <Select value={type} onChange={(e) => setType(e.target.value)}>
+              {ACCOUNT_TYPES.map((t) => (
+                <option key={t} value={t}>
+                  {t}
+                </option>
+              ))}
+            </Select>
+          </Field>
+          <Field label="Status">
+            <Select value={status} onChange={(e) => setStatus(e.target.value)}>
+              {ACCOUNT_STATUSES.map((s) => (
+                <option key={s} value={s}>
+                  {s}
+                </option>
+              ))}
+            </Select>
+          </Field>
+          <Field label="Annual revenue">
+            <Input type="number" value={annualRevenue} onChange={(e) => setAnnualRevenue(e.target.value)} />
+          </Field>
+          <Field label="Owner">
+            <Select value={ownerId} onChange={(e) => setOwnerId(e.target.value)}>
+              <option value="">Unassigned</option>
+              {employees.map((e) => (
+                <option key={e.id} value={e.id}>
+                  {e.fullName}
+                </option>
+              ))}
+            </Select>
+          </Field>
+        </div>
         {error && <p className="text-small text-danger-600">{error}</p>}
         <div className="flex gap-2 pt-2">
           <Button onClick={save} disabled={saving || !name}>
