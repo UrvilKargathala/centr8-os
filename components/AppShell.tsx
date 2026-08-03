@@ -43,6 +43,11 @@ const ICON = {
   chevronLeft: "M15 19l-7-7 7-7",
   chevronRight: "M9 5l7 7-7 7",
   chevronDown: "M19 9l-7 7-7-7",
+  // Global command-center dashboard — a home icon, distinct from the
+  // per-pillar "dashboard" (a line chart icon) used inside Project
+  // Management/HR. Kept the "grid" key name (referenced elsewhere) even
+  // though the shape is now a house, to avoid a churny rename.
+  grid: "M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3v-6a1 1 0 011-1h4a1 1 0 011 1v6h3a1 1 0 001-1V10m-9-7l9 7",
 };
 
 type NavItem = { href: string; label: string; icon: string; comingSoon?: boolean };
@@ -53,7 +58,7 @@ const NAV_SECTIONS: NavSection[] = [
     title: "Project Management",
     icon: ICON.checklist,
     items: [
-      { href: "/dashboard", label: "Dashboard", icon: ICON.dashboard },
+      { href: "/projects/dashboard", label: "Dashboard", icon: ICON.dashboard },
       { href: "/projects", label: "Projects", icon: ICON.folder },
       { href: "/tasks", label: "Tasks", icon: ICON.checklist },
       { href: "/team", label: "Team", icon: ICON.users },
@@ -260,9 +265,8 @@ function AppSidebar({
         }`}
       >
         <div className="relative flex h-14 shrink-0 items-center gap-2 border-b border-neutral-300 px-3">
-          <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-sm bg-primary-600 text-caption font-semibold text-neutral-50">
-            C8
-          </div>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/c8-favicon.png" alt="Centr8 OS" className="h-7 w-7 shrink-0 rounded-sm object-contain" />
           {!collapsed && <span className="text-h3 font-semibold text-neutral-950">Centr8 OS</span>}
           <button
             type="button"
@@ -275,6 +279,17 @@ function AppSidebar({
         </div>
 
         <nav className="flex-1 space-y-4 overflow-y-auto p-3 font-heading">
+          <Link
+            href="/dashboard"
+            title="Dashboard"
+            className={`flex items-center gap-2.5 rounded-sm px-3 py-2 text-[13px] font-medium ${
+              pathname === "/dashboard" ? "bg-primary-100 text-primary-700" : "text-neutral-700 hover:bg-neutral-200"
+            } ${collapsed ? "justify-center" : ""}`}
+          >
+            <Icon path={ICON.grid} />
+            {!collapsed && <span>Dashboard</span>}
+          </Link>
+
           {groups.map((group) => (
             <div key={group.label} className="space-y-1">
               <p

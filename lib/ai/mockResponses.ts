@@ -489,6 +489,55 @@ Follow-ups:
       }
       return { recommendations: recs.slice(0, 8) };
     },
+    // Global dashboard (/dashboard) — "AI: Daily Briefing".
+    daily_briefing: (ctx: MockContext) => {
+      const d = (ctx.dashboard_data as Record<string, unknown>) || {};
+      const tasks = (d.tasks as { overdue?: number; in_progress?: number }) || {};
+      const projects = (d.projects as { active?: number; at_risk?: number }) || {};
+      const deals = (d.deals as { weighted_pipeline_value?: number; deals_to_close_this_month?: number } | null) || null;
+      const attendance = (d.attendance as { attendance_rate_percent?: number | null } | null) || null;
+      const leave = (d.leave as { on_leave_today?: number | null } | null) || null;
+      const openHrCases = d.open_hr_cases as number | null | undefined;
+      const ai = (d.ai as { pending_sprint_plans?: number | null; documents_in_draft?: number | null }) || {};
+
+      const highlights: { type: "positive" | "warning" | "action_needed"; text: string }[] = [];
+      const sentences: string[] = [];
+
+      const overdue = tasks.overdue ?? 0;
+      const atRisk = projects.at_risk ?? 0;
+      if (overdue > 0) {
+        sentences.push(`You have ${overdue} overdue task${overdue === 1 ? "" : "s"}${atRisk > 0 ? ` across ${atRisk} at-risk project${atRisk === 1 ? "" : "s"}` : ""}.`);
+        highlights.push({ type: "action_needed", text: `${overdue} overdue task${overdue === 1 ? "" : "s"} need${overdue === 1 ? "s" : ""} attention` });
+      } else {
+        sentences.push("No overdue tasks right now — project work is on pace.");
+        highlights.push({ type: "positive", text: "No overdue tasks" });
+      }
+
+      if (deals) {
+        const weighted = (deals.weighted_pipeline_value ?? 0).toLocaleString();
+        const closing = deals.deals_to_close_this_month ?? 0;
+        sentences.push(`Pipeline is ₹${weighted} weighted${closing > 0 ? `, with ${closing} deal${closing === 1 ? "" : "s"} expected to close this month` : ""}.`);
+        if (closing > 0) highlights.push({ type: "positive", text: `${closing} deal${closing === 1 ? "" : "s"} closing this month` });
+      }
+
+      if (attendance && attendance.attendance_rate_percent !== null && attendance.attendance_rate_percent !== undefined) {
+        const onLeave = leave?.on_leave_today ?? 0;
+        sentences.push(`${onLeave > 0 ? `${onLeave} team member${onLeave === 1 ? "" : "s"} ${onLeave === 1 ? "is" : "are"} on leave today, ` : ""}attendance rate is ${attendance.attendance_rate_percent}%.`);
+        if (attendance.attendance_rate_percent < 70) highlights.push({ type: "warning", text: `Attendance is low today (${attendance.attendance_rate_percent}%)` });
+      }
+
+      if (typeof openHrCases === "number" && openHrCases > 0) {
+        sentences.push(`${openHrCases} HR case${openHrCases === 1 ? "" : "s"} ${openHrCases === 1 ? "is" : "are"} open.`);
+        highlights.push({ type: "warning", text: `${openHrCases} open HR case${openHrCases === 1 ? "" : "s"}` });
+      }
+
+      const pendingPlans = ai.pending_sprint_plans ?? 0;
+      const draftDocs = ai.documents_in_draft ?? 0;
+      if (pendingPlans > 0) highlights.push({ type: "action_needed", text: `${pendingPlans} sprint plan${pendingPlans === 1 ? "" : "s"} awaiting approval` });
+      if (draftDocs > 0) highlights.push({ type: "warning", text: `${draftDocs} document${draftDocs === 1 ? "" : "s"} still in draft` });
+
+      return { summary: sentences.join(" "), highlights: highlights.slice(0, 5) };
+    },
     recommend_members_for_role: (ctx: MockContext) => {
       const role = ((ctx.role as string) || "team member").toLowerCase();
       const pool: Record<string, { name: string; reason: string }[]> = {

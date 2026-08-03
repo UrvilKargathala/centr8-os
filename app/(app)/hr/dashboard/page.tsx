@@ -49,7 +49,7 @@ export default function HrDashboardPage() {
 
     Promise.all([
       fetch(`/api/employees?org_id=${selectedOrgId}`).then((r) => r.json()),
-      fetch(`/api/leave-requests?org_id=${selectedOrgId}`).then((r) => r.json()),
+      fetch(`/api/leave/pending-approvals?org_id=${selectedOrgId}`).then((r) => r.json()),
       canViewAttendance
         ? Promise.all(
             days.map((date) =>
