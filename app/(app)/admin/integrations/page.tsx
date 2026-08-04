@@ -25,13 +25,48 @@ const PROVIDERS = [
     connectedLabel: "Connected as",
   },
   {
-    key: "zoom",
-    name: "Zoom",
+    key: "google-meet",
+    name: "Google Meet",
     description: "Schedule and link video meetings.",
     available: false,
     connectedLabel: "Connected as",
   },
 ] as const;
+
+function SlackIcon() {
+  return (
+    <svg className="h-8 w-8" viewBox="0 0 24 24">
+      <path fill="#36C5F0" d="M8.7 15.5a1.9 1.9 0 11-1.9-1.9h1.9v1.9zM9.6 15.5a1.9 1.9 0 013.8 0v4.8a1.9 1.9 0 01-3.8 0v-4.8z" />
+      <path fill="#2EB67D" d="M8.4 8.6a1.9 1.9 0 111.9-1.9v1.9H8.4zM8.4 9.6a1.9 1.9 0 010 3.8H3.6a1.9 1.9 0 010-3.8h4.8z" />
+      <path fill="#ECB22E" d="M15.3 8.4a1.9 1.9 0 111.9 1.9h-1.9V8.4zM14.4 8.4a1.9 1.9 0 01-3.8 0V3.6a1.9 1.9 0 013.8 0v4.8z" />
+      <path fill="#E01E5A" d="M15.6 15.3a1.9 1.9 0 11-1.9 1.9v-1.9h1.9zM15.6 14.4a1.9 1.9 0 010-3.8h4.8a1.9 1.9 0 010 3.8h-4.8z" />
+    </svg>
+  );
+}
+
+function GmailIcon() {
+  return (
+    <svg className="h-8 w-8" viewBox="0 0 24 24" fill="none">
+      <rect x="2" y="5" width="20" height="14" rx="2" fill="#EA4335" />
+      <path d="M4 7.5l8 5.5 8-5.5" stroke="white" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+function GoogleMeetIcon() {
+  return (
+    <svg className="h-8 w-8" viewBox="0 0 24 24" fill="none">
+      <rect x="3" y="6" width="12" height="12" rx="2" fill="#00897B" />
+      <path d="M17 9.3L21 6.8V17.2L17 14.7z" fill="#00897B" />
+    </svg>
+  );
+}
+
+const PROVIDER_ICON: Record<(typeof PROVIDERS)[number]["key"], () => React.ReactElement> = {
+  slack: SlackIcon,
+  gmail: GmailIcon,
+  "google-meet": GoogleMeetIcon,
+};
 
 export default function IntegrationsPage() {
   return (
@@ -108,10 +143,14 @@ function IntegrationsPageInner() {
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {PROVIDERS.map((provider) => {
           const connected = connectedByProvider.get(provider.key);
+          const Icon = PROVIDER_ICON[provider.key];
           return (
             <Card key={provider.key} padding="md" className="flex flex-col gap-3">
               <div className="flex items-start justify-between gap-2">
-                <h2 className="text-h3 font-semibold text-neutral-950">{provider.name}</h2>
+                <div className="flex items-center gap-2.5">
+                  <Icon />
+                  <h2 className="text-h3 font-semibold text-neutral-950">{provider.name}</h2>
+                </div>
                 {connected ? (
                   <Badge color="success">Connected</Badge>
                 ) : provider.available ? (
