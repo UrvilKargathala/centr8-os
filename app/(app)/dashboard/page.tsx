@@ -265,7 +265,7 @@ const STAGE_COLOR: Record<string, BadgeColor> = {
 // distributes the icon row and text block across the fixed height instead
 // of a fluid space-y gap, so tightening/loosening content never blows the
 // box out.
-const KPI_CARD = "!w-[268px] !h-[117px] !rounded-2xl !p-4 flex flex-col justify-between overflow-hidden";
+const KPI_CARD = "!w-[380px] !h-[136px] !rounded-2xl !p-4 flex flex-col justify-between overflow-hidden";
 
 export default function DashboardPage() {
   const { selectedOrgId, selectedOrg, can, loading: orgLoading } = useOrg();
