@@ -124,7 +124,7 @@ export default function UnifiedInboxPage() {
               {[
                 { label: "Send email", note: "Opens Gmail composer (Phase 7 wiring)." },
                 { label: "Send Slack message", note: "Posts to a channel or DM (Phase 7 wiring)." },
-                { label: "Schedule meeting", note: "Creates a Zoom meeting + Calendar invite (Phase 7 wiring)." },
+                { label: "Schedule meeting", note: "Creates a Google Meet meeting + Calendar invite (Phase 7 wiring)." },
               ].map((opt) => (
                 <button
                   key={opt.label}

@@ -59,12 +59,12 @@ export default function VideoPage() {
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h1 className="font-heading text-display font-semibold text-neutral-950">Video</h1>
-          <p className="mt-1 text-body text-neutral-600">Zoom — upcoming and past meetings</p>
+          <p className="mt-1 text-body text-neutral-600">Google Meet — upcoming and past meetings</p>
         </div>
         <Button onClick={() => setSchedule(true)}>+ Schedule meeting</Button>
       </div>
 
-      <CommunicationBanner service="Zoom" />
+      <CommunicationBanner service="Google Meet" />
 
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex gap-1 rounded-md border border-neutral-300 bg-neutral-50 p-0.5">
@@ -136,7 +136,7 @@ export default function VideoPage() {
             <div className="mt-3 flex flex-wrap gap-2">
               {tab === "upcoming" ? (
                 <>
-                  <Button onClick={() => joinMock(m)}>Join via Zoom</Button>
+                  <Button onClick={() => joinMock(m)}>Join via Google Meet</Button>
                   <Button variant="secondary" onClick={() => copyLink(m)}>Copy link</Button>
                 </>
               ) : (
@@ -212,7 +212,7 @@ export default function VideoPage() {
           <div className="space-y-3">
             <h3 className="font-heading text-h3 font-semibold text-neutral-950">Schedule meeting</h3>
             <p className="text-body text-neutral-800">
-              Zoom scheduling lands with the real connector — the UI wiring is Phase 7.
+              Google Meet scheduling lands with the real connector — the UI wiring is Phase 7.
             </p>
             <div className="flex justify-end">
               <Button onClick={() => setSchedule(false)}>Got it</Button>

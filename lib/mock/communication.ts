@@ -191,7 +191,7 @@ export const mockZoom: {
       ],
       start_time: inHours(2),
       duration_minutes: 60,
-      join_url: "https://zoom.us/j/mock-123456",
+      join_url: "https://meet.google.com/mock-abc-defg",
     },
     {
       id: "z-2",
@@ -203,7 +203,7 @@ export const mockZoom: {
       ],
       start_time: inHours(6),
       duration_minutes: 30,
-      join_url: "https://zoom.us/j/mock-789012",
+      join_url: "https://meet.google.com/mock-hij-klmn",
     },
     {
       id: "z-3",
@@ -216,7 +216,7 @@ export const mockZoom: {
       ],
       start_time: inHours(28),
       duration_minutes: 45,
-      join_url: "https://zoom.us/j/mock-345678",
+      join_url: "https://meet.google.com/mock-opq-rstu",
     },
   ],
   past: [
