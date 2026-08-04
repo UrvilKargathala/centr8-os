@@ -715,6 +715,13 @@
       "when": 1785490337353,
       "tag": "0100_seed_ai_assistant_permissions",
       "breakpoints": true
+    },
+    {
+      "idx": 101,
+      "version": "7",
+      "when": 1785832924000,
+      "tag": "0101_task_detail_card_fields",
+      "breakpoints": true
     }
   ]
 }

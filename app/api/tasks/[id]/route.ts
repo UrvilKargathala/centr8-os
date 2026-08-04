@@ -46,6 +46,9 @@ export async function PATCH(req: NextRequest, { params }: Params) {
           assigneeId: body.assignee_id === undefined ? undefined : body.assignee_id,
           estimate: body.estimate === undefined ? undefined : body.estimate,
           dueDate: body.due_date === undefined ? undefined : body.due_date,
+          category: body.category === undefined ? undefined : body.category,
+          startTime: body.start_time === undefined ? undefined : body.start_time,
+          endTime: body.end_time === undefined ? undefined : body.end_time,
         })
         .where(eq(tasks.id, id))
         .returning();

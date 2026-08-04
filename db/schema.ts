@@ -316,6 +316,11 @@ export const tasks = pgTable(
     assigneeId: uuid("assignee_id"),
     estimate: integer("estimate"),
     dueDate: date("due_date"),
+    // Free-text like people.department — no separate categories table,
+    // same "not worth a lookup table yet" call.
+    category: text("category"),
+    startTime: time("start_time"),
+    endTime: time("end_time"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
@@ -365,6 +370,30 @@ export const taskDependencies = pgTable(
     }),
     primaryKey({ columns: [table.taskId, table.dependsOnTaskId] }),
     check("task_dependencies_no_self_reference", sql`${table.taskId} <> ${table.dependsOnTaskId}`),
+  ],
+).enableRLS();
+
+// Multi-assignee support for the task detail card — additive alongside
+// tasks.assigneeId (kept as-is; every other task view — Board/List/Card/
+// dashboard "Recent Tasks" — still reads the single legacy field, same
+// "intentional-later merge" reasoning as the people/employees split
+// documented in CLAUDE.md §11a rather than a risky rip-and-replace).
+export const taskAssignees = pgTable(
+  "task_assignees",
+  {
+    taskId: uuid("task_id").notNull().references(() => tasks.id, { onDelete: "cascade" }),
+    personId: uuid("person_id").notNull().references(() => people.id, { onDelete: "cascade" }),
+    orgId: uuid("org_id").notNull().references(() => organizations.id, { onDelete: "cascade" }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    primaryKey({ columns: [t.taskId, t.personId] }),
+    pgPolicy("task_assignees_isolation", {
+      for: "all",
+      to: authenticatedRole,
+      using: inUserOrgs,
+      withCheck: inUserOrgs,
+    }),
   ],
 ).enableRLS();
 
