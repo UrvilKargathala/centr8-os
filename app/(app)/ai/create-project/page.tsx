@@ -17,6 +17,13 @@ type CreatedResult = {
   tasks: unknown[];
 };
 
+const EXAMPLE_PROMPTS = [
+  "Launch a customer referral program by end of Q3, including a landing page, reward tracking, and email campaigns.",
+  "Migrate our billing system to Stripe over the next 6 weeks, with a rollback plan and finance sign-off.",
+  "Redesign the onboarding flow to cut signup drop-off, shipping in two 2-week sprints.",
+  "Plan a 4-week hiring push for two senior engineers, from job posts through offer.",
+];
+
 export default function CreateProjectPage() {
   const { selectedOrgId, can, permissionsLoading } = useOrg();
   // Generate/Accept/Reject all gate on project:create server-side (drafts
@@ -121,7 +128,21 @@ export default function CreateProjectPage() {
           Your role doesn't allow creating projects, so drafts can't be generated or accepted here.
         </p>
       ) : (
-        <Card padding="sm" className="space-y-3">
+        <Card padding="sm" className="space-y-4">
+          {!draft && !created && (
+            <div className="flex flex-col items-center gap-2 py-2 text-center">
+              <span className="flex h-14 w-14 items-center justify-center rounded-full bg-ai-100 text-ai-600">
+                <svg className="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 3l1.9 5.6L19.5 10.5l-5.6 1.9L12 18l-1.9-5.6L4.5 10.5l5.6-1.9L12 3z" />
+                </svg>
+              </span>
+              <p className="text-h3 font-semibold text-neutral-950">What are you building?</p>
+              <p className="text-small text-neutral-600">
+                Describe the project in a sentence or two — the Planner agent drafts a goal, milestones, sprints, and tasks for you to review.
+              </p>
+            </div>
+          )}
+
           <label className="block text-body-medium font-medium text-neutral-800">
             Describe the project
             <Textarea
@@ -132,6 +153,22 @@ export default function CreateProjectPage() {
               placeholder="Launch a customer referral program by end of Q3, including a landing page, reward tracking, and email campaigns."
             />
           </label>
+
+          {!draft && !created && (
+            <div className="flex flex-wrap gap-2">
+              {EXAMPLE_PROMPTS.map((p) => (
+                <button
+                  key={p}
+                  type="button"
+                  onClick={() => setPrompt(p)}
+                  className="rounded-full border border-neutral-300 bg-neutral-50 px-3 py-1.5 text-caption text-neutral-700 hover:border-ai-600 hover:bg-ai-100 hover:text-ai-600"
+                >
+                  {p.length > 60 ? `${p.slice(0, 57)}…` : p}
+                </button>
+              ))}
+            </div>
+          )}
+
           <Button onClick={handleGenerate} disabled={generating || !selectedOrgId || !prompt}>
             {generating ? "Generating…" : "Generate Draft"}
           </Button>
