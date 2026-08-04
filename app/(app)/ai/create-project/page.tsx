@@ -120,7 +120,7 @@ export default function CreateProjectPage() {
   }
 
   return (
-    <div className="max-w-3xl space-y-6">
+    <div className="mx-auto max-w-3xl space-y-6">
       <h1 className="text-display font-semibold text-neutral-950">AI Project Creation</h1>
 
       {!permissionsLoading && !canCreateProject ? (
