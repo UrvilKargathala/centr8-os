@@ -8,7 +8,7 @@ AI-native operating system for work. See [CLAUDE.md](./CLAUDE.md) for locked sta
 - Neon Postgres — database (direct connection for migrations, pooled for runtime)
 - Drizzle ORM — schema + migrations (`db/`)
 - Supabase Auth — email/password now, SAML SSO placeholder wired in Phase 3
-- Railway — the agent-orchestration worker (`workers/agent-worker.ts`), deployed as its own Railway service pointed at this repo with `npm run worker` as the start command (see `railway.json`); everything else stays on Vercel. Not yet actually provisioned on Railway — build/deploy config is ready, but creating the live service needs interactive `railway login`, which wasn't available in the session that built it. Runs locally via `npm run worker`.
+- AI agent calls run inline in Next.js API routes via `generateAI()` (`lib/ai/generate.ts`). No separate worker service.
 
 No paid tiers are used. See CLAUDE.md §2 before adding any new service.
 
@@ -36,10 +36,9 @@ No paid tiers are used. See CLAUDE.md §2 before adding any new service.
    npm run db:test-rls    # asserts a user in Org A gets zero rows from Org B
    npm run db:test-rbac   # asserts a 'member' is blocked from deleting a project, etc.
    ```
-5. Start the dev server and the agent worker (two separate processes — the worker doesn't run inside `next dev`):
+5. Start the dev server:
    ```bash
-   npm run dev      # terminal 1
-   npm run worker   # terminal 2 — polls agent_jobs; without it, AI draft/health requests time out after 25s
+   npm run dev
    ```
 6. Verify the health check: `GET http://localhost:3000/api/health` → `{ "status": "ok" }`
 
@@ -54,7 +53,7 @@ No paid tiers are used. See CLAUDE.md §2 before adding any new service.
 - `service_role` (`BYPASSRLS`) — also granted to the Neon connection role, but never active by default. Only `set role service_role` for the duration of an admin operation (seeding, org provisioning) bypasses RLS; ordinary queries on the same connection stay scoped. This exists because forcing RLS (`db/migrations/0002_force_rls.sql`) creates a bootstrap problem — creating org #1 needs a membership row, which needs org #1 to already exist.
 - Table-level `GRANT`s to `authenticated`/`service_role` (`db/migrations/0005_role_grants.sql`) — creating a role gives it nothing on its own; RLS only filters *which* rows a permitted statement can touch, so without a base `GRANT` every query 403s before RLS is even evaluated.
 
-**The one that actually bit us:** Neon grants `BYPASSRLS` to its project-owner role by default (confirmed via `select rolbypassrls from pg_roles`) — the single role this project connects as for both `NEON_DIRECT_URL` and `NEON_POOLED_URL`. `FORCE ROW LEVEL SECURITY` (0002/0004) does nothing against that, since the bypass is a role attribute checked ahead of ownership. `db/withOrgContext.ts` therefore does `set role authenticated` before every request-scoped query, not just `set_config(...)` — without it, RLS silently no-ops and every query sees every org's rows. Any script or worker that runs RLS-scoped queries against Neon needs the same `set role authenticated` step; `db/test-rls-isolation.ts` (which caught this) does it too.
+**The one that actually bit us:** Neon grants `BYPASSRLS` to its project-owner role by default (confirmed via `select rolbypassrls from pg_roles`) — the single role this project connects as for both `NEON_DIRECT_URL` and `NEON_POOLED_URL`. `FORCE ROW LEVEL SECURITY` (0002/0004) does nothing against that, since the bypass is a role attribute checked ahead of ownership. `db/withOrgContext.ts` therefore does `set role authenticated` before every request-scoped query, not just `set_config(...)` — without it, RLS silently no-ops and every query sees every org's rows. Any script that runs RLS-scoped queries against Neon needs the same `set role authenticated` step; `db/test-rls-isolation.ts` (which caught this) does it too.
 
 The seed and RLS-test scripts use `@neondatabase/serverless`'s `Pool` (not the `neon-http` driver `db/index.ts` uses for app queries) because `set_config(..., true)`/`set role` need a session-scoped connection; `neon-http` issues each query as a stateless HTTP call.
 
@@ -102,23 +101,22 @@ An org can add its own rows (`org_id` = that org) to override a default or defin
 
 `db/test-rbac.ts` (`npm run db:test-rbac`) exercises the real `requirePermission()` + `withOrgContext()` path (not a reimplementation) end to end: confirms `admin` can delete a project, `member` gets a `403` on the same action, `viewer` is blocked from creating a task, `member` *can* create a task (proving it's role-based, not a blanket deny), and that a blocked delete attempt never touches the row while an admin's does.
 
-## AI agent orchestration worker (Prompt 2.1)
+## AI agent calls
 
-CLAUDE.md §5 specifies five composable agents (Planner/Monitor/Analyst/Writer/Communicator) coordinated by a Railway worker — not called inline from Next.js API routes. `workers/agent-worker.ts` is that worker: a standalone long-running process, run separately from `next dev`/Vercel via `npm run worker`, that polls `agent_jobs` with `SELECT ... FOR UPDATE SKIP LOCKED` (`workers/db.ts`) so multiple worker instances can run concurrently without double-processing a job.
+All five composable agents (Planner/Monitor/Analyst/Writer/Communicator) are called inline from Next.js API routes via `generateAI()` (`lib/ai/generate.ts`). No separate worker process is needed.
 
-- **Agent modules** (`lib/agents/`) — one file per agent, each its own callable function, not a shared prompt file: `planner.ts` (draft generation, migrated from the old `lib/ai/gemini.ts`), `monitor.ts` (health signals + summary, migrated from `lib/ai/gemini.ts` + `lib/ai/healthSignals.ts`), and scaffolded-but-unwired `analyst.ts`/`writer.ts`/`communicator.ts` (each throws a clear "no job types registered yet" error — Prompts 2.6/2.7/3.1 give them real work).
-- **`lib/agents/registry.ts`** maps a job's `job_type` string to `{ agentType, tier, handler, auditAction, targetType, targetId }` — the worker's whole dispatch table, so adding a job type never touches the poll loop.
-- **API routes don't call Gemini directly anymore.** `POST /api/ai/create-project-draft` and `POST /api/ai/project-health` insert an `agent_jobs` row (`status: 'pending'`) and poll it (`lib/api/helpers.ts`'s `pollAgentJob`, 25s timeout, 400ms interval, each poll its own short `withOrgContext` call rather than one held-open transaction for the whole wait) instead of awaiting a Gemini response inline.
-- **Every job — success or failure — gets one `audit_log` entry**, written by the worker itself (`workers/db.ts`'s `finishJob`, in the same transaction as the status update) with `tier`, `input`, `output`, and `org_id` in `metadata` (Prompt 2.1 task 4). Action names are unchanged from the pre-worker routes (`ai_project_draft_generated`, `project_health_snapshot_generated`) so the dashboard's "Recent activity" feed reads the same as before; a failed job appends `_failed` to the action.
-- **Not actually deployed to Railway yet.** `railway.json` sets the service start command to `npm run worker`; the Railway CLI is installed but this session had no `railway login` session to provision a live service with. Everything up to that boundary — schema, worker code, job dispatch, audit logging — is built and verified against live Neon/Supabase (see below); only the "create a Railway project and point it at this repo" step is outstanding.
+- **Agent modules** (`lib/agents/`) — one file per agent: `planner.ts` (real Gemini-backed draft generation), `monitor.ts` (health signals + Gemini summary), and scaffolded `analyst.ts`/`writer.ts`/`communicator.ts`.
+- **`lib/ai/generate.ts`** routes through mock responses by default (`NEXT_PUBLIC_AI_PROVIDER=mock`); switching to a real LLM provider requires zero UI changes.
+- **Every AI call — success or failure — gets one `audit_log` entry** written by the API route itself with `tier`, `input`, `output`, and `org_id` in `metadata`. Action names: `ai_project_draft_generated`, `project_health_snapshot_generated`; a failed call appends `_failed`.
+- **`agent_jobs` table** exists in the schema but is no longer written to. It was previously used by a Railway worker; that architecture was removed.
 
 ## AI: natural-language project creation (FR-7.x, Tier 0 — Suggest Only)
 
 Three routes, split so the boundary CLAUDE.md §4 requires ("Tier 0 — Suggest Only: AI proposes, human must trigger") is a hard code boundary, not just a convention:
 
-- `POST /api/ai/create-project-draft` — takes `{ org_id, prompt }`, enqueues a Planner job (`job_type: 'create_project_draft'`) and polls for the result, returning `{ draftId, draft }` where `draft` is `{ goal, project, milestones[], sprints[], tasks[] }`. **Writes nothing to `goals`/`projects`/`milestones`/`sprints`/`tasks`** — the only DB writes are the `agent_jobs` row and the worker's `audit_log` entry (`actor_type: 'ai'`, `action: 'ai_project_draft_generated'`), holding the prompt and full draft in `metadata`. Gated by `requirePermission(..., "project", "create")` before the job is even enqueued, so drafting doesn't burn Gemini quota for a user who couldn't act on it anyway.
-- `POST /api/ai/create-project-draft/accept` — the *only* route allowed to turn a draft into real rows, and only ever called from an explicit "Accept & Create" click. Unchanged by the Prompt 2.1 worker migration (it never called Gemini). Checks `requirePermission` for `goal`/`project`/`milestone`/`sprint`/`task` create (all four, even if a list is empty, so a partial-permission user can't sneak in some of the structure), then inserts everything inside one `withOrgContext` transaction, then logs a second `audit_log` row (`actor_type: 'human'`, `action: 'ai_project_draft_accepted'`, `target_type: 'project'`, `target_id`: the new project, `metadata.draftId` linking back to the generation log entry).
-- `POST /api/ai/create-project-draft/reject` — also unchanged by the worker migration. Logs `audit_log` (`actor_type: 'human'`, `action: 'ai_project_draft_rejected'`, `metadata.reason` if the reviewer gave one) — nothing else. Deliberately distinct from "Discard" in the UI, which clears local state with **no** server call at all; Reject is a real, permanent reviewer decision, same as Accept.
+- `POST /api/ai/create-project-draft` — takes `{ org_id, prompt }`, calls `generateAI("Planner", "create_project_draft", ...)` inline, returning `{ draft }` where `draft` is `{ goal, project, milestones[], sprints[], tasks[] }`. **Writes nothing to `goals`/`projects`/`milestones`/`sprints`/`tasks`** — the only DB write is an `audit_log` entry (`actor_type: 'ai'`, `action: 'ai_project_draft_generated'`), holding the prompt and full draft in `metadata`. Gated by `requirePermission(..., "project", "create")` before the AI call, so drafting doesn't burn Gemini quota for a user who couldn't act on it anyway.
+- `POST /api/ai/create-project-draft/accept` — the *only* route allowed to turn a draft into real rows, and only ever called from an explicit "Accept & Create" click. Checks `requirePermission` for `goal`/`project`/`milestone`/`sprint`/`task` create (all four, even if a list is empty, so a partial-permission user can't sneak in some of the structure), then inserts everything inside one `withOrgContext` transaction, then logs a second `audit_log` row (`actor_type: 'human'`, `action: 'ai_project_draft_accepted'`, `target_type: 'project'`, `target_id`: the new project, `metadata.draftId` linking back to the generation log entry).
+- `POST /api/ai/create-project-draft/reject` — logs `audit_log` (`actor_type: 'human'`, `action: 'ai_project_draft_rejected'`, `metadata.reason` if the reviewer gave one) — nothing else. Deliberately distinct from "Discard" in the UI, which clears local state with **no** server call at all; Reject is a real, permanent reviewer decision, same as Accept.
 
 Two schema mismatches the draft shape has to route around, both are just dropped/ignored rather than worked around with new columns (not asked for):
 - `projects` has no `description` column (Prompt 1.3 schema) — the draft's `project.description` is shown in the review UI but never persisted.
@@ -128,25 +126,25 @@ Review UI at `/ai/create-project` (`app/(app)/ai/create-project/page.tsx` — or
 
 `resource_type` gained a `goal` value (`db/migrations/0009_goal_permissions.sql` + `0010_seed_goal_permissions.sql`, same owner/admin-full vs. member/viewer-read-only split as the other org-structure types) since accepting a draft creates a `goals` row too and that needed its own permission gate.
 
-Acceptance criterion verified by construction, not just by testing: `create-project-draft`'s handler has no `db.insert` call touching any of the five work-hierarchy tables — grep it if in doubt. Verified end-to-end against live Neon/Supabase + a real bearer token, worker running locally via `npm run worker`: the request correctly enqueues a job, the worker claims it (`SELECT ... FOR UPDATE SKIP LOCKED`), calls Gemini, and — this Gemini account is currently over its free-tier quota — the resulting `429` is caught, the job is marked `failed` with the error message, an `audit_log` row is written (`ai_project_draft_generated_failed`, with `tier`/`input`/`output` in `metadata`), and the route surfaces a `502` with Gemini's own error, no partial writes. Accept and Reject were separately verified with a hand-built draft payload (bypassing the Gemini step entirely, since neither route touches it): both created/logged exactly the expected rows.
+Acceptance criterion verified by construction: `create-project-draft`'s handler has no `db.insert` call touching any of the five work-hierarchy tables — grep it if in doubt. AI calls run inline via `generateAI()`; on failure, an `audit_log` row is written (`ai_project_draft_generated_failed`, with `tier`/`input`/`output` in `metadata`) and the route surfaces a `502`.
 
 ## AI: baseline health monitoring (FR-8.x subset, Tier 0 — read-only)
 
-`POST /api/ai/project-health` enqueues a Monitor job (`job_type: 'project_health_scan'`) and polls for the result. Given `{ org_id, project_id }`:
+`POST /api/ai/project-health` calls `generateAI("Monitor", "project_health_scan", ...)` inline. Given `{ org_id, project_id }`:
 
-1. The route resolves the project's name, then enqueues the job with `{ projectId, projectName }` as input.
-2. The worker's Monitor handler (`lib/agents/monitor.ts`) reads tasks/sprints/task_dependencies for the project (read-only) via `computeProjectHealthSignals()`, computing `{ totalTasks, openTasks, doneTasks, overdueTasks, blockedTasks, sprints: [{ id, name, status, totalTasks, doneTasks, burnRate }] }`, then calls Gemini (`generateHealthSummary()`) for a 2-4 sentence plain-language summary, and writes an `audit_log` entry itself (`actor_type: 'ai'`, `action: 'project_health_snapshot_generated'`).
-3. Once the route's poll sees the job `done`, it inserts `project_health_snapshots` (`org_id`, `project_id`, `signals` jsonb, `ai_summary` text, `created_at`). That's the only write this route makes directly — nothing here ever touches `goals`/`projects`/`milestones`/`sprints`/`tasks`.
+1. The route resolves the project's name.
+2. `generateAI` returns `{ signals, aiSummary }` — in mock mode this is canned data; with a real provider it would compute health signals from tasks/sprints and call Gemini for a plain-language summary.
+3. The route writes an `audit_log` entry (`actor_type: 'ai'`, `action: 'project_health_snapshot_generated'`), then inserts `project_health_snapshots` (`org_id`, `project_id`, `signals` jsonb, `ai_summary` text, `created_at`). Nothing here ever touches `goals`/`projects`/`milestones`/`sprints`/`tasks`.
 
 Two signal definitions worth knowing since neither maps to an obvious column:
 - **Overdue** — tasks have no due-date column, so a task counts as overdue if it's open (not `done`/`cancelled`) and its sprint's `end_date` has passed. No sprint, no overdue signal for that task.
 - **Blocked** — read off `task_dependencies`: a task is blocked if any dependency (`task_id -> depends_on_task_id`) points at a task that isn't `done`/`cancelled` yet.
 
-`GET /api/ai/project-health?org_id=...` returns the latest snapshot per project (`selectDistinctOn` on `project_id`, ordered by `created_at desc`) for the dashboard at `/health` (`app/(app)/health/page.tsx`) — org ID in, cards out (summary text, task/overdue/blocked counts, per-sprint burn rate table), plus a small form to trigger a new scan for a given project ID. Unchanged by the Prompt 2.1 migration — verified still returning `200` with the existing snapshot shape after the worker migration landed.
+`GET /api/ai/project-health?org_id=...` returns the latest snapshot per project (`selectDistinctOn` on `project_id`, ordered by `created_at desc`) for the dashboard at `/health` (`app/(app)/health/page.tsx`) — org ID in, cards out (summary text, task/overdue/blocked counts, per-sprint burn rate table), plus a small form to trigger a new scan for a given project ID.
 
 `resource_type` gained `project_health_snapshot` (`db/migrations/0011`–`0013`) — `owner`/`admin`/`member` can trigger a scan (it costs a Gemini call) and everyone including `viewer` can read, matching the pattern that `viewer` never triggers side effects elsewhere in this app. Snapshots are immutable, so only `create`/`read` are seeded — no route updates or deletes one.
 
-Verified end-to-end the same way as draft generation: the route enqueues the job, the worker claims it and correctly computes signals, the Gemini summary call hits the same account-level `429` quota error, the job fails cleanly, and **zero snapshot rows get written** — the insert only ever runs after `pollAgentJob` returns a `done` job, so a failed job can't reach it.
+On failure, zero snapshot rows get written — the insert only runs after a successful `generateAI` call.
 
 ## UI shell & app screens (PHASE_PROMPT_UI.md Prompts 0.1–0.2)
 

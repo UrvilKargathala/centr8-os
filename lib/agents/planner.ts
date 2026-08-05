@@ -1,10 +1,6 @@
 // Planner agent (FR-7.x), Tier 0 — Suggest Only. Only ever produces a
 // draft; it must never write to the DB itself. The human-in-the-loop write
 // path lives entirely in app/api/ai/create-project-draft/accept/route.ts.
-//
-// Migrated from lib/ai/gemini.ts (Prompt 2.1) — this is now the only place
-// that owns draft-generation logic; the API route just enqueues a job and
-// polls for this handler's result via workers/agent-worker.ts.
 import { AgentError, callGemini } from "./shared/geminiClient";
 import type { ProjectDraft } from "@/lib/ai/projectDraft";
 

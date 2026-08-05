@@ -1,7 +1,6 @@
-// Every agent job handler shares this shape so workers/agent-worker.ts can
-// dispatch by job_type without knowing anything about a given agent's
-// input/output payload. Each agent module (planner.ts, monitor.ts, ...)
-// exports its own typed handler through lib/agents/registry.ts.
+// Agent type definitions. The worker dispatch table is no longer used;
+// AI calls run inline via generateAI(). These types are kept for the
+// real Gemini-backed agent modules in planner.ts / monitor.ts.
 export type AgentJobHandler = (input: unknown) => Promise<unknown>;
 
 export type AgentType = "planner" | "monitor" | "analyst" | "writer" | "communicator";

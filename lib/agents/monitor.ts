@@ -118,11 +118,7 @@ export interface ProjectHealthScanOutput {
   aiSummary: string;
 }
 
-// job_type "project_health_scan" — registered in lib/agents/registry.ts.
-// Takes the db handle as a closure argument (via a factory) rather than
-// importing one directly, since the worker connects as service_role and
-// the signals queries below are already explicitly project_id-scoped —
-// see workers/db.ts.
+// Project health scan handler. Takes a db handle as a closure argument.
 export function makeProjectHealthScanJob(db: OrgScopedDb) {
   return async function runProjectHealthScanJob(input: unknown): Promise<ProjectHealthScanOutput> {
     const { projectId, projectName } = input as ProjectHealthScanInput;

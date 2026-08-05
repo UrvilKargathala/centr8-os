@@ -14,11 +14,9 @@ Centr8 OS is an AI-native "operating system for work." An autonomous AI Project 
 
 | Layer | Tool | Notes |
 |---|---|---|
-| Frontend / API routes | Next.js (Vercel) | Standard CRUD, auth pages, dashboards, client portal |
-| AI / Agent orchestration workers | Node or Python long-running workers (Railway) | Agents don't fit serverless timeouts — planning/monitoring loops run here |
-| Database | Neon Postgres | Single source of truth for both Next.js and Railway workers |
+| Frontend / API routes + AI | Next.js (Vercel) | Standard CRUD, auth pages, dashboards, client portal, all AI agent calls inline |
+| Database | Neon Postgres | Single source of truth |
 | Auth / RBAC | Supabase Auth (free tier) | RLS for multi-tenant isolation |
-| Job queue | Postgres-backed (`SELECT ... FOR UPDATE SKIP LOCKED`) | Do NOT use Upstash — already consumed by SiteScore |
 | LLM | Google Gemini (free tier) | All agent reasoning (Planner, Monitor, Analyst, Writer, Communicator) |
 | RAG / embeddings | Postgres + pgvector (Neon extension, free) | No external vector DB |
 | Email / transactional | Resend | Client comms, notifications |
@@ -53,7 +51,7 @@ Centr8 OS is an AI-native "operating system for work." An autonomous AI Project 
 
 ## 5. Composable Agent Pattern
 
-Do not build one monolithic "do everything" AI call. Five specialized agents, each a distinct prompt/service, coordinated by a lightweight orchestration layer (a Railway worker, not a separate paid orchestration product):
+Do not build one monolithic "do everything" AI call. Five specialized agents, each a distinct prompt/service, called inline from Next.js API routes via `generateAI()` (`lib/ai/generate.ts`):
 
 - **Planner** — NL → structured project/sprint plans
 - **Monitor** — health signals, risk detection, delivery prediction

@@ -48,8 +48,13 @@ CREATE POLICY "leave_balances_isolation" ON "leave_balances" AS PERMISSIVE FOR A
 
 -- Migrate the existing 'PTO' policy into a leave_type (fixed id so the
 -- restructured leave_policies row below can reference it in this same migration).
+-- Guarded on the org actually existing — this is a one-time historical-data
+-- migration for org 00000000-0000-0000-0000-000000000001 specifically, not
+-- a general seed; on a fresh database (org not created yet, seeded later by
+-- db/seed.ts) this is a correct no-op rather than an FK violation.
 INSERT INTO "leave_types" ("id", "org_id", "name", "color", "requires_approval", "is_paid", "is_active")
-VALUES ('ed24c05b-e54c-449c-beac-6b042c8c87ec', '00000000-0000-0000-0000-000000000001', 'PTO', '#2E62F0', true, true, true);--> statement-breakpoint
+SELECT 'ed24c05b-e54c-449c-beac-6b042c8c87ec', '00000000-0000-0000-0000-000000000001', 'PTO', '#2E62F0', true, true, true
+WHERE EXISTS (SELECT 1 FROM "organizations" WHERE "id" = '00000000-0000-0000-0000-000000000001');--> statement-breakpoint
 
 ALTER TABLE "leave_policies" ADD COLUMN "leave_type_id" uuid;--> statement-breakpoint
 UPDATE "leave_policies" SET "leave_type_id" = 'ed24c05b-e54c-449c-beac-6b042c8c87ec' WHERE "id" = 'c7591515-b434-429f-9c48-7ad0d4e4db91';--> statement-breakpoint

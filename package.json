@@ -15,8 +15,7 @@
     "db:studio": "node --env-file=.env.local node_modules/.bin/drizzle-kit studio",
     "db:seed": "node --env-file=.env.local node_modules/.bin/tsx db/seed.ts",
     "db:test-rls": "node --env-file=.env.local node_modules/.bin/tsx db/test-rls-isolation.ts",
-    "db:test-rbac": "node --env-file=.env.local node_modules/.bin/tsx db/test-rbac.ts",
-    "worker": "node --env-file=.env.local node_modules/.bin/tsx workers/agent-worker.ts"
+    "db:test-rbac": "node --env-file=.env.local node_modules/.bin/tsx db/test-rbac.ts"
   },
   "dependencies": {
     "@neondatabase/serverless": "^1.1.0",

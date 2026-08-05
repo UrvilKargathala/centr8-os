@@ -1,6 +1,6 @@
-// Maps a job_type string (agent_jobs.job_type) to the agent module that
-// handles it — the worker's dispatch table (workers/agent-worker.ts) so
-// adding a new job never touches the poll loop itself, only this file.
+// Maps a job_type string to the agent module that handles it.
+// Historical — was the worker's dispatch table; now unused since AI
+// calls run inline via generateAI(). Kept for reference.
 import type { OrgScopedDb } from "@/db/withOrgContext";
 import type { AgentJobDefinition } from "./types";
 import { runCreateProjectDraftJob } from "./planner";

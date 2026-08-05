@@ -727,12 +727,10 @@ export const projectHealthSnapshots = pgTable(
   ],
 ).enableRLS();
 
-// --- Agent job queue (Prompt 2.1) ---
-// CLAUDE.md §5/§6: five composable agents (Planner/Monitor/Analyst/Writer/
-// Communicator), coordinated by a Railway worker polling this table via
-// `SELECT ... FOR UPDATE SKIP LOCKED` (workers/agent-worker.ts) — not
-// called inline from a Next.js request. API routes insert a row here and
-// poll it for a result instead of calling Gemini directly.
+// --- Agent job queue (historical, no longer written to) ---
+// agent_jobs was originally polled by a Railway worker; all AI calls now
+// run inline via generateAI() in Next.js API routes. Table kept for
+// schema compatibility but no active code inserts into it.
 export const agentTypeEnum = pgEnum("agent_type", [
   "planner",
   "monitor",

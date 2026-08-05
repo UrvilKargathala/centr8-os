@@ -1,11 +1,9 @@
 import { mockResponses, type MockContext } from "./mockResponses";
 
-// Shared router for the New Project wizard's AI touchpoints. Provider is
-// controlled by NEXT_PUBLIC_AI_PROVIDER — 'mock' (default) returns
-// hand-written responses after a 1-2s delay; 'groq' / 'gemini' would route
-// through the existing /api/agent-job pipeline. That branch is intentionally
-// a TODO stub — the code path exists so switching providers is a config
-// change, not a rewrite.
+// Shared router for all AI agent calls. Provider is controlled by
+// NEXT_PUBLIC_AI_PROVIDER — 'mock' (default) returns hand-written
+// responses after a 1-2s delay; a real provider would call the LLM
+// directly. Called inline from API routes, no worker needed.
 export async function generateAI(
   agent: keyof typeof mockResponses,
   task: string,
@@ -14,10 +12,8 @@ export async function generateAI(
   const provider = process.env.NEXT_PUBLIC_AI_PROVIDER || "mock";
 
   if (provider !== "mock") {
-    // TODO: route through /api/agent-job with { agent, task, context } and
-    // poll the returned job id until done. Same shape as the mock — callers
-    // don't need to know which path ran.
-    console.warn(`generateAI: provider="${provider}" not yet wired to /api/agent-job, falling back to mock`);
+    // TODO: call the real LLM provider (Gemini, etc.) via lib/agents/*.ts.
+    console.warn(`generateAI: provider="${provider}" not yet wired, falling back to mock`);
   }
 
   const delay = 1000 + Math.random() * 1000;

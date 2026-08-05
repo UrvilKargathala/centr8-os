@@ -856,6 +856,28 @@ Follow-ups:
     },
   },
   Planner: {
+    create_project_draft: (ctx: MockContext) => {
+      const prompt = (ctx.prompt as string) || "New project";
+      return {
+        goal: { name: `Goal: ${prompt}`, description: `Strategic goal derived from: ${prompt}` },
+        project: { name: prompt.slice(0, 60), status: "planning" },
+        milestones: [
+          { name: "Discovery & Planning", description: "Requirements gathering and architecture" },
+          { name: "Core Build", description: "Primary feature implementation" },
+        ],
+        sprints: [
+          { name: "Sprint 1 — Foundation", startDate: "2026-08-11", endDate: "2026-08-22" },
+          { name: "Sprint 2 — Build", startDate: "2026-08-25", endDate: "2026-09-05" },
+        ],
+        tasks: [
+          { title: "Define requirements", sprintIndex: 0, priority: "high", estimate: 8 },
+          { title: "Set up project structure", sprintIndex: 0, priority: "high", estimate: 4 },
+          { title: "Implement core features", sprintIndex: 1, priority: "high", estimate: 16 },
+          { title: "Write tests", sprintIndex: 1, priority: "medium", estimate: 8 },
+          { title: "Documentation", sprintIndex: 1, priority: "low", estimate: 4 },
+        ],
+      };
+    },
     suggest_timeline: (ctx: MockContext) => {
       const now = new Date((ctx.today as string) || "2026-07-24");
       const start = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 7);
@@ -1110,6 +1132,19 @@ Follow-ups:
     },
   },
   Monitor: {
+    project_health_scan: (ctx: MockContext) => {
+      const name = (ctx.projectName as string) || "Project";
+      return {
+        signals: {
+          totalTasks: 15, openTasks: 8, doneTasks: 7, overdueTasks: 2, blockedTasks: 1,
+          sprints: [
+            { id: "s1", name: "Sprint 1", status: "completed", totalTasks: 5, doneTasks: 5, burnRate: 1.0 },
+            { id: "s2", name: "Sprint 2", status: "active", totalTasks: 10, doneTasks: 2, burnRate: 0.2 },
+          ],
+        },
+        aiSummary: `${name} is progressing steadily with 47% of tasks completed. Two tasks are overdue in the current sprint and one is blocked by an unresolved dependency. Consider re-prioritising the blocked item to maintain velocity.`,
+      };
+    },
     // HR Batch 2 — /hr/attendance Team Today view.
     flag_attendance_anomalies: (ctx: MockContext) => {
       const names = (ctx.employee_names as string[]) || [];

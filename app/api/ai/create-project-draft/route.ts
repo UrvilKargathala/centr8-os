@@ -1,18 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { withOrgContext } from "@/db/withOrgContext";
-import { agentJobs } from "@/db/schema";
-import { ApiError, handleApiError, pollAgentJob, requireUserId } from "@/lib/api/helpers";
+import { auditLog } from "@/db/schema";
+import { ApiError, handleApiError, requireUserId } from "@/lib/api/helpers";
 import { requirePermission } from "@/lib/api/permissions";
-import type { CreateProjectDraftInput } from "@/lib/agents/planner";
+import { generateAI } from "@/lib/ai/generate";
 
 // Tier 0 — Suggest Only (CLAUDE.md §4). This route must never write to
 // goals/projects/milestones/sprints/tasks — only POST .../accept does,
 // and only on an explicit human click.
-//
-// Prompt 2.1: enqueues a Planner job for workers/agent-worker.ts to pick
-// up (SELECT ... FOR UPDATE SKIP LOCKED) instead of calling Gemini inline.
-// The worker itself writes the audit_log entry (lib/agents/registry.ts's
-// "ai_project_draft_generated" auditAction) once the job finishes.
 export const maxDuration = 30;
 
 export async function POST(req: NextRequest) {
@@ -24,28 +19,34 @@ export async function POST(req: NextRequest) {
       throw new ApiError(400, "org_id and prompt are required");
     }
 
-    // Gate on the same permission accepting will need, so a user who can't
-    // create a project doesn't get to spend Gemini quota drafting one.
     await withOrgContext(userId, (db) => requirePermission(db, userId, body.org_id, "project", "create"));
 
-    const input: CreateProjectDraftInput = { prompt: body.prompt };
-    const [job] = await withOrgContext(userId, (db) =>
-      db
-        .insert(agentJobs)
-        .values({
-          orgId: body.org_id,
-          agentType: "planner",
-          jobType: "create_project_draft",
-          tier: "tier_0",
-          requestedByUserId: userId,
-          input,
-        })
-        .returning(),
+    const input = { prompt: body.prompt };
+    let draft: unknown;
+    let error: string | null = null;
+
+    try {
+      draft = await generateAI("Planner", "create_project_draft", input);
+    } catch (err) {
+      error = err instanceof Error ? err.message : String(err);
+    }
+
+    const action = error ? "ai_project_draft_generated_failed" : "ai_project_draft_generated";
+    await withOrgContext(userId, (db) =>
+      db.insert(auditLog).values({
+        orgId: body.org_id,
+        actorUserId: userId,
+        actorType: "ai",
+        action,
+        targetType: "organization",
+        targetId: body.org_id,
+        metadata: { tier: "tier_0", input, output: draft ?? null, error },
+      }),
     );
 
-    const finished = await pollAgentJob(userId, job.id);
+    if (error) throw new ApiError(502, error);
 
-    return NextResponse.json({ data: { draftId: finished.id, draft: finished.output } }, { status: 201 });
+    return NextResponse.json({ data: { draft } }, { status: 201 });
   } catch (err) {
     return handleApiError(err);
   }
