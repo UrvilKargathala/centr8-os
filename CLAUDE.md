@@ -17,7 +17,7 @@ Centr8 OS is an AI-native "operating system for work." An autonomous AI Project 
 | Frontend / API routes + AI | Next.js (Vercel) | Standard CRUD, auth pages, dashboards, client portal, all AI agent calls inline |
 | Database | Neon Postgres | Single source of truth |
 | Auth / RBAC | Supabase Auth (free tier) | RLS for multi-tenant isolation |
-| LLM | Google Gemini (free tier) | All agent reasoning (Planner, Monitor, Analyst, Writer, Communicator) |
+| LLM | OpenRouter (free tier, google/gemma-4-31b-it:free) | All agent reasoning; mock mode available via `NEXT_PUBLIC_AI_PROVIDER=mock` |
 | RAG / embeddings | Postgres + pgvector (Neon extension, free) | No external vector DB |
 | Email / transactional | Resend | Client comms, notifications |
 | Analytics | PostHog | Feature usage, AI action logs |
