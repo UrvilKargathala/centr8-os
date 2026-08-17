@@ -413,11 +413,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const { callCount: aiCallCount } = useAiUsage();
   const [orgMenuOpen, setOrgMenuOpen] = useState(false);
   const orgMenuRef = useRef<HTMLDivElement>(null);
-  const [approvalsOpen, setApprovalsOpen] = useState(false);
-  const approvalsRef = useRef<HTMLDivElement>(null);
-  const [approvals, setApprovals] = useState<
-    { id: string; action: string; agent: string; preview: string }[]
-  >([]);
   const [theme, setTheme] = useState<"light" | "dark">("light");
 
   useEffect(() => {
@@ -443,7 +438,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     function onClickOutside(e: MouseEvent) {
       if (menuRef.current && !menuRef.current.contains(e.target as Node)) setMenuOpen(false);
       if (orgMenuRef.current && !orgMenuRef.current.contains(e.target as Node)) setOrgMenuOpen(false);
-      if (approvalsRef.current && !approvalsRef.current.contains(e.target as Node)) setApprovalsOpen(false);
     }
     document.addEventListener("mousedown", onClickOutside);
     return () => document.removeEventListener("mousedown", onClickOutside);
@@ -468,22 +462,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     document.documentElement.classList.toggle("dark", t === "dark");
   }
 
-  useEffect(() => {
-    if (!selectedOrgId) return;
-    fetch(`/api/ai/sprint-plans?org_id=${selectedOrgId}&status=pending`)
-      .then((r) => (r.ok ? r.json() : { data: [] }))
-      .then((j) =>
-        setApprovals(
-          (j.data ?? []).map((p: any) => ({
-            id: p.id,
-            action: p.title ?? "Sprint plan",
-            agent: "Planner",
-            preview: p.summary ?? "",
-          }))
-        )
-      )
-      .catch(() => {});
-  }, [selectedOrgId]);
 
   async function handleSignOut() {
     const supabase = createClient();
@@ -643,81 +621,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             </button>
 
             <NotificationBell orgId={selectedOrgId} />
-
-            <div className="relative" ref={approvalsRef}>
-              <button
-                type="button"
-                onClick={() => setApprovalsOpen((v) => !v)}
-                title="Pending approvals"
-                className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-sm text-neutral-600 hover:bg-neutral-200"
-              >
-                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-                </svg>
-                {approvals.length > 0 && (
-                  <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary-600 px-1 text-caption font-medium text-neutral-50">
-                    {approvals.length}
-                  </span>
-                )}
-              </button>
-
-              {approvalsOpen && (
-                <div className="absolute right-0 top-full z-50 mt-1 w-96 rounded-md border border-neutral-300 bg-neutral-50 shadow-lg">
-                  <div className="border-b border-neutral-200 px-4 py-2">
-                    <p className="text-body-medium font-semibold text-neutral-950">Approvals</p>
-                    <p className="text-caption text-neutral-500">
-                      AI actions queued for review (Tier 1)
-                    </p>
-                  </div>
-                  {approvals.length === 0 ? (
-                    <p className="px-4 py-6 text-center text-body text-neutral-600">Nothing waiting on you.</p>
-                  ) : (
-                    <ul className="max-h-96 divide-y divide-neutral-200 overflow-y-auto">
-                      {approvals.map((a) => (
-                        <li key={a.id} className="space-y-2 px-4 py-3">
-                          <div className="flex items-start justify-between gap-2">
-                            <div className="min-w-0">
-                              <p className="truncate text-body-medium font-medium text-neutral-950">{a.action}</p>
-                              <p className="text-caption text-neutral-500">{a.agent}</p>
-                            </div>
-                          </div>
-                          <p className="line-clamp-2 rounded-sm bg-ai-100 px-2 py-1 text-small text-neutral-700">
-                            {a.preview}
-                          </p>
-                          <div className="flex gap-2">
-                            <button
-                              type="button"
-                              onClick={() => {
-                                fetch(`/api/ai/sprint-plans/${a.id}/approve`, { method: "POST" })
-                                  .then((r) => { if (r.ok) setApprovals((list) => list.filter((x) => x.id !== a.id)); });
-                              }}
-                              className="rounded-sm bg-primary-600 px-2.5 py-1 text-small font-medium text-neutral-50 hover:bg-primary-700"
-                            >
-                              Approve
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => {
-                                const reason = prompt("Rejection reason:");
-                                if (!reason) return;
-                                fetch(`/api/ai/sprint-plans/${a.id}/reject`, {
-                                  method: "POST",
-                                  headers: { "Content-Type": "application/json" },
-                                  body: JSON.stringify({ rejection_reason: reason }),
-                                }).then((r) => { if (r.ok) setApprovals((list) => list.filter((x) => x.id !== a.id)); });
-                              }}
-                              className="rounded-sm border border-neutral-300 px-2.5 py-1 text-small font-medium text-neutral-700 hover:bg-neutral-200"
-                            >
-                              Reject
-                            </button>
-                          </div>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                </div>
-              )}
-            </div>
 
             <div className="hidden h-5 w-px bg-neutral-300 sm:block" />
 
