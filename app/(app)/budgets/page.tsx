@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useOrg } from "@/lib/context/OrgContext";
+import { PageSkeleton } from "@/components/ui/skeleton";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
@@ -65,7 +66,7 @@ export default function BudgetsPage() {
     loadAll();
   }
 
-  if (orgLoading || loading) return <p className="text-body text-neutral-600">Loading budgets…</p>;
+  if (orgLoading || loading) return <PageSkeleton variant="table" />;
   if (!selectedOrgId) return <p className="text-body text-neutral-600">No organization selected.</p>;
   if (error) return <p className="rounded-md bg-danger-100 p-3 text-body text-danger-600">{error}</p>;
 

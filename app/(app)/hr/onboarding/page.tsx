@@ -10,6 +10,7 @@ import { Input, Select, Field, Textarea } from "@/components/ui/Input";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/Table";
 import { Empty, EmptyHeader, EmptyMedia, EmptyTitle, EmptyDescription } from "@/components/ui/Empty";
 import { AiButton, AiSuggestionCard, useAiCall } from "@/components/ui/AiTouchpoint";
+import { SectionSkeleton } from "@/components/ui/skeleton";
 
 type Step = {
   step_id: string;
@@ -80,7 +81,7 @@ function ActiveOnboardingTab({ orgId }: { orgId: string }) {
       .finally(() => setLoading(false));
   }, [orgId]);
 
-  if (loading) return <p className="text-body text-neutral-600">Loading…</p>;
+  if (loading) return <SectionSkeleton variant="list" />;
   if (error) return <p className="rounded-md bg-danger-100 p-3 text-body text-danger-600">{error}</p>;
 
   if (workflows.length === 0) {
@@ -170,7 +171,7 @@ function TemplatesTab({ orgId, canConfigure }: { orgId: string; canConfigure: bo
   }
   useEffect(load, [orgId]);
 
-  if (loading) return <p className="text-body text-neutral-600">Loading…</p>;
+  if (loading) return <SectionSkeleton variant="list" />;
   if (error) return <p className="rounded-md bg-danger-100 p-3 text-body text-danger-600">{error}</p>;
 
   return (

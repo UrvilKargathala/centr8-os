@@ -9,6 +9,7 @@ import { Card } from "@/components/ui/Card";
 import { Modal } from "@/components/ui/Modal";
 import { Input, Select, Field } from "@/components/ui/Input";
 import { Avatar } from "@/components/ui/Avatar";
+import { PageSkeleton } from "@/components/ui/skeleton";
 
 type Member = { userId: string; email: string | null; role: string; deactivatedAt: string | null };
 
@@ -66,7 +67,7 @@ export default function MembersPage() {
     loadAll();
   }
 
-  if (orgLoading || loading) return <p className="text-body text-neutral-600">Loading…</p>;
+  if (orgLoading || loading) return <PageSkeleton variant="table" />;
   if (!selectedOrgId) return <p className="text-body text-neutral-600">No organization selected.</p>;
   if (!canManage) return <p className="text-body text-neutral-600">You don&apos;t have access to this page.</p>;
 

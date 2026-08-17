@@ -11,6 +11,7 @@ import { Input, Select, Field, Textarea } from "@/components/ui/Input";
 import { Badge } from "@/components/ui/Badge";
 import { AiButton, AiSuggestionCard, useAiCall } from "@/components/ui/AiTouchpoint";
 import { useToast } from "@/components/ui/Toast";
+import { PageSkeleton } from "@/components/ui/skeleton";
 import { LogActivityForm } from "../../leads/page";
 import { STAGE_LABEL, STAGE_BADGE_COLOR, fmtMoney, isStale } from "../page";
 
@@ -176,7 +177,7 @@ export default function DealDetailPage() {
     load();
   }
 
-  if (orgLoading || loading) return <p className="text-body text-neutral-600">Loading…</p>;
+  if (orgLoading || loading) return <PageSkeleton variant="detail" />;
   if (!deal || !editForm) return <p className="text-body text-neutral-600">Deal not found.</p>;
 
   const closed = deal.stage === "won" || deal.stage === "lost";
@@ -189,7 +190,7 @@ export default function DealDetailPage() {
   return (
     <div className="space-y-6">
       <Card>
-        <div className="flex items-start justify-between gap-4">
+        <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
             <h1 className="text-h2 font-semibold text-neutral-950">{deal.name}</h1>
             <p className="mt-1 text-h3 font-semibold text-neutral-950">{fmtMoney(deal.value, deal.currency)}</p>
@@ -218,7 +219,7 @@ export default function DealDetailPage() {
               </p>
             )}
           </div>
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap gap-2 shrink-0">
             {!closed && canClose && (
               <>
                 <Button className="!bg-success-600 hover:!bg-success-600/90" onClick={() => setShowWon(true)}>
@@ -270,12 +271,12 @@ export default function DealDetailPage() {
         </div>
       </Card>
 
-      <div className="flex gap-1 border-b border-neutral-200">
+      <div className="flex gap-1 overflow-x-auto border-b border-neutral-200">
         {TABS.map((t) => (
           <button
             key={t}
             onClick={() => setTab(t)}
-            className={`px-4 py-2 text-body-medium font-medium ${tab === t ? "border-b-2 border-danger-600 text-neutral-950" : "text-neutral-600"}`}
+            className={`whitespace-nowrap px-4 py-2 text-body-medium font-medium ${tab === t ? "border-b-2 border-danger-600 text-neutral-950" : "text-neutral-600"}`}
           >
             {t}
           </button>

@@ -8,6 +8,7 @@ import { Input, Select, Field } from "@/components/ui/Input";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/Table";
 import { Empty, EmptyHeader, EmptyTitle, EmptyDescription } from "@/components/ui/Empty";
 import { ACTIVITY_TYPES } from "@/lib/constants";
+import { PageSkeleton } from "@/components/ui/skeleton";
 
 type Activity = {
   id: string;
@@ -63,7 +64,7 @@ export default function ActivitiesPage() {
 
   const employeeName = (id: string | null) => employees.find((e) => e.id === id)?.fullName ?? "—";
 
-  if (orgLoading || loading) return <p className="text-body text-neutral-600">Loading…</p>;
+  if (orgLoading || loading) return <PageSkeleton variant="table" />;
   if (!selectedOrgId) return <p className="text-body text-neutral-600">No organization selected.</p>;
   if (!can("activity", "read")) return <p className="text-body text-neutral-600">You don&apos;t have access to activities.</p>;
 
@@ -131,6 +132,7 @@ export default function ActivitiesPage() {
           </EmptyHeader>
         </Empty>
       ) : (
+        <div className="overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow>
@@ -155,6 +157,7 @@ export default function ActivitiesPage() {
             ))}
           </TableBody>
         </Table>
+        </div>
       )}
     </div>
   );

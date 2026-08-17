@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { Modal } from "@/components/ui/Modal";
 import { Input } from "@/components/ui/Input";
+import { PageSkeleton } from "@/components/ui/skeleton";
 
 type Integration = {
   id: string;
@@ -260,7 +261,7 @@ function IntegrationsPageInner() {
     loadAll();
   }
 
-  if (orgLoading || loading) return <p className="text-body text-neutral-600">Loading integrations…</p>;
+  if (orgLoading || loading) return <PageSkeleton variant="cards" />;
   if (!selectedOrgId) return <p className="text-body text-neutral-600">No organization selected.</p>;
   if (!canConfigure) return <p className="text-body text-neutral-600">You don&apos;t have access to this page.</p>;
   if (error) return <p className="rounded-md bg-danger-100 p-3 text-body text-danger-600">{error}</p>;

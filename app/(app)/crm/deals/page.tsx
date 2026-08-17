@@ -12,6 +12,7 @@ import { Avatar, ViewIconLink } from "@/components/ui/Avatar";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/Table";
 import { Empty, EmptyHeader, EmptyTitle, EmptyDescription } from "@/components/ui/Empty";
 import { useToast } from "@/components/ui/Toast";
+import { PageSkeleton } from "@/components/ui/skeleton";
 
 const STAGES = ["prospecting", "discovery", "proposal", "negotiation", "contract_sent"] as const;
 export const STAGE_LABEL: Record<string, string> = {
@@ -168,13 +169,13 @@ export default function DealsPage() {
     }
   }
 
-  if (orgLoading || loading) return <p className="text-body text-neutral-600">Loading…</p>;
+  if (orgLoading || loading) return <PageSkeleton variant="table" />;
   if (!selectedOrgId) return <p className="text-body text-neutral-600">No organization selected.</p>;
   if (!can("deal", "read")) return <p className="text-body text-neutral-600">You don&apos;t have access to deals.</p>;
 
   return (
     <div className="space-y-6">
-      <div className="flex items-start justify-between gap-4">
+      <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <h1 className="text-h2 font-semibold text-neutral-950">Deals</h1>
           <p className="text-body text-neutral-600">Manage your sales pipeline.</p>
@@ -514,7 +515,7 @@ export function NewDealModal({
             ))}
           </Select>
         </Field>
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <Field label="Value">
             <Input className="w-full" type="number" value={value} onChange={(e) => setValue(e.target.value)} />
           </Field>

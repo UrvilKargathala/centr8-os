@@ -24,6 +24,7 @@ import { hasPermission } from "./permissions";
 import { callsMissedToday, gmailUnread, slackTotalUnread } from "@/lib/mock/communication";
 import { integrations } from "@/db/schema";
 import { getValidGoogleToken, listGoogleMeetings, type GoogleMeeting } from "./googleMeet";
+import { createNotification } from "@/lib/notifications/create";
 
 const OPEN_DEAL_STAGES = ["prospecting", "discovery", "proposal", "negotiation", "contract_sent"] as const;
 
@@ -124,6 +125,33 @@ export async function loadProjectsSection(db: OrgScopedDb, userId: string, orgId
       due_date: t.dueDate,
       status: t.status,
     }));
+
+  // Fire task_overdue notifications for overdue tasks not yet notified.
+  // Runs on dashboard load (the landing page everyone hits). Dedup via
+  // overdueNotifiedAt on the task row itself — avoids cross-user
+  // notification queries that RLS would block.
+  const unnotifiedOverdue = overdueTasks.filter((t) => t.assigneeId && !t.overdueNotifiedAt);
+  if (unnotifiedOverdue.length > 0) {
+    const personIdSet = new Set(unnotifiedOverdue.map((t) => t.assigneeId!));
+    const userIdByPersonId = new Map(
+      peopleRows.filter((p) => personIdSet.has(p.id) && p.userId).map((p) => [p.id, p.userId!]),
+    );
+    for (const t of unnotifiedOverdue) {
+      const recipientUserId = userIdByPersonId.get(t.assigneeId!);
+      if (recipientUserId) {
+        createNotification(db, {
+          orgId,
+          userId: recipientUserId,
+          type: "task_overdue",
+          title: "Task overdue",
+          body: t.title,
+          linkType: "task",
+          linkId: t.id,
+        }).catch(() => {});
+      }
+      db.update(tasks).set({ overdueNotifiedAt: new Date() }).where(eq(tasks.id, t.id)).catch(() => {});
+    }
+  }
 
   return {
     projects: {

@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useOrg } from "@/lib/context/OrgContext";
+import { PageSkeleton, SectionSkeleton } from "@/components/ui/skeleton";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
@@ -140,7 +141,7 @@ export default function PayrollPage() {
   const selectedFinalizedCount = [...selected].filter((id) => records.find((r) => r.id === id)?.status === "finalized").length;
   const departmentOptions = Array.from(new Set(employees.map((e) => e.departmentId).filter(Boolean))) as string[];
 
-  if (orgLoading) return <p className="text-body text-neutral-600">Loading…</p>;
+  if (orgLoading) return <PageSkeleton variant="table" />;
   if (!selectedOrgId) return <p className="text-body text-neutral-600">No organization selected.</p>;
   if (!hasAnyAccess) return <p className="text-body text-neutral-600">You don&apos;t have access to this page.</p>;
 
@@ -167,7 +168,7 @@ export default function PayrollPage() {
       </div>
 
       {loading ? (
-        <p className="text-body text-neutral-600">Loading…</p>
+        <SectionSkeleton variant="table" />
       ) : records.length === 0 ? (
         <Empty>
           <EmptyHeader>

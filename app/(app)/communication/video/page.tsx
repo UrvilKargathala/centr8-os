@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useOrg } from "@/lib/context/OrgContext";
+import { PageSkeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/Button";
 import { Modal } from "@/components/ui/Modal";
 import { Input, Textarea, Field } from "@/components/ui/Input";
@@ -167,7 +168,7 @@ export default function VideoPage() {
           </div>
 
           {meetingsLoading ? (
-            <p className="text-body text-neutral-500">Loading meetings…</p>
+            <PageSkeleton variant="cards" />
           ) : meetingsError ? (
             <p className="text-body text-danger-600">{meetingsError}</p>
           ) : (
@@ -447,7 +448,7 @@ function WeekStrip({ meetings, onOpen }: { meetings: GoogleMeeting[]; onOpen: (m
   }
 
   return (
-    <div className="grid grid-cols-7 gap-2">
+    <div className="overflow-x-auto"><div className="grid min-w-[500px] grid-cols-7 gap-2">
       {days.map((d) => {
         const isToday = d.iso === todayIso;
         return (
@@ -484,6 +485,6 @@ function WeekStrip({ meetings, onOpen }: { meetings: GoogleMeeting[]; onOpen: (m
           </div>
         );
       })}
-    </div>
+    </div></div>
   );
 }

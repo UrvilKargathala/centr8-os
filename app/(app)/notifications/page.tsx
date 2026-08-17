@@ -5,6 +5,7 @@ import { useOrg } from "@/lib/context/OrgContext";
 import { Button } from "@/components/ui/Button";
 import { Empty, EmptyHeader, EmptyTitle, EmptyDescription } from "@/components/ui/Empty";
 import { linkFor, notificationIconBg, notificationMeta, type Notification } from "@/components/notifications/shared";
+import { PageSkeleton } from "@/components/ui/skeleton";
 
 function timeAgo(iso: string) {
   const diff = Date.now() - new Date(iso).getTime();
@@ -112,7 +113,7 @@ export default function NotificationsPage() {
     });
   }
 
-  if (orgLoading) return <p className="text-body text-neutral-600">Loading…</p>;
+  if (orgLoading) return <PageSkeleton variant="table" />;
   if (!selectedOrgId) return <p className="text-body text-neutral-600">No organization selected.</p>;
 
   return (

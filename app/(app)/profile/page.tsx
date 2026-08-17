@@ -7,6 +7,7 @@ import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Input, Field } from "@/components/ui/Input";
+import { Skeleton, PageSkeleton, SectionSkeleton } from "@/components/ui/skeleton";
 
 export default function ProfilePage() {
   const { orgs, selectedOrgId, loading: orgLoading } = useOrg();
@@ -25,13 +26,13 @@ export default function ProfilePage() {
       <Card className="space-y-4">
         <div>
           <p className="text-small text-neutral-600">Email</p>
-          <p className="text-body-medium font-medium text-neutral-950">{email ?? "Loading…"}</p>
+          <p className="text-body-medium font-medium text-neutral-950">{email ?? <Skeleton className="h-4 w-32 inline-block" />}</p>
         </div>
 
         <div>
           <p className="mb-2 text-small text-neutral-600">Organizations</p>
           {orgLoading ? (
-            <p className="text-body text-neutral-600">Loading…</p>
+            <PageSkeleton variant="form" />
           ) : orgs.length === 0 ? (
             <p className="text-body text-neutral-600">Not a member of any organization.</p>
           ) : (
@@ -151,7 +152,7 @@ function SsoConfigSection({ orgId }: { orgId: string }) {
       </div>
 
       {loading ? (
-        <p className="text-body text-neutral-600">Loading…</p>
+        <SectionSkeleton variant="text" />
       ) : (
         <>
           {config && (
@@ -284,7 +285,7 @@ function ApiKeysSection({ orgId }: { orgId: string }) {
       {error && <p className="rounded-md bg-danger-100 p-3 text-body text-danger-600">{error}</p>}
 
       {loading ? (
-        <p className="text-body text-neutral-600">Loading…</p>
+        <SectionSkeleton variant="text" />
       ) : keys.length === 0 ? (
         <p className="text-body text-neutral-600">No API keys yet.</p>
       ) : (

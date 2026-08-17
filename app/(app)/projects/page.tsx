@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useOrg } from "@/lib/context/OrgContext";
+import { PageSkeleton } from "@/components/ui/skeleton";
 import { ProjectStatusBadge, Badge, projectStatusColor } from "@/components/ui/Badge";
 import { CardLink } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
@@ -192,7 +193,7 @@ export default function ProjectsPage() {
   }
 
   if (orgLoading || loading) {
-    return <p className="text-body text-neutral-600">Loading projects…</p>;
+    return <PageSkeleton variant="cards" />;
   }
 
   if (!selectedOrgId) {
@@ -506,7 +507,7 @@ function TimelineView({ projects }: { projects: Project[] }) {
   } as Record<string, string>;
 
   return (
-    <div className="rounded-md border border-neutral-300 bg-neutral-50 p-4">
+    <div className="overflow-x-auto rounded-md border border-neutral-300 bg-neutral-50 p-4">
       <div className="relative">
         {/* Month tick strip */}
         <div className="relative mb-3 h-6 border-b border-neutral-200">

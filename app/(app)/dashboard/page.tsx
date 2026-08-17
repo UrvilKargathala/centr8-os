@@ -15,6 +15,7 @@ import { Avatar } from "@/components/ui/Avatar";
 import { NewProjectWizard } from "@/components/NewProjectWizard";
 import { ChatInput, HeroEmptyState, MessageList, useAskAiConversation } from "@/components/ai/AskAiChat";
 import { useAiUsage } from "@/lib/context/AiUsageContext";
+import { PageSkeleton } from "@/components/ui/skeleton";
 
 function timeAgo(iso: string) {
   const diff = Date.now() - new Date(iso).getTime();
@@ -265,7 +266,7 @@ const STAGE_COLOR: Record<string, BadgeColor> = {
 // distributes the icon row and text block across the fixed height instead
 // of a fluid space-y gap, so tightening/loosening content never blows the
 // box out.
-const KPI_CARD = "!w-[380px] !h-[136px] !rounded-2xl !p-4 flex flex-col justify-between overflow-hidden";
+const KPI_CARD = "!h-[136px] !rounded-2xl !p-4 flex flex-col justify-between overflow-hidden";
 
 export default function DashboardPage() {
   const { selectedOrgId, selectedOrg, can, loading: orgLoading } = useOrg();
@@ -354,7 +355,7 @@ export default function DashboardPage() {
     setBriefingDismissed(true);
   }
 
-  if (orgLoading || loading) return <p className="text-body text-neutral-600">Loading…</p>;
+  if (orgLoading || loading) return <PageSkeleton variant="dashboard" />;
   if (!selectedOrgId || !data) return <p className="text-body text-neutral-600">No organization selected.</p>;
 
   const firstName = email ? email.split("@")[0].split(/[._-]/)[0] : null;
@@ -441,7 +442,7 @@ export default function DashboardPage() {
       {/* Section 1 — Quick Stats. Fixed 268x117 tiles (explicit request) —
           a flex-wrap row rather than a fluid grid, since a fixed pixel size
           per card doesn't divide evenly into a responsive grid track. */}
-      <div className="flex flex-wrap gap-4">
+      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         {data.projects ? (
           <CardLink href="/projects" className={KPI_CARD}>
             <div className="flex items-start justify-between">

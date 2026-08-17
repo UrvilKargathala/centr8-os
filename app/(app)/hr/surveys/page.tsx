@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/Badge";
 import { Input, Select, Field, Textarea } from "@/components/ui/Input";
 import { Empty, EmptyHeader, EmptyTitle, EmptyDescription } from "@/components/ui/Empty";
 import { AiButton, AiSuggestionCard, useAiCall } from "@/components/ui/AiTouchpoint";
+import { SectionSkeleton } from "@/components/ui/skeleton";
 
 type QuestionType = "rating_1_5" | "text" | "multiple_choice";
 type Question = { id: string; text: string; type: QuestionType; options?: string[] };
@@ -104,7 +105,7 @@ function ActiveSurveysTab({ orgId, refreshKey, onChanged }: { orgId: string; ref
   }
   useEffect(load, [orgId, refreshKey]);
 
-  if (loading) return <p className="text-body text-neutral-600">Loading…</p>;
+  if (loading) return <SectionSkeleton variant="cards" />;
   if (surveys.length === 0) {
     return (
       <Empty>
@@ -253,7 +254,7 @@ function ManageSurveysTab({ orgId, refreshKey, onChanged }: { orgId: string; ref
         <Button onClick={() => setEditing("new")}>+ New Survey</Button>
       </div>
       {loading ? (
-        <p className="text-body text-neutral-600">Loading…</p>
+        <SectionSkeleton variant="table" />
       ) : (
         <div className="space-y-3">
           {surveys.map((s) => (

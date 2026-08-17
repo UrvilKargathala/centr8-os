@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useOrg } from "@/lib/context/OrgContext";
+import { PageSkeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/Button";
 import { Modal } from "@/components/ui/Modal";
 import { Input, Select, Field, Textarea } from "@/components/ui/Input";
@@ -46,17 +47,28 @@ export default function TeamPage() {
   const [q, setQ] = useState("");
   const [roleFilter, setRoleFilter] = useState("");
   const [editing, setEditing] = useState<Person | null | "new">(null);
+  const [taskEstimates, setTaskEstimates] = useState<Record<string, number>>({});
 
   function loadAll() {
     if (!selectedOrgId) return;
     setLoading(true);
     setError(null);
     const params = new URLSearchParams({ org_id: selectedOrgId });
-    fetch(`/api/team?${params}`)
-      .then((r) => r.json())
-      .then((b) => {
-        if (b.data) setPeople(b.data);
-        else setError(b.error ?? "Failed to load team");
+    Promise.all([
+      fetch(`/api/team?${params}`).then((r) => r.json()),
+      fetch(`/api/tasks?${params}`).then((r) => r.json()),
+    ])
+      .then(([teamBody, taskBody]) => {
+        if (teamBody.data) setPeople(teamBody.data);
+        else setError(teamBody.error ?? "Failed to load team");
+        const tasks = (taskBody.data ?? []) as { assigneeId: string | null; estimate: number | null; status: string }[];
+        const est: Record<string, number> = {};
+        for (const t of tasks) {
+          if (t.assigneeId && t.status !== "done" && t.status !== "cancelled") {
+            est[t.assigneeId] = (est[t.assigneeId] ?? 0) + (t.estimate ?? 0);
+          }
+        }
+        setTaskEstimates(est);
       })
       .catch((e) => setError(e instanceof Error ? e.message : "Failed to load team"))
       .finally(() => setLoading(false));
@@ -95,7 +107,7 @@ export default function TeamPage() {
     };
   }, [people]);
 
-  if (orgLoading || loading) return <p className="text-body text-neutral-600">Loading team…</p>;
+  if (orgLoading || loading) return <PageSkeleton variant="cards" />;
   if (!selectedOrgId) return <p className="text-body text-neutral-600">No organization selected.</p>;
   if (error) return <p className="rounded-md bg-danger-100 p-3 text-body text-danger-600">{error}</p>;
 
@@ -152,18 +164,9 @@ export default function TeamPage() {
               {people.length === 0 ? "Add the people who will work on your projects." : "Try clearing the search or role filter."}
             </EmptyDescription>
           </EmptyHeader>
-          {people.length === 0 && (
-            <div className="mt-3 flex justify-center gap-2">
-              {can("team", "create") && <Button onClick={() => setEditing("new")}>+ Add person</Button>}
-              <Button
-                variant="secondary"
-                onClick={() => {
-                  /* TODO: CSV import — not built yet. */
-                  alert("CSV import — coming soon");
-                }}
-              >
-                Import from CSV
-              </Button>
+          {people.length === 0 && can("team", "create") && (
+            <div className="mt-3 flex justify-center">
+              <Button onClick={() => setEditing("new")}>+ Add person</Button>
             </div>
           )}
         </Empty>
@@ -198,12 +201,19 @@ export default function TeamPage() {
                   <td className="px-4 py-3 text-neutral-800">{p.jobTitle ?? "—"}</td>
                   <td className="px-4 py-3 text-neutral-600">{p.department ?? "—"}</td>
                   <td className="px-4 py-3">
-                    <div className="flex items-center gap-2">
-                      <div className="h-1.5 w-16 overflow-hidden rounded-full bg-neutral-200">
-                        <div className="h-full rounded-full bg-primary-600" style={{ width: "100%" }} />
-                      </div>
-                      <span className="text-small text-neutral-600">{p.availableHoursPerWeek} hrs/wk</span>
-                    </div>
+                    {(() => {
+                      const used = taskEstimates[p.id] ?? 0;
+                      const pct = p.availableHoursPerWeek > 0 ? Math.min(100, Math.round((used / p.availableHoursPerWeek) * 100)) : 0;
+                      const color = pct > 90 ? "bg-danger-600" : pct > 70 ? "bg-warning-600" : "bg-primary-600";
+                      return (
+                        <div className="flex items-center gap-2">
+                          <div className="h-1.5 w-16 overflow-hidden rounded-full bg-neutral-200">
+                            <div className={`h-full rounded-full ${color}`} style={{ width: `${pct}%` }} />
+                          </div>
+                          <span className="text-small text-neutral-600">{used}/{p.availableHoursPerWeek}h</span>
+                        </div>
+                      );
+                    })()}
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex flex-wrap gap-1">

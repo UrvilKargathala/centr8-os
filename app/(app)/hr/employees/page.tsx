@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useOrg } from "@/lib/context/OrgContext";
+import { PageSkeleton } from "@/components/ui/skeleton";
 import { EmploymentStatusBadge } from "@/components/ui/Badge";
 import { Card, CardLink } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
@@ -118,7 +119,7 @@ export default function EmployeeDirectoryPage() {
   }
 
   if (orgLoading || loading) {
-    return <p className="text-body text-neutral-600">Loading employees…</p>;
+    return <PageSkeleton variant="table" />;
   }
   if (!selectedOrgId) {
     return <p className="text-body text-neutral-600">No organization selected.</p>;

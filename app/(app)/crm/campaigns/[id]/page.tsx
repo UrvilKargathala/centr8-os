@@ -12,6 +12,7 @@ import { Badge, DealStageBadge, LeadStatusBadge, type BadgeColor } from "@/compo
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/Table";
 import { AiButton, AiSuggestionCard, useAiCall } from "@/components/ui/AiTouchpoint";
 import { useToast } from "@/components/ui/Toast";
+import { PageSkeleton } from "@/components/ui/skeleton";
 import { fmtMoney } from "../../deals/page";
 
 const CAMPAIGN_TYPES = ["email", "social", "event", "webinar", "referral", "paid_ads", "content", "cold_outreach", "other"] as const;
@@ -154,7 +155,7 @@ export default function CampaignDetailPage() {
     load();
   }
 
-  if (orgLoading || loading) return <p className="text-body text-neutral-600">Loading…</p>;
+  if (orgLoading || loading) return <PageSkeleton variant="detail" />;
   if (!detail) return <p className="text-body text-neutral-600">Campaign not found.</p>;
 
   const campaign = detail.campaign;
@@ -265,7 +266,7 @@ export default function CampaignDetailPage() {
                   <Input className="w-full" type="date" value={editForm.endDate ?? ""} onChange={(e) => setEditForm({ ...editForm, endDate: e.target.value })} />
                 </Field>
               </div>
-              <div className="grid grid-cols-3 gap-3">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
                 <Field label="Budget allocated">
                   <Input
                     type="number"
@@ -375,6 +376,7 @@ export default function CampaignDetailPage() {
           {leads.length === 0 ? (
             <p className="text-small text-neutral-600">No leads attributed to this campaign yet.</p>
           ) : (
+            <div className="overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -401,6 +403,7 @@ export default function CampaignDetailPage() {
                 ))}
               </TableBody>
             </Table>
+            </div>
           )}
         </Card>
       )}
@@ -411,6 +414,7 @@ export default function CampaignDetailPage() {
           {deals.length === 0 ? (
             <p className="text-small text-neutral-600">No deals attributed to this campaign yet.</p>
           ) : (
+            <div className="overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -437,6 +441,7 @@ export default function CampaignDetailPage() {
                 ))}
               </TableBody>
             </Table>
+            </div>
           )}
         </Card>
       )}

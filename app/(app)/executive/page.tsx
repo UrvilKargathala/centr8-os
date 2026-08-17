@@ -8,6 +8,7 @@ import { Badge, projectStatusColor, cardAccentClass } from "@/components/ui/Badg
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { PROJECT_STATUSES } from "@/lib/constants";
+import { PageSkeleton } from "@/components/ui/skeleton";
 
 type Project = { id: string; name: string; status: string };
 type HealthSnapshot = {
@@ -69,7 +70,7 @@ export default function ExecutivePage() {
       .finally(() => setRecsLoading(false));
   }
 
-  if (orgLoading || loading) return <p className="text-body text-neutral-600">Loading…</p>;
+  if (orgLoading || loading) return <PageSkeleton variant="dashboard" />;
   if (!selectedOrgId) return <p className="text-body text-neutral-600">No organization selected.</p>;
   if (error) return <p className="rounded-md bg-danger-100 p-3 text-body text-danger-600">{error}</p>;
 

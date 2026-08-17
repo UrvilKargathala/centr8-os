@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useOrg } from "@/lib/context/OrgContext";
+import { PageSkeleton } from "@/components/ui/skeleton";
 import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/Table";
@@ -82,7 +83,7 @@ export default function CapacityPlanningPage() {
       <Card>
         <h2 className="mb-4 text-body-medium font-semibold text-neutral-950">Team Allocation</h2>
         {loading ? (
-          <p className="py-8 text-center text-body text-neutral-500">Loading...</p>
+          <PageSkeleton variant="table" />
         ) : people.length === 0 ? (
           <Empty>
             <EmptyHeader>

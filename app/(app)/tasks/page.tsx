@@ -3,6 +3,7 @@
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useOrg } from "@/lib/context/OrgContext";
+import { PageSkeleton, SectionSkeleton } from "@/components/ui/skeleton";
 import { TaskStatusBadge, TaskPriorityBadge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Input, Select, Textarea, Field } from "@/components/ui/Input";
@@ -72,7 +73,7 @@ function tabToParams(tab: Tab) {
 
 export default function TasksPage() {
   return (
-    <Suspense fallback={<p className="text-body text-neutral-600">Loading…</p>}>
+    <Suspense fallback={<PageSkeleton variant="table" />}>
       <TasksInner />
     </Suspense>
   );
@@ -99,6 +100,7 @@ function TasksInner() {
   const [openTaskId, setOpenTaskId] = useState<string | null>(null);
   const [showNew, setShowNew] = useState(false);
   const [flashId, setFlashId] = useState<string | null>(null);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
   const searchRef = useRef<HTMLInputElement>(null);
 
   const peopleById = useMemo(() => {
@@ -179,7 +181,26 @@ function TasksInner() {
     }
   }
 
-  if (orgLoading || !selectedOrgId) return <p className="text-body text-neutral-600">Loading…</p>;
+  async function bulkSetStatus(status: string) {
+    const ids = [...selected];
+    await Promise.all(ids.map((id) =>
+      fetch(`/api/tasks/${id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ status }) }),
+    ));
+    setSelected(new Set());
+    toast.show(`${ids.length} task${ids.length > 1 ? "s" : ""} → ${status.replace("_", " ")}`);
+    loadAll();
+  }
+
+  async function bulkDelete() {
+    const ids = [...selected];
+    if (!confirm(`Delete ${ids.length} task${ids.length > 1 ? "s" : ""}? This cannot be undone.`)) return;
+    await Promise.all(ids.map((id) => fetch(`/api/tasks/${id}`, { method: "DELETE" })));
+    setSelected(new Set());
+    toast.show(`${ids.length} task${ids.length > 1 ? "s" : ""} deleted`);
+    loadAll();
+  }
+
+  if (orgLoading || !selectedOrgId) return <PageSkeleton variant="table" />;
 
   return (
     <div className="space-y-6">
@@ -278,7 +299,7 @@ function TasksInner() {
 
       {/* List */}
       {loading ? (
-        <p className="text-body text-neutral-600">Loading…</p>
+        <SectionSkeleton variant="table" />
       ) : rows.length === 0 ? (
         <Empty>
           <EmptyHeader>
@@ -297,11 +318,34 @@ function TasksInner() {
           )}
         </Empty>
       ) : (
+        <>
+        {selected.size > 0 && (
+          <div className="flex items-center gap-3 rounded-md border border-primary-600 bg-primary-100 px-4 py-2">
+            <span className="text-body-medium font-medium text-primary-700">{selected.size} selected</span>
+            <Select className="w-36" defaultValue="" onChange={(e) => { if (e.target.value) bulkSetStatus(e.target.value); e.target.value = ""; }}>
+              <option value="" disabled>Set status…</option>
+              <option value="todo">Pending</option>
+              <option value="in_progress">In Progress</option>
+              <option value="in_review">In Review</option>
+              <option value="done">Done</option>
+            </Select>
+            {can("task", "delete") && (
+              <button type="button" onClick={bulkDelete} className="text-small font-medium text-danger-600 hover:underline">Delete</button>
+            )}
+            <button type="button" onClick={() => setSelected(new Set())} className="ml-auto text-small text-neutral-600 hover:underline">Clear</button>
+          </div>
+        )}
         <div className="overflow-x-auto rounded-md border border-neutral-300">
           <table className="w-full min-w-[960px] text-body">
             <thead>
               <tr className="border-b border-neutral-200 bg-neutral-100 text-left text-caption font-medium uppercase tracking-wide text-neutral-500">
-                <th className="w-8 px-3 py-2" />
+                <th className="w-8 px-3 py-2">
+                  <input
+                    type="checkbox"
+                    checked={rows.length > 0 && selected.size === rows.length}
+                    onChange={(e) => setSelected(e.target.checked ? new Set(rows.map((r) => r.id)) : new Set())}
+                  />
+                </th>
                 <th className="px-4 py-2">Task</th>
                 <th className="px-4 py-2">Assignee</th>
                 <th className="px-4 py-2">Priority</th>
@@ -323,8 +367,15 @@ function TasksInner() {
                     className={`cursor-pointer transition-colors ${flash ? "bg-primary-100" : overdue ? "bg-danger-100/40 hover:bg-danger-100" : "hover:bg-neutral-100"}`}
                   >
                     <td className="px-3 py-3" onClick={(e) => e.stopPropagation()}>
-                      {/* TODO: wire bulk actions */}
-                      <input type="checkbox" />
+                      <input
+                        type="checkbox"
+                        checked={selected.has(r.id)}
+                        onChange={(e) => {
+                          const next = new Set(selected);
+                          if (e.target.checked) next.add(r.id); else next.delete(r.id);
+                          setSelected(next);
+                        }}
+                      />
                     </td>
                     <td className="px-4 py-3">
                       <p className="font-medium text-neutral-950">{r.title}</p>
@@ -368,6 +419,7 @@ function TasksInner() {
             </tbody>
           </table>
         </div>
+        </>
       )}
 
       {openTaskId && (
@@ -479,14 +531,25 @@ function QuickNewTaskModal({
     setAiPicked(new Set(r.subtask_titles));
     setAiLoading(false);
   }
-  function acceptAi() {
-    if (!ai) return;
-    // TODO: subtask table doesn't exist yet — just logging accepted subtasks
-    // so the flow is proven end-to-end. Full wiring in a later prompt.
-    console.log("Task subtasks accepted (TODO: wire once subtask table lands)", {
-      title,
-      subtasks: [...aiPicked],
-    });
+  async function acceptAi() {
+    if (!ai || !orgId) return;
+    const subtasks = [...aiPicked];
+    await Promise.all(
+      subtasks.map((s) =>
+        fetch("/api/tasks", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            org_id: orgId,
+            project_id: projectId,
+            sprint_id: sprintId || null,
+            title: s,
+            assignee_id: assigneeId || null,
+            priority,
+          }),
+        }),
+      ),
+    );
     setAi(null);
   }
 
@@ -615,7 +678,7 @@ function QuickNewTaskModal({
                     <Button type="button" variant="secondary" onClick={() => setAi(null)}>Reject</Button>
                   </div>
                   <p className="text-caption text-neutral-500">
-                    Subtasks logged on accept — the subtask table doesn&apos;t exist yet, so no rows are created for now.
+                    Accepted subtasks are created as tasks in the same project.
                   </p>
                 </div>
               </div>

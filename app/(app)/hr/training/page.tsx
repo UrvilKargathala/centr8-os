@@ -9,6 +9,7 @@ import { Modal } from "@/components/ui/Modal";
 import { Input, Select, Field, Textarea } from "@/components/ui/Input";
 import { Empty, EmptyHeader, EmptyTitle, EmptyDescription } from "@/components/ui/Empty";
 import { AiButton, AiSuggestionCard, useAiCall } from "@/components/ui/AiTouchpoint";
+import { SectionSkeleton } from "@/components/ui/skeleton";
 
 type Course = {
   id: string;
@@ -121,7 +122,7 @@ function CatalogTab({
   const categories = Array.from(new Set(courses.map((c) => c.category).filter(Boolean))) as string[];
   const filtered = courses.filter((c) => !categoryFilter || c.category === categoryFilter);
 
-  if (loading) return <p className="text-body text-neutral-600">Loading…</p>;
+  if (loading) return <SectionSkeleton variant="cards" />;
 
   return (
     <div className="space-y-4">
@@ -316,7 +317,7 @@ function MyLearningTab({ orgId, refreshKey, onChanged }: { orgId: string; refres
     onChanged();
   }
 
-  if (loading) return <p className="text-body text-neutral-600">Loading…</p>;
+  if (loading) return <SectionSkeleton variant="list" />;
   if (enrollments.length === 0) {
     return (
       <Empty>
@@ -398,7 +399,7 @@ function ProgressOverviewTab({ orgId }: { orgId: string }) {
       .finally(() => setLoading(false));
   }, [orgId]);
 
-  if (loading) return <p className="text-body text-neutral-600">Loading…</p>;
+  if (loading) return <SectionSkeleton variant="table" />;
 
   const requiredCourses = courses.filter((c) => c.requiredForRoles?.length > 0);
   if (requiredCourses.length === 0) {

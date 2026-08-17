@@ -9,6 +9,7 @@ import { Card } from "@/components/ui/Card";
 import { Modal } from "@/components/ui/Modal";
 import { Input, Select, Field, Textarea } from "@/components/ui/Input";
 import { AiButton, AiSuggestionCard, useAiCall } from "@/components/ui/AiTouchpoint";
+import { PageSkeleton } from "@/components/ui/skeleton";
 import { CANDIDATE_STAGES, JOB_POSTING_STATUSES, type JobPosting, type Candidate } from "../page";
 
 const STAGE_LABEL: Record<string, string> = {
@@ -68,7 +69,7 @@ export default function JobDetailPage() {
     await fetch(`/api/recruitment/candidates/${candidateId}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ stage }) });
   }
 
-  if (orgLoading || loading) return <p className="text-body text-neutral-600">Loading…</p>;
+  if (orgLoading || loading) return <PageSkeleton variant="kanban" />;
   if (!selectedOrgId) return <p className="text-body text-neutral-600">No organization selected.</p>;
   if (!job) return <p className="text-body text-neutral-600">Job posting not found.</p>;
 
@@ -207,7 +208,7 @@ function JobHeader({ job, canEdit, editing, onEdit, onSaved, employees }: { job:
           ))}
         </Select>
       </Field>
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <Field label="Salary min"><Input type="number" className="w-full" value={salaryMin} onChange={(e) => setSalaryMin(e.target.value)} /></Field>
         <Field label="Salary max"><Input type="number" className="w-full" value={salaryMax} onChange={(e) => setSalaryMax(e.target.value)} /></Field>
       </div>

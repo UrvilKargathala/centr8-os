@@ -10,6 +10,7 @@ import { Input, Select, Field, Textarea } from "@/components/ui/Input";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/Table";
 import { Empty, EmptyHeader, EmptyTitle, EmptyDescription } from "@/components/ui/Empty";
 import { AiButton, AiSuggestionCard, useAiCall } from "@/components/ui/AiTouchpoint";
+import { SectionSkeleton } from "@/components/ui/skeleton";
 
 type Category = { id: string; name: string; description: string | null; defaultAssigneeId: string | null; isActive: boolean };
 type HrCase = {
@@ -121,7 +122,7 @@ function MyCasesTab({
         <Button onClick={() => setShowNew(true)}>+ Raise a Case</Button>
       </div>
       {loading ? (
-        <p className="text-body text-neutral-600">Loading…</p>
+        <SectionSkeleton variant="table" />
       ) : rows.length === 0 ? (
         <Empty>
           <EmptyHeader>
@@ -316,7 +317,7 @@ function AllCasesTab({ orgId, refreshKey, onOpen }: { orgId: string; refreshKey:
         </Field>
       </div>
       {loading ? (
-        <p className="text-body text-neutral-600">Loading…</p>
+        <SectionSkeleton variant="table" />
       ) : (
         <Card padding="sm">
           <Table>

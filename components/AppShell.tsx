@@ -409,32 +409,16 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const menuRef = useRef<HTMLDivElement>(null);
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [approvalsOpen, setApprovalsOpen] = useState(false);
   const [askOpen, setAskOpen] = useState(false);
   const { callCount: aiCallCount } = useAiUsage();
   const [orgMenuOpen, setOrgMenuOpen] = useState(false);
-  const approvalsRef = useRef<HTMLDivElement>(null);
   const orgMenuRef = useRef<HTMLDivElement>(null);
-
-  const [approvals, setApprovals] = useState<Array<{ id: string; agent: string; action: string; preview: string }>>([]);
-
-  useEffect(() => {
-    if (!selectedOrgId) return;
-    fetch(`/api/ai/sprint-plans?org_id=${selectedOrgId}&status=pending`)
-      .then((r) => (r.ok ? r.json() : { data: [] }))
-      .then((json) => {
-        const plans = (json.data ?? []) as Array<{ id: string; sprintName: string; reasoning?: string }>;
-        setApprovals(
-          plans.map((p) => ({
-            id: p.id,
-            agent: "Planner",
-            action: `Sprint plan: ${p.sprintName}`,
-            preview: p.reasoning?.slice(0, 120) ?? "AI-generated sprint plan awaiting your review.",
-          })),
-        );
-      })
-      .catch(() => {});
-  }, [selectedOrgId]);
+  const [approvalsOpen, setApprovalsOpen] = useState(false);
+  const approvalsRef = useRef<HTMLDivElement>(null);
+  const [approvals, setApprovals] = useState<
+    { id: string; action: string; agent: string; preview: string }[]
+  >([]);
+  const [theme, setTheme] = useState<"light" | "dark">("light");
 
   useEffect(() => {
     const v = localStorage.getItem("centr8:sidebar-collapsed");
@@ -458,12 +442,48 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     function onClickOutside(e: MouseEvent) {
       if (menuRef.current && !menuRef.current.contains(e.target as Node)) setMenuOpen(false);
-      if (approvalsRef.current && !approvalsRef.current.contains(e.target as Node)) setApprovalsOpen(false);
       if (orgMenuRef.current && !orgMenuRef.current.contains(e.target as Node)) setOrgMenuOpen(false);
+      if (approvalsRef.current && !approvalsRef.current.contains(e.target as Node)) setApprovalsOpen(false);
     }
     document.addEventListener("mousedown", onClickOutside);
     return () => document.removeEventListener("mousedown", onClickOutside);
   }, []);
+
+  useEffect(() => {
+    const stored = (localStorage.getItem("centr8:theme") ?? "light") as "light" | "dark";
+    setTheme(stored);
+    document.documentElement.classList.toggle("dark", stored === "dark");
+  }, []);
+
+  function toggleTheme() {
+    setTheme((prev) => {
+      const next = prev === "dark" ? "light" : "dark";
+      localStorage.setItem("centr8:theme", next);
+      document.documentElement.classList.toggle("dark", next === "dark");
+      return next;
+    });
+  }
+
+  function applyTheme(t: "light" | "dark") {
+    document.documentElement.classList.toggle("dark", t === "dark");
+  }
+
+  useEffect(() => {
+    if (!selectedOrgId) return;
+    fetch(`/api/ai/sprint-plans?org_id=${selectedOrgId}&status=pending`)
+      .then((r) => (r.ok ? r.json() : { data: [] }))
+      .then((j) =>
+        setApprovals(
+          (j.data ?? []).map((p: any) => ({
+            id: p.id,
+            action: p.title ?? "Sprint plan",
+            agent: "Planner",
+            preview: p.summary ?? "",
+          }))
+        )
+      )
+      .catch(() => {});
+  }, [selectedOrgId]);
 
   async function handleSignOut() {
     const supabase = createClient();
@@ -474,7 +494,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   return (
     <ToastProvider>
-    <div className="flex min-h-screen bg-neutral-100">
+    <div className="flex h-screen bg-neutral-100">
       <AppSidebar
         isAdmin={isAdmin}
         collapsed={collapsed}
@@ -483,7 +503,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         setMobileOpen={setMobileOpen}
       />
 
-      <div className="flex min-w-0 flex-1 flex-col">
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col">
         <header className="relative z-30 flex h-14 items-center gap-2 border-b border-neutral-300 bg-neutral-50 px-3 sm:px-6">
           <button
             type="button"
@@ -531,13 +551,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                     alt=""
                     className="h-7 w-7 shrink-0 rounded-md object-cover"
                   />
-                  <span className="hidden flex-col items-start sm:flex">
-                    <span className="max-w-[10rem] truncate text-body-medium font-medium leading-tight text-neutral-950">
-                      {orgs.find((o) => o.id === selectedOrgId)?.name ?? "Select org"}
-                    </span>
-                    <span className="text-caption capitalize leading-tight text-neutral-500">
-                      {orgs.find((o) => o.id === selectedOrgId)?.role ?? ""}
-                    </span>
+                  <span className="hidden max-w-[10rem] truncate text-body-medium font-medium text-neutral-950 sm:inline">
+                    {orgs.find((o) => o.id === selectedOrgId)?.name ?? "Select org"}
                   </span>
                   <Icon path={ICON.chevronDown} className="h-3.5 w-3.5 text-neutral-500" />
                 </button>
@@ -591,6 +606,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
             <AttendanceWidget />
 
+            <div className="hidden h-5 w-px bg-neutral-300 sm:block" />
+
             <button
               type="button"
               onClick={() => setAskOpen(true)}
@@ -603,6 +620,25 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 <span className="absolute -right-1.5 -top-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-ai-600 px-1 text-[10px] font-bold text-white">
                   {aiCallCount}
                 </span>
+              )}
+            </button>
+
+            <div className="hidden h-5 w-px bg-neutral-300 sm:block" />
+
+            <button
+              type="button"
+              onClick={toggleTheme}
+              title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-sm text-neutral-600 hover:bg-neutral-200"
+            >
+              {theme === "dark" ? (
+                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+                </svg>
+              ) : (
+                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+                </svg>
               )}
             </button>
 
@@ -683,28 +719,22 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               )}
             </div>
 
+            <div className="hidden h-5 w-px bg-neutral-300 sm:block" />
+
             <div className="relative" ref={menuRef}>
               <button
                 onClick={() => setMenuOpen((v) => !v)}
-                className="flex items-center gap-2 rounded-sm px-2 py-1.5 hover:bg-neutral-200"
+                className="flex items-center gap-2 rounded-sm px-1.5 py-1 hover:bg-neutral-200"
               >
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src="/avatar.png"
                   alt={email ?? "Account"}
-                  className="h-8 w-8 shrink-0 rounded-full object-cover"
+                  className="h-7 w-7 shrink-0 rounded-full object-cover"
                 />
-                <span className="hidden flex-col items-start sm:flex">
-                  <span className="max-w-[10rem] truncate text-body-medium font-medium leading-tight text-neutral-950">
-                    {email ?? "Account"}
-                  </span>
-                  <span className="text-caption capitalize leading-tight text-neutral-500">
-                    {orgs.find((o) => o.id === selectedOrgId)?.role ?? "—"}
-                  </span>
+                <span className="hidden max-w-[10rem] truncate text-small font-medium text-neutral-700 sm:inline">
+                  {email ?? "Account"}
                 </span>
-                <svg className="hidden h-3.5 w-3.5 text-neutral-600 sm:block" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-                </svg>
               </button>
 
               {menuOpen && (

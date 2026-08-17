@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useOrg } from "@/lib/context/OrgContext";
+import { SectionSkeleton } from "@/components/ui/skeleton";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
@@ -58,7 +59,7 @@ export default function LeaveManagementPage() {
     return true;
   });
 
-  if (orgLoading) return <p className="text-body text-neutral-600">Loading…</p>;
+  if (orgLoading) return <SectionSkeleton variant="table" />;
   if (!selectedOrgId) return <p className="text-body text-neutral-600">No organization selected.</p>;
 
   return (
@@ -133,7 +134,7 @@ function MyLeaveTab({ orgId, refreshKey, onRequestLeave }: { orgId: string; refr
   }
   useEffect(load, [orgId, refreshKey]);
 
-  if (loading) return <p className="text-body text-neutral-600">Loading…</p>;
+  if (loading) return <SectionSkeleton variant="table" />;
 
   return (
     <div className="space-y-6">
@@ -333,7 +334,7 @@ function ApprovalsTab({ orgId, onPendingCount, refreshKey }: { orgId: string; on
     }
   }
 
-  if (loading) return <p className="text-body text-neutral-600">Loading…</p>;
+  if (loading) return <SectionSkeleton variant="table" />;
 
   if (requests.length === 0) {
     return (
@@ -536,7 +537,7 @@ function TeamCalendarTab({ orgId }: { orgId: string }) {
     return filtered.filter((r) => r.startDate <= dateIso && r.endDate >= dateIso);
   }
 
-  if (loading) return <p className="text-body text-neutral-600">Loading…</p>;
+  if (loading) return <SectionSkeleton variant="table" />;
 
   return (
     <div className="space-y-4">
@@ -580,6 +581,8 @@ function TeamCalendarTab({ orgId }: { orgId: string }) {
             ›
           </button>
         </div>
+        <div className="overflow-x-auto">
+        <div className="min-w-[600px]">
         <div className="grid grid-cols-7 gap-1 text-center text-caption text-neutral-500">
           {["S", "M", "T", "W", "T", "F", "S"].map((d, i) => (
             <div key={i}>{d}</div>
@@ -612,6 +615,8 @@ function TeamCalendarTab({ orgId }: { orgId: string }) {
               </div>
             );
           })}
+        </div>
+        </div>
         </div>
         <p className="mt-3 text-caption text-neutral-500">Solid = approved · faded = pending</p>
       </Card>
@@ -654,7 +659,7 @@ function PoliciesTab({ orgId }: { orgId: string }) {
     if (res.ok) load();
   }
 
-  if (loading) return <p className="text-body text-neutral-600">Loading…</p>;
+  if (loading) return <SectionSkeleton variant="table" />;
 
   return (
     <div className="space-y-8">

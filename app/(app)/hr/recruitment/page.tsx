@@ -10,6 +10,7 @@ import { Input, Select, Field, Textarea } from "@/components/ui/Input";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/Table";
 import { Empty, EmptyHeader, EmptyTitle, EmptyDescription } from "@/components/ui/Empty";
 import { AiButton, AiSuggestionCard, useAiCall } from "@/components/ui/AiTouchpoint";
+import { SectionSkeleton } from "@/components/ui/skeleton";
 
 // Schema-accurate enums (db/schema.ts) — lib/constants.ts's
 // JOB_POSTING_STATUSES/CANDIDATE_STAGES predate Batch 3's real values.
@@ -120,7 +121,7 @@ function JobPostingsTab({ orgId, refreshKey }: { orgId: string; refreshKey: numb
       .finally(() => setLoading(false));
   }, [orgId, refreshKey]);
 
-  if (loading) return <p className="text-body text-neutral-600">Loading…</p>;
+  if (loading) return <SectionSkeleton variant="table" />;
   if (jobs.length === 0) {
     return (
       <Empty>
@@ -190,7 +191,7 @@ function AllCandidatesTab({ orgId }: { orgId: string }) {
         </Field>
       </div>
       {loading ? (
-        <p className="text-body text-neutral-600">Loading…</p>
+        <SectionSkeleton variant="table" />
       ) : (
         <Card padding="sm">
           <Table>
@@ -280,7 +281,7 @@ function NewJobModal({ orgId, onClose, onSaved }: { orgId: string; onClose: () =
       <form onSubmit={handleSubmit} className="space-y-3">
         <h3 className="text-h3 font-semibold text-neutral-950">New job posting</h3>
         {error && <p className="rounded-md bg-danger-100 p-2 text-body text-danger-600">{error}</p>}
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <Field label="Title">
             <Input className="w-full" value={title} onChange={(e) => setTitle(e.target.value)} autoFocus />
           </Field>
@@ -301,7 +302,7 @@ function NewJobModal({ orgId, onClose, onSaved }: { orgId: string; onClose: () =
             <p className="text-body text-neutral-700">{draftAI.result.description}</p>
           </AiSuggestionCard>
         )}
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <Field label="Employment type">
             <Select className="w-full" value={employmentType} onChange={(e) => setEmploymentType(e.target.value)}>
               <option value="full_time">Full time</option>
@@ -320,12 +321,12 @@ function NewJobModal({ orgId, onClose, onSaved }: { orgId: string; onClose: () =
         <Field label="Requirements">
           <Textarea className="w-full" rows={3} value={requirements} onChange={(e) => setRequirements(e.target.value)} />
         </Field>
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <Field label="Salary min"><Input type="number" className="w-full" value={salaryMin} onChange={(e) => setSalaryMin(e.target.value)} /></Field>
           <Field label="Salary max"><Input type="number" className="w-full" value={salaryMax} onChange={(e) => setSalaryMax(e.target.value)} /></Field>
           <Field label="Currency"><Input className="w-full" value={currency} onChange={(e) => setCurrency(e.target.value)} /></Field>
         </div>
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <Field label="Hiring manager">
             <Select className="w-full" value={hiringManagerId} onChange={(e) => setHiringManagerId(e.target.value)}>
               <option value="">None</option>

@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/Button";
 import { Modal } from "@/components/ui/Modal";
 import { Select, Field, Textarea } from "@/components/ui/Input";
 import { Empty, EmptyHeader, EmptyTitle, EmptyDescription } from "@/components/ui/Empty";
+import { PageSkeleton } from "@/components/ui/skeleton";
 
 const DOC_TYPES: { value: string; label: string }[] = [
   { value: "prd", label: "PRD" },
@@ -105,17 +106,17 @@ export default function DocumentsPage() {
 
   const projectName = (id?: string) => projects.find((p) => p.id === id)?.name;
 
-  if (orgLoading || loading) return <p className="text-body text-neutral-600">Loading…</p>;
+  if (orgLoading || loading) return <PageSkeleton variant="table" />;
   if (!selectedOrgId) return <p className="text-body text-neutral-600">No organization selected.</p>;
 
   return (
     <div className="space-y-6">
-      <div className="flex items-start justify-between gap-4">
+      <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <h1 className="text-h2 font-semibold text-neutral-950">Documents</h1>
           <p className="text-body text-neutral-600">AI-generated PRDs, SOPs, reports, and more.</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <Select className="w-40" value={docTypeFilter} onChange={(e) => setDocTypeFilter(e.target.value)}>
             <option value="">All types</option>
             {DOC_TYPES.map((d) => (

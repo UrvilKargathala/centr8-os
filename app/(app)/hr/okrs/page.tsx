@@ -9,6 +9,7 @@ import { Modal } from "@/components/ui/Modal";
 import { Input, Select, Field } from "@/components/ui/Input";
 import { Empty, EmptyHeader, EmptyTitle, EmptyDescription } from "@/components/ui/Empty";
 import { AiButton, AiSuggestionCard, useAiCall } from "@/components/ui/AiTouchpoint";
+import { PageSkeleton } from "@/components/ui/skeleton";
 
 type KeyResultStatus = "on_track" | "at_risk" | "off_track" | "completed";
 type KeyResult = { title: string; status: KeyResultStatus };
@@ -115,7 +116,7 @@ function OkrList({ orgId, scope, refreshKey, onChanged }: { orgId: string; scope
   }
   useEffect(load, [orgId, scope, refreshKey, ownEmployeeId]);
 
-  if (loading) return <p className="text-body text-neutral-600">Loading…</p>;
+  if (loading) return <PageSkeleton variant="table" />;
   if (okrs.length === 0) {
     return (
       <Empty>

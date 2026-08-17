@@ -322,6 +322,7 @@ export const tasks = pgTable(
     category: text("category"),
     startTime: time("start_time"),
     endTime: time("end_time"),
+    overdueNotifiedAt: timestamp("overdue_notified_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },

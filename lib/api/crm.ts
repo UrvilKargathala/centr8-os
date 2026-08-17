@@ -196,6 +196,21 @@ export async function changeDealStage(
     performedBy: performedByEmployeeId,
   });
 
+  if (updated?.ownerId) {
+    const [owner] = await db.select({ userId: employees.userId }).from(employees).where(eq(employees.id, updated.ownerId));
+    if (owner?.userId) {
+      createNotification(db, {
+        orgId,
+        userId: owner.userId,
+        type: "deal_stage_changed",
+        title: `Deal moved: ${fromStage} → ${toStage}`,
+        body: updated.name,
+        linkType: "deal",
+        linkId: updated.id,
+      }).catch(() => {});
+    }
+  }
+
   return updated;
 }
 

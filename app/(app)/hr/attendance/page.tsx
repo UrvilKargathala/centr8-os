@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useOrg } from "@/lib/context/OrgContext";
+import { SectionSkeleton } from "@/components/ui/skeleton";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
@@ -25,7 +26,7 @@ export default function AttendancePage() {
   const [view, setView] = useState<View>("My Attendance");
   const [showManual, setShowManual] = useState(false);
 
-  if (orgLoading) return <p className="text-body text-neutral-600">Loading…</p>;
+  if (orgLoading) return <SectionSkeleton variant="table" />;
   if (!selectedOrgId) return <p className="text-body text-neutral-600">No organization selected.</p>;
 
   return (
@@ -145,7 +146,7 @@ function MyAttendanceView({ orgId }: { orgId: string }) {
       .finally(() => setLoading(false));
   }, [orgId]);
 
-  if (loading || !settings) return <p className="text-body text-neutral-600">Loading…</p>;
+  if (loading || !settings) return <SectionSkeleton variant="table" />;
 
   return (
     <div className="space-y-6">
@@ -236,7 +237,7 @@ function TeamTodayView({ orgId, canEditAny }: { orgId: string; canEditAny: boole
   const departmentOptions = Array.from(new Set(employees.map((e) => e.departmentId).filter(Boolean))) as string[];
   const locationOptions = Array.from(new Set(employees.map((e) => e.location).filter(Boolean))) as string[];
 
-  if (loading) return <p className="text-body text-neutral-600">Loading…</p>;
+  if (loading) return <SectionSkeleton variant="table" />;
 
   return (
     <div className="space-y-6">

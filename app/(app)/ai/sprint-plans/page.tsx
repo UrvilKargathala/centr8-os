@@ -11,6 +11,7 @@ import { Select, Field, Textarea } from "@/components/ui/Input";
 import { AiBanner } from "@/components/ui/AiBanner";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/Table";
 import { Empty, EmptyHeader, EmptyTitle, EmptyDescription } from "@/components/ui/Empty";
+import { PageSkeleton } from "@/components/ui/skeleton";
 
 function timeAgo(iso: string) {
   const diff = Date.now() - new Date(iso).getTime();
@@ -116,7 +117,7 @@ export default function SprintPlansPage() {
     loadPlans();
   }
 
-  if (orgLoading || loading) return <p className="text-body text-neutral-600">Loading…</p>;
+  if (orgLoading || loading) return <PageSkeleton variant="cards" />;
   if (!selectedOrgId) return <p className="text-body text-neutral-600">No organization selected.</p>;
 
   const projectName = (id: string) => projects.find((p) => p.id === id)?.name ?? "Unknown project";
@@ -131,12 +132,12 @@ export default function SprintPlansPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-start justify-between gap-4">
+      <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <h1 className="text-h2 font-semibold text-neutral-950">Sprint Plans</h1>
           <p className="text-body text-neutral-600">AI-drafted sprint plans awaiting your review.</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <Select className="w-48" value={projectFilter} onChange={(e) => setProjectFilter(e.target.value)}>
             <option value="">All projects</option>
             {projects.map((p) => (

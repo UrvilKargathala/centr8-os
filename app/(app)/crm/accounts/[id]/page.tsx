@@ -11,6 +11,7 @@ import { Input, Select, Field, Textarea } from "@/components/ui/Input";
 import { AccountTypeBadge, AccountStatusBadge, Badge } from "@/components/ui/Badge";
 import { AiButton, AiSuggestionCard, useAiCall } from "@/components/ui/AiTouchpoint";
 import { ACCOUNT_TYPES, ACCOUNT_STATUSES } from "@/lib/constants";
+import { PageSkeleton } from "@/components/ui/skeleton";
 import { LogActivityForm } from "../../leads/page";
 import { NewDealModal, STAGE_LABEL, STAGE_BADGE_COLOR, fmtMoney } from "../../deals/page";
 
@@ -123,7 +124,7 @@ export default function AccountDetailPage() {
     load();
   }
 
-  if (orgLoading || loading) return <p className="text-body text-neutral-600">Loading…</p>;
+  if (orgLoading || loading) return <PageSkeleton variant="detail" />;
   if (!selectedOrgId) return <p className="text-body text-neutral-600">No organization selected.</p>;
   if (!account) return <p className="text-body text-neutral-600">Account not found.</p>;
 
@@ -153,12 +154,12 @@ export default function AccountDetailPage() {
         </div>
       </Card>
 
-      <div className="flex gap-1 border-b border-neutral-200">
+      <div className="flex gap-1 overflow-x-auto border-b border-neutral-200">
         {TABS.map((t) => (
           <button
             key={t}
             onClick={() => setTab(t)}
-            className={`px-4 py-2 text-body-medium font-medium ${tab === t ? "border-b-2 border-danger-600 text-neutral-950" : "text-neutral-600"}`}
+            className={`whitespace-nowrap px-4 py-2 text-body-medium font-medium ${tab === t ? "border-b-2 border-danger-600 text-neutral-950" : "text-neutral-600"}`}
           >
             {t}
           </button>

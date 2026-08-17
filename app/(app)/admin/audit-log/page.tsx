@@ -7,6 +7,7 @@ import { Badge, type BadgeColor } from "@/components/ui/Badge";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/Table";
 import { Button } from "@/components/ui/Button";
 import { Empty, EmptyHeader, EmptyMedia, EmptyTitle, EmptyDescription } from "@/components/ui/Empty";
+import { PageSkeleton } from "@/components/ui/skeleton";
 
 type AuditEntry = {
   id: string;
@@ -95,7 +96,7 @@ export default function AuditLogPage() {
 
       <Card>
         {loading ? (
-          <p className="py-8 text-center text-body text-neutral-500">Loading...</p>
+          <PageSkeleton variant="table" />
         ) : filtered.length === 0 ? (
           <Empty>
             <EmptyHeader>

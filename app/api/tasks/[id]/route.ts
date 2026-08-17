@@ -1,10 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { withOrgContext } from "@/db/withOrgContext";
 import { people, tasks } from "@/db/schema";
 import { ApiError, handleApiError, requireUserId } from "@/lib/api/helpers";
 import { requirePermission } from "@/lib/api/permissions";
 import { createNotification } from "@/lib/notifications/create";
+
+function extractMentionedNames(text: string): string[] {
+  const matches = text.match(/@([\w]+(?:\s+[\w]+)?)/g);
+  if (!matches) return [];
+  return [...new Set(matches.map((m) => m.slice(1).toLowerCase()))];
+}
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -31,7 +37,7 @@ export async function PATCH(req: NextRequest, { params }: Params) {
     const body = await req.json();
 
     const row = await withOrgContext(userId, async (db) => {
-      const [existing] = await db.select({ orgId: tasks.orgId, assigneeId: tasks.assigneeId }).from(tasks).where(eq(tasks.id, id));
+      const [existing] = await db.select({ orgId: tasks.orgId, assigneeId: tasks.assigneeId, description: tasks.description }).from(tasks).where(eq(tasks.id, id));
       if (!existing) return undefined;
 
       await requirePermission(db, userId, existing.orgId, "task", "update");
@@ -68,6 +74,33 @@ export async function PATCH(req: NextRequest, { params }: Params) {
             linkType: "task",
             linkId: updated.id,
           }).catch(() => {});
+        }
+      }
+
+      // Fire mention notifications when description changes and contains @Name
+      if (body.description !== undefined && body.description !== existing.description) {
+        const oldNames = existing.description ? extractMentionedNames(existing.description) : [];
+        const newNames = extractMentionedNames(body.description ?? "");
+        const freshMentions = newNames.filter((n) => !oldNames.includes(n));
+        if (freshMentions.length > 0) {
+          const orgPeople = await db
+            .select({ id: people.id, fullName: people.fullName, userId: people.userId })
+            .from(people)
+            .where(eq(people.orgId, existing.orgId));
+          for (const name of freshMentions) {
+            const match = orgPeople.find((p) => p.fullName.toLowerCase().startsWith(name));
+            if (match?.userId) {
+              createNotification(db, {
+                orgId: existing.orgId,
+                userId: match.userId,
+                type: "mention",
+                title: `You were mentioned in a task`,
+                body: updated.title,
+                linkType: "task",
+                linkId: updated.id,
+              }).catch(() => {});
+            }
+          }
         }
       }
 

@@ -116,6 +116,35 @@ export async function POST(req: NextRequest) {
         }
       }
 
+      // Mention detection in new task description
+      if (body.description) {
+        const mentions = (body.description as string).match(/@([\w]+(?:\s+[\w]+)?)/g);
+        if (mentions) {
+          const orgPeople = await db
+            .select({ id: people.id, fullName: people.fullName, userId: people.userId })
+            .from(people)
+            .where(eq(people.orgId, body.org_id));
+          const seen = new Set<string>();
+          for (const raw of mentions) {
+            const name = raw.slice(1).toLowerCase();
+            if (seen.has(name)) continue;
+            seen.add(name);
+            const match = orgPeople.find((p) => p.fullName.toLowerCase().startsWith(name));
+            if (match?.userId) {
+              createNotification(db, {
+                orgId: body.org_id,
+                userId: match.userId,
+                type: "mention",
+                title: "You were mentioned in a task",
+                body: created.title,
+                linkType: "task",
+                linkId: created.id,
+              }).catch(() => {});
+            }
+          }
+        }
+      }
+
       return [created];
     });
 

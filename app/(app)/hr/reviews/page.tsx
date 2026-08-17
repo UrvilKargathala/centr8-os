@@ -10,6 +10,7 @@ import { Input, Select, Field, Textarea } from "@/components/ui/Input";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/Table";
 import { Empty, EmptyHeader, EmptyTitle, EmptyDescription } from "@/components/ui/Empty";
 import { AiButton, AiSuggestionCard, useAiCall } from "@/components/ui/AiTouchpoint";
+import { SectionSkeleton } from "@/components/ui/skeleton";
 
 type Cycle = {
   id: string;
@@ -105,7 +106,7 @@ function MyReviewsTab({ orgId }: { orgId: string }) {
   }
   useEffect(load, [orgId]);
 
-  if (loading) return <p className="text-body text-neutral-600">Loading…</p>;
+  if (loading) return <SectionSkeleton variant="table" />;
   if (rows.length === 0) {
     return (
       <Empty>
@@ -227,7 +228,7 @@ function TeamReviewsTab({ orgId }: { orgId: string }) {
   }
   useEffect(load, [orgId]);
 
-  if (loading) return <p className="text-body text-neutral-600">Loading…</p>;
+  if (loading) return <SectionSkeleton variant="table" />;
   if (rows.length === 0) {
     return (
       <Empty>
@@ -403,7 +404,7 @@ function AllReviewsTab({ orgId }: { orgId: string }) {
         </Field>
       </div>
       {loading ? (
-        <p className="text-body text-neutral-600">Loading…</p>
+        <SectionSkeleton variant="table" />
       ) : (
         <Card padding="sm">
           <Table>
@@ -457,7 +458,7 @@ function CyclesTab({ orgId }: { orgId: string }) {
         <Button onClick={() => setShowNew(true)}>+ New Cycle</Button>
       </div>
       {loading ? (
-        <p className="text-body text-neutral-600">Loading…</p>
+        <SectionSkeleton variant="table" />
       ) : (
         <Card padding="sm">
           <Table>
@@ -551,7 +552,7 @@ function NewCycleModal({ orgId, onClose, onSaved }: { orgId: string; onClose: ()
             <option value="probation">Probation</option>
           </Select>
         </Field>
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <Field label="Self-assessment opens"><Input type="date" className="w-full" value={selfOpen} onChange={(e) => setSelfOpen(e.target.value)} /></Field>
           <Field label="Self-assessment due"><Input type="date" className="w-full" value={selfDue} onChange={(e) => setSelfDue(e.target.value)} /></Field>
           <Field label="Manager assessment due"><Input type="date" className="w-full" value={managerDue} onChange={(e) => setManagerDue(e.target.value)} /></Field>

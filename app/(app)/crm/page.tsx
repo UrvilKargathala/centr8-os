@@ -6,6 +6,7 @@ import { Card } from "@/components/ui/Card";
 import { LeadStatusBadge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Avatar, Pill } from "@/components/ui/Avatar";
+import { PageSkeleton } from "@/components/ui/skeleton";
 
 function timeAgo(iso: string) {
   const diff = Date.now() - new Date(iso).getTime();
@@ -86,7 +87,7 @@ export default function CrmDashboardPage() {
       .finally(() => setLoading(false));
   }, [selectedOrgId, canReadDeals]);
 
-  if (orgLoading || loading) return <p className="text-body text-neutral-600">Loading…</p>;
+  if (orgLoading || loading) return <PageSkeleton variant="dashboard" />;
   if (!selectedOrgId) return <p className="text-body text-neutral-600">No organization selected.</p>;
   if (!can("lead", "read")) return <p className="text-body text-neutral-600">You don&apos;t have access to CRM.</p>;
 

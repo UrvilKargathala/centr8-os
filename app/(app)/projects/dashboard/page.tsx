@@ -13,6 +13,7 @@ import { generateAI } from "@/lib/ai/generate";
 import { TaskCalendarView } from "@/components/TaskCalendarView";
 import type { Task } from "@/components/TaskCard";
 import { TASK_STATUSES, TASK_STATUS_PROGRESS } from "@/lib/constants";
+import { PageSkeleton } from "@/components/ui/skeleton";
 
 type Project = { id: string; name: string; status: string };
 type Sprint = { id: string; projectId: string; name: string; status: string };
@@ -92,7 +93,7 @@ export default function DashboardPage() {
       .finally(() => setLoading(false));
   }, [selectedOrgId]);
 
-  if (orgLoading || loading) return <p className="text-body text-neutral-600">Loading…</p>;
+  if (orgLoading || loading) return <PageSkeleton variant="dashboard" />;
   if (!selectedOrgId) return <p className="text-body text-neutral-600">No organization selected.</p>;
   if (error) return <p className="rounded-md bg-danger-100 p-3 text-body text-danger-600">{error}</p>;
 
@@ -271,7 +272,7 @@ export default function DashboardPage() {
             </div>
             {planiqAnswer && <p className="rounded-md border border-neutral-300 bg-neutral-100 p-3 text-body text-neutral-800">{planiqAnswer}</p>}
           </div>
-          <div className="grid grid-cols-3 gap-2">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
             <Link
               href="/tasks"
               className="flex flex-col items-center justify-center gap-1 rounded-md border border-neutral-300 bg-neutral-50 p-3 text-center hover:bg-neutral-100"
@@ -379,7 +380,8 @@ export default function DashboardPage() {
           </span>
         </div>
         <Card>
-          <div className="grid grid-cols-7 gap-3">
+          <div className="overflow-x-auto">
+          <div className="min-w-[500px] grid grid-cols-7 gap-3">
             {activityPerDay.map((d) => {
               const h = (d.count / activityMax) * 100;
               return (
@@ -424,6 +426,7 @@ export default function DashboardPage() {
                 </div>
               );
             })}
+          </div>
           </div>
         </Card>
       </section>

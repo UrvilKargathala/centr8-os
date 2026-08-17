@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useOrg } from "@/lib/context/OrgContext";
+import { SectionSkeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { Input } from "@/components/ui/Input";
@@ -195,7 +196,7 @@ export default function ClickUpPage() {
           <aside className="space-y-2 rounded-md border border-neutral-300 bg-neutral-50 p-3">
             <p className="mb-1 text-caption font-semibold uppercase tracking-wider text-neutral-500">Tasks</p>
             {tasksLoading ? (
-              <p className="text-small text-neutral-500">Loading tasks…</p>
+              <SectionSkeleton variant="list" />
             ) : tasksError ? (
               <p className="text-small text-danger-600">{tasksError}</p>
             ) : tasks.length === 0 ? (
@@ -245,7 +246,7 @@ export default function ClickUpPage() {
 
                 <div className="flex-1 space-y-4 overflow-y-auto p-4">
                   {commentsLoading ? (
-                    <p className="text-center text-body text-neutral-500">Loading comments…</p>
+                    <SectionSkeleton variant="text" />
                   ) : comments.length === 0 ? (
                     <p className="text-center text-body text-neutral-500">No comments on this task yet.</p>
                   ) : (
@@ -314,7 +315,7 @@ export default function ClickUpPage() {
           <aside className="space-y-2 rounded-md border border-neutral-300 bg-neutral-50 p-3">
             <p className="mb-1 text-caption font-semibold uppercase tracking-wider text-neutral-500">Docs</p>
             {docsLoading ? (
-              <p className="text-small text-neutral-500">Loading docs…</p>
+              <SectionSkeleton variant="list" />
             ) : docsError ? (
               <p className="text-small text-danger-600">{docsError}</p>
             ) : docs.length === 0 ? (
@@ -358,7 +359,7 @@ export default function ClickUpPage() {
 
                 <div className="flex-1 space-y-6 overflow-y-auto p-4">
                   {docPagesLoading ? (
-                    <p className="text-center text-body text-neutral-500">Loading pages…</p>
+                    <SectionSkeleton variant="text" />
                   ) : docPages.length === 0 ? (
                     <p className="text-center text-body text-neutral-500">This doc has no readable pages.</p>
                   ) : (

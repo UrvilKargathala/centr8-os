@@ -10,6 +10,7 @@ import { Input, Select, Field, Textarea } from "@/components/ui/Input";
 import { Badge, type BadgeColor } from "@/components/ui/Badge";
 import { Empty, EmptyHeader, EmptyTitle, EmptyDescription } from "@/components/ui/Empty";
 import { fmtMoney } from "../deals/page";
+import { PageSkeleton } from "@/components/ui/skeleton";
 
 const CAMPAIGN_TYPES = ["email", "social", "event", "webinar", "referral", "paid_ads", "content", "cold_outreach", "other"] as const;
 const CAMPAIGN_STATUSES = ["planned", "draft", "active", "paused", "completed", "cancelled"] as const;
@@ -100,13 +101,13 @@ export default function CampaignsPage() {
     [campaigns, search, status],
   );
 
-  if (orgLoading || loading) return <p className="text-body text-neutral-600">Loading…</p>;
+  if (orgLoading || loading) return <PageSkeleton variant="cards" />;
   if (!selectedOrgId) return <p className="text-body text-neutral-600">No organization selected.</p>;
   if (!can("campaign", "read")) return <p className="text-body text-neutral-600">You don&apos;t have access to campaigns.</p>;
 
   return (
     <div className="space-y-6">
-      <div className="flex items-start justify-between gap-4">
+      <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <h1 className="text-h2 font-semibold text-neutral-950">Campaigns</h1>
           <p className="text-body text-neutral-600">Track marketing efforts and measure ROI.</p>
@@ -177,7 +178,7 @@ export default function CampaignsPage() {
                 <p className="mt-2 text-caption text-neutral-500">
                   {c.startDate ?? "No start"} – {c.endDate ?? "No end"} · {employeeName(c.ownerId)}
                 </p>
-                <div className="mt-2 grid grid-cols-4 gap-1 text-center text-caption text-neutral-600">
+                <div className="mt-2 grid grid-cols-2 gap-1 text-center text-caption text-neutral-600 sm:grid-cols-4">
                   <div>
                     <p className="text-body-medium font-semibold text-neutral-950">{m?.leads_count ?? "—"}</p>
                     Leads
@@ -284,7 +285,7 @@ function NewCampaignModal({
         <Field label="Campaign name">
           <Input className="w-full" value={name} onChange={(e) => setName(e.target.value)} />
         </Field>
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <Field label="Type">
             <Select className="w-full" value={type} onChange={(e) => setType(e.target.value)}>
               {CAMPAIGN_TYPES.map((t) => (
@@ -307,7 +308,7 @@ function NewCampaignModal({
         <Field label="Description">
           <Textarea className="w-full" value={description} onChange={(e) => setDescription(e.target.value)} rows={2} />
         </Field>
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <Field label="Start date">
             <Input className="w-full" type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
           </Field>
@@ -315,7 +316,7 @@ function NewCampaignModal({
             <Input className="w-full" type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} />
           </Field>
         </div>
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <Field label="Budget allocated">
             <Input className="w-full" type="number" value={budgetAllocated} onChange={(e) => setBudgetAllocated(e.target.value)} />
           </Field>

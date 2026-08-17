@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { and, eq, inArray } from "drizzle-orm";
+import { and, eq, gte, inArray } from "drizzle-orm";
 import { withOrgContext } from "@/db/withOrgContext";
-import { deals, leaveRequests, people, projects, sprintPlanProposals, tasks } from "@/db/schema";
+import { deals, leaveRequests, notifications, people, projects, sprintPlanProposals, tasks } from "@/db/schema";
 import { ApiError, handleApiError, requireUserId } from "@/lib/api/helpers";
 import { generateAI } from "@/lib/ai/generate";
+import { createNotification } from "@/lib/notifications/create";
 
 const OPEN_DEAL_STAGES = ["prospecting", "discovery", "proposal", "negotiation", "contract_sent"] as const;
 const STALE_DAYS = 14;
@@ -65,7 +66,29 @@ export async function GET(req: NextRequest) {
         pending_sprint_plans: pendingPlans.length,
       })) as { recommendations: unknown[] };
 
-      return ai.recommendations;
+      // Fire at most one ai_recommendation notification per user per day.
+      // Dedup: query own notifications (SELECT policy allows user_id = auth.uid()).
+      const recs = ai.recommendations as { priority?: string }[];
+      const hasCritical = recs.some((r) => r.priority === "critical" || r.priority === "high");
+      if (hasCritical) {
+        const startOfDay = new Date();
+        startOfDay.setHours(0, 0, 0, 0);
+        const [existing] = await db
+          .select({ id: notifications.id })
+          .from(notifications)
+          .where(and(eq(notifications.userId, userId), eq(notifications.type, "ai_recommendation"), gte(notifications.createdAt, startOfDay)));
+        if (!existing) {
+          const count = recs.filter((r) => r.priority === "critical" || r.priority === "high").length;
+          createNotification(db, {
+            orgId,
+            userId,
+            type: "ai_recommendation",
+            title: `${count} action${count > 1 ? "s" : ""} need${count === 1 ? "s" : ""} attention`,
+          }).catch(() => {});
+        }
+      }
+
+      return recs;
     });
 
     return NextResponse.json({ data: result });

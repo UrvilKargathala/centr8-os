@@ -8,6 +8,7 @@ import { Badge, cardAccentClass } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { AiBanner } from "@/components/ui/AiBanner";
 import { Empty, EmptyHeader, EmptyTitle, EmptyDescription } from "@/components/ui/Empty";
+import { PageSkeleton } from "@/components/ui/skeleton";
 
 const DISMISSED_KEY = "centr8_dismissed_recommendations";
 
@@ -90,7 +91,7 @@ export default function RecommendationsPage() {
   const critical = visible.filter((r) => r.priority === "critical").length;
   const high = visible.filter((r) => r.priority === "high").length;
 
-  if (orgLoading) return <p className="text-body text-neutral-600">Loading…</p>;
+  if (orgLoading) return <PageSkeleton variant="cards" />;
   if (!selectedOrgId) return <p className="text-body text-neutral-600">No organization selected.</p>;
 
   if (!loaded && !loading) {
@@ -125,7 +126,7 @@ export default function RecommendationsPage() {
         </Button>
       </div>
 
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <Card padding="sm" color="danger">
           <p className="text-caption text-neutral-600">Critical</p>
           <p className="text-h3 font-semibold text-neutral-950">{critical}</p>

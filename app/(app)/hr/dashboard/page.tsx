@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { Bar, BarChart, CartesianGrid, XAxis } from "recharts";
 import { useOrg } from "@/lib/context/OrgContext";
+import { PageSkeleton } from "@/components/ui/skeleton";
 import { Card } from "@/components/ui/Card";
 import { EmploymentStatusBadge, Badge } from "@/components/ui/Badge";
 import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from "@/components/ui/Chart";
@@ -79,7 +80,7 @@ export default function HrDashboardPage() {
       .finally(() => setLoading(false));
   }, [selectedOrgId, canViewAttendance]);
 
-  if (orgLoading || loading) return <p className="text-body text-neutral-600">Loading…</p>;
+  if (orgLoading || loading) return <PageSkeleton variant="dashboard" />;
   if (!selectedOrgId) return <p className="text-body text-neutral-600">No organization selected.</p>;
   if (error) return <p className="rounded-md bg-danger-100 p-3 text-body text-danger-600">{error}</p>;
 

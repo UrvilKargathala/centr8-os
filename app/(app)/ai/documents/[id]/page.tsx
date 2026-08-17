@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/Button";
 import { Input, Textarea } from "@/components/ui/Input";
 import { Badge } from "@/components/ui/Badge";
 import { AiBanner } from "@/components/ui/AiBanner";
+import { PageSkeleton } from "@/components/ui/skeleton";
 
 const DOC_TYPE_LABEL: Record<string, string> = {
   prd: "PRD",
@@ -118,7 +119,7 @@ export default function DocumentDetailPage() {
     window.open(`/api/ai/documents/${id}/export`);
   }
 
-  if (loading || !doc) return <p className="text-body text-neutral-600">Loading…</p>;
+  if (loading || !doc) return <PageSkeleton variant="detail" />;
 
   return (
     <div className="space-y-4">

@@ -9,6 +9,7 @@ import { Input, Select, Field } from "@/components/ui/Input";
 import { Modal } from "@/components/ui/Modal";
 import { Segmented } from "@/components/ui/Segmented";
 import { useToast } from "@/components/ui/Toast";
+import { PageSkeleton, SectionSkeleton } from "@/components/ui/skeleton";
 
 type Prefs = {
   fullName: string | null;
@@ -103,6 +104,12 @@ export default function ProfileSettingsPage() {
   const [pwModal, setPwModal] = useState(false);
   const [deleteModal, setDeleteModal] = useState(false);
   const [securityLog, setSecurityLog] = useState<{ id: string; action: string; createdAt: string; targetType: string }[]>([]);
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [mfaModal, setMfaModal] = useState(false);
+  const [mfaFactors, setMfaFactors] = useState<{ id: string; type: string; status: string }[]>([]);
+  const [sessionInfo, setSessionInfo] = useState<{ lastSignIn: string | null; createdAt: string | null; provider: string } | null>(null);
 
   function loadAll() {
     if (!selectedOrgId) return;
@@ -145,8 +152,54 @@ export default function ProfileSettingsPage() {
     fetch("/api/me/security-log")
       .then((r) => r.json())
       .then((b) => setSecurityLog(b.data ?? []));
+
+    // Load MFA factors and session info
+    const supabase = createClient();
+    supabase.auth.mfa.listFactors().then(({ data: mfaData }) => {
+      setMfaFactors(mfaData?.totp?.map((f) => ({ id: f.id, type: f.factor_type, status: f.status })) ?? []);
+    });
+    supabase.auth.getUser().then(({ data: ud }) => {
+      if (ud.user) {
+        setSessionInfo({
+          lastSignIn: ud.user.last_sign_in_at ?? null,
+          createdAt: ud.user.created_at ?? null,
+          provider: (ud.user.app_metadata?.providers as string[] | undefined)?.[0] ?? "email",
+        });
+      }
+    });
   }
   useEffect(loadAll, [selectedOrgId]);
+
+  async function handleAvatarUpload(file: File) {
+    if (!selectedOrgId) return;
+    if (file.size > 2 * 1024 * 1024) { toast.show("File too large (max 2 MB)", "error"); return; }
+    if (!file.type.startsWith("image/")) { toast.show("Only image files allowed", "error"); return; }
+    setAvatarPreview(URL.createObjectURL(file));
+    setUploadingAvatar(true);
+    const formData = new FormData();
+    formData.append("file", file);
+    const res = await fetch(`/api/me/avatar?org_id=${selectedOrgId}`, { method: "POST", body: formData });
+    setUploadingAvatar(false);
+    if (res.ok) {
+      const body = await res.json();
+      setData((prev) => prev ? { ...prev, preferences: { ...prev.preferences, avatarUrl: body.data.avatarUrl } } : prev);
+      toast.show("Avatar updated");
+    } else {
+      const body = await res.json();
+      toast.show(body.error ?? "Upload failed", "error");
+      setAvatarPreview(null);
+    }
+  }
+
+  async function unenrollMfa(factorId: string) {
+    const supabase = createClient();
+    const { error: err } = await supabase.auth.mfa.unenroll({ factorId });
+    if (err) toast.show(err.message, "error");
+    else {
+      setMfaFactors((prev) => prev.filter((f) => f.id !== factorId));
+      toast.show("Two-factor authentication disabled");
+    }
+  }
 
   // Warn on unload if any section has unsaved changes.
   const dirtyAccount = useMemo(() => JSON.stringify(account) !== JSON.stringify(initial.current?.account), [account]);
@@ -211,6 +264,11 @@ export default function ProfileSettingsPage() {
       toast.show("Preferences saved");
       if (initial.current) initial.current.prefs = prefs;
       setPrefs({ ...prefs });
+      // Apply theme to document
+      const isDark = prefs.theme === "dark" || (prefs.theme === "system" && matchMedia("(prefers-color-scheme:dark)").matches);
+      document.documentElement.classList.toggle("dark", isDark);
+      if (prefs.theme === "system") localStorage.removeItem("centr8-theme");
+      else localStorage.setItem("centr8-theme", prefs.theme);
     } else {
       const b = await res.json();
       toast.show(b.error ?? "Failed to save", "error");
@@ -261,7 +319,7 @@ export default function ProfileSettingsPage() {
     }
   }
 
-  if (orgLoading || loading) return <p className="text-body text-neutral-600">Loading…</p>;
+  if (orgLoading || loading) return <PageSkeleton variant="form" />;
   if (!selectedOrgId) return <p className="text-body text-neutral-600">No organization selected.</p>;
   if (error || !data) return <p className="rounded-md bg-danger-100 p-3 text-body text-danger-600">{error ?? "Failed to load"}</p>;
 
@@ -273,13 +331,13 @@ export default function ProfileSettingsPage() {
       </div>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-[220px_1fr]">
-        <aside className="hidden self-start lg:sticky lg:top-4 lg:block">
-          <nav className="space-y-0.5">
+        <aside className="sticky top-0 z-10 -mx-4 self-start bg-neutral-100 px-4 py-2 sm:-mx-6 sm:px-6 lg:mx-0 lg:bg-transparent lg:px-0 lg:py-0">
+          <nav className="flex gap-1 overflow-x-auto lg:flex-col lg:gap-0.5">
             {SECTIONS.map((s) => (
               <a
                 key={s.id}
                 href={`#${s.id}`}
-                className="block rounded-md px-3 py-2 text-body-medium font-medium text-neutral-700 hover:bg-neutral-200"
+                className="shrink-0 rounded-md px-3 py-2 text-body-medium font-medium text-neutral-700 hover:bg-neutral-200"
               >
                 {s.label}
               </a>
@@ -291,19 +349,32 @@ export default function ProfileSettingsPage() {
           {/* ── SECTION 1 — Account ─────────────────────────────── */}
           <SectionCard id="account" title="Account information" subtitle="This information is visible to others in your organization">
             <div className="flex items-center gap-4">
-              <span className="flex h-24 w-24 shrink-0 items-center justify-center rounded-full bg-primary-100 text-h1 font-semibold text-primary-700">
-                {(account.fullName || data.email || "?").slice(0, 1).toUpperCase()}
-              </span>
+              {avatarPreview || data.preferences.avatarUrl ? (
+                <img
+                  src={avatarPreview ?? data.preferences.avatarUrl!}
+                  alt="Avatar"
+                  className="h-24 w-24 shrink-0 rounded-full object-cover"
+                />
+              ) : (
+                <span className="flex h-24 w-24 shrink-0 items-center justify-center rounded-full bg-primary-100 text-h1 font-semibold text-primary-700">
+                  {(account.fullName || data.email || "?").slice(0, 1).toUpperCase()}
+                </span>
+              )}
               <div>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/png,image/jpeg,image/webp"
+                  className="hidden"
+                  onChange={(e) => { const f = e.target.files?.[0]; if (f) handleAvatarUpload(f); e.target.value = ""; }}
+                />
                 <Button
                   type="button"
                   variant="secondary"
-                  onClick={() => {
-                    console.log("avatar upload: TODO — hook to Supabase Storage");
-                    toast.show("Avatar upload — coming soon");
-                  }}
+                  disabled={uploadingAvatar}
+                  onClick={() => fileInputRef.current?.click()}
                 >
-                  Change photo
+                  {uploadingAvatar ? "Uploading…" : "Change photo"}
                 </Button>
                 <p className="mt-1 text-caption text-neutral-500">PNG or JPG, up to 2MB</p>
               </div>
@@ -379,20 +450,51 @@ export default function ProfileSettingsPage() {
             )}
 
             <SubHead title="Two-factor authentication" />
-            <div className="rounded-md border border-neutral-300 bg-neutral-100 p-3">
-              <p className="text-body text-neutral-800">Two-factor auth setup — coming soon.</p>
-              <p className="mt-1 text-caption text-neutral-500">
-                TOTP enrollment flows through Supabase MFA; wiring in a follow-up.
-              </p>
-            </div>
+            {mfaFactors.some((f) => f.status === "verified") ? (
+              <div className="space-y-2">
+                <div className="flex items-center gap-2 rounded-md border border-success-600/30 bg-success-100 p-3">
+                  <svg className="h-5 w-5 text-success-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                  </svg>
+                  <p className="text-body font-medium text-success-600">Two-factor authentication is enabled</p>
+                </div>
+                <Button type="button" variant="secondary" onClick={() => {
+                  const verified = mfaFactors.find((f) => f.status === "verified");
+                  if (verified && confirm("Disable two-factor authentication? You can re-enable it later.")) unenrollMfa(verified.id);
+                }}>
+                  Disable 2FA
+                </Button>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                <p className="text-body text-neutral-700">Add an extra layer of security to your account with a TOTP authenticator app.</p>
+                <Button type="button" variant="secondary" onClick={() => setMfaModal(true)}>
+                  Set up two-factor authentication
+                </Button>
+              </div>
+            )}
 
             <SubHead title="Active sessions" />
-            <div className="rounded-md border border-neutral-300 bg-neutral-100 p-3">
-              <p className="text-body text-neutral-800">Session listing — coming soon.</p>
-              <p className="mt-1 text-caption text-neutral-500">
-                Per-user session enumeration with device/location needs the Supabase admin API; wiring in a follow-up.
-              </p>
-            </div>
+            {sessionInfo ? (
+              <div className="rounded-md border border-neutral-300 bg-neutral-50 p-3">
+                <div className="space-y-2 text-body">
+                  <div className="flex items-center justify-between">
+                    <span className="font-medium text-neutral-950">Current session</span>
+                    <span className="rounded-full bg-success-100 px-2 py-0.5 text-caption font-medium text-success-600">Active</span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2 text-small text-neutral-600">
+                    <span>Provider</span>
+                    <span className="text-neutral-800">{sessionInfo.provider}</span>
+                    <span>Last sign-in</span>
+                    <span className="text-neutral-800">{sessionInfo.lastSignIn ? new Date(sessionInfo.lastSignIn).toLocaleString() : "—"}</span>
+                    <span>Account created</span>
+                    <span className="text-neutral-800">{sessionInfo.createdAt ? new Date(sessionInfo.createdAt).toLocaleString() : "—"}</span>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <SectionSkeleton variant="text" />
+            )}
 
             <SubHead title="Recent activity" />
             {securityLog.length === 0 ? (
@@ -417,7 +519,6 @@ export default function ProfileSettingsPage() {
           <SectionCard id="preferences" title="Preferences" subtitle="Personalize how Centr8 OS looks and behaves for you">
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <Field label="Theme">
-                {/* TODO: dark-mode wiring itself is a follow-up; saving the preference works today. */}
                 <Segmented
                   value={prefs.theme}
                   onChange={(v) => setPrefs({ ...prefs, theme: v })}
@@ -535,10 +636,7 @@ export default function ProfileSettingsPage() {
               <Button
                 type="button"
                 variant="secondary"
-                onClick={() => {
-                  console.log("me/notifications: test email requested — TODO wire to Resend");
-                  toast.show("Test email queued");
-                }}
+                onClick={() => toast.show("Email provider (Resend) is not configured yet", "error")}
               >
                 Send me a test email
               </Button>
@@ -586,6 +684,15 @@ export default function ProfileSettingsPage() {
 
       {pwModal && <ChangePasswordModal onClose={() => setPwModal(false)} />}
       {deleteModal && <DeleteAccountModal onClose={() => setDeleteModal(false)} onConfirm={confirmDelete} />}
+      {mfaModal && (
+        <MfaEnrollModal
+          onClose={() => setMfaModal(false)}
+          onEnrolled={(factor) => {
+            setMfaFactors((prev) => [...prev, factor]);
+            setMfaModal(false);
+          }}
+        />
+      )}
     </div>
   );
 }
@@ -696,6 +803,77 @@ function ChangePasswordModal({ onClose }: { onClose: () => void }) {
           </Button>
         </div>
       </form>
+    </Modal>
+  );
+}
+
+function MfaEnrollModal({ onClose, onEnrolled }: { onClose: () => void; onEnrolled: (factor: { id: string; type: string; status: string }) => void }) {
+  const toast = useToast();
+  const [qrUri, setQrUri] = useState<string | null>(null);
+  const [factorId, setFactorId] = useState<string | null>(null);
+  const [challengeId, setChallengeId] = useState<string | null>(null);
+  const [code, setCode] = useState("");
+  const [verifying, setVerifying] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+
+  useEffect(() => {
+    const supabase = createClient();
+    supabase.auth.mfa.enroll({ factorType: "totp", friendlyName: "Centr8 OS" }).then(({ data, error }) => {
+      if (error) { setErr(error.message); return; }
+      setQrUri(data.totp.qr_code);
+      setFactorId(data.id);
+      // Create a challenge immediately so we can verify
+      supabase.auth.mfa.challenge({ factorId: data.id }).then(({ data: ch, error: chErr }) => {
+        if (chErr) setErr(chErr.message);
+        else setChallengeId(ch.id);
+      });
+    });
+  }, []);
+
+  async function verify() {
+    if (!factorId || !challengeId) return;
+    setVerifying(true);
+    setErr(null);
+    const supabase = createClient();
+    const { error: vErr } = await supabase.auth.mfa.verify({ factorId, challengeId, code });
+    setVerifying(false);
+    if (vErr) { setErr(vErr.message); return; }
+    toast.show("Two-factor authentication enabled");
+    onEnrolled({ id: factorId, type: "totp", status: "verified" });
+  }
+
+  return (
+    <Modal onClose={onClose} maxWidth="max-w-md">
+      <div className="space-y-4">
+        <h3 className="font-heading text-h3 font-semibold text-neutral-950">Set up two-factor authentication</h3>
+        {err && <p className="rounded-md bg-danger-100 p-2 text-body text-danger-600">{err}</p>}
+        {qrUri ? (
+          <>
+            <p className="text-body text-neutral-700">Scan this QR code with your authenticator app (Google Authenticator, Authy, etc.):</p>
+            <div className="flex justify-center">
+              <img src={qrUri} alt="TOTP QR Code" className="h-48 w-48" />
+            </div>
+            <Field label="Enter the 6-digit code from your app">
+              <Input
+                className="w-full"
+                value={code}
+                onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                placeholder="000000"
+                maxLength={6}
+                autoFocus
+              />
+            </Field>
+            <div className="flex justify-end gap-2 border-t border-neutral-200 pt-3">
+              <Button type="button" variant="secondary" onClick={onClose}>Cancel</Button>
+              <Button type="button" disabled={code.length !== 6 || verifying} onClick={verify}>
+                {verifying ? "Verifying…" : "Verify & Enable"}
+              </Button>
+            </div>
+          </>
+        ) : !err ? (
+          <p className="text-body text-neutral-600">Generating QR code…</p>
+        ) : null}
+      </div>
     </Modal>
   );
 }

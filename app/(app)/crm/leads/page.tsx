@@ -13,6 +13,7 @@ import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@
 import { Empty, EmptyHeader, EmptyTitle, EmptyDescription } from "@/components/ui/Empty";
 import { AiButton, AiSuggestionCard, useAiCall } from "@/components/ui/AiTouchpoint";
 import { LEAD_STATUSES, ACTIVITY_TYPES } from "@/lib/constants";
+import { PageSkeleton, SectionSkeleton } from "@/components/ui/skeleton";
 
 const KANBAN_STATUSES = ["new", "contacted", "qualified", "unqualified"] as const;
 const STATUS_LABEL: Record<string, string> = {
@@ -122,13 +123,13 @@ export default function LeadsPage() {
     await fetch(`/api/crm/leads/${id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ status: newStatus }) });
   }
 
-  if (orgLoading || loading) return <p className="text-body text-neutral-600">Loading…</p>;
+  if (orgLoading || loading) return <PageSkeleton variant="table" />;
   if (!selectedOrgId) return <p className="text-body text-neutral-600">No organization selected.</p>;
   if (!can("lead", "read")) return <p className="text-body text-neutral-600">You don&apos;t have access to leads.</p>;
 
   return (
     <div className="space-y-6">
-      <div className="flex items-start justify-between gap-4">
+      <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <h1 className="text-h2 font-semibold text-neutral-950">Leads</h1>
           <p className="text-body text-neutral-600">Track and qualify your prospects.</p>
@@ -562,6 +563,7 @@ function LeadDetailModal({
           <Input className="w-full" type="number" value={form.score ?? ""} disabled={!canUpdate} onChange={(e) => setForm({ ...form, score: e.target.value ? Number(e.target.value) : null })} />
         </Field>
       </div>
+
       <div className="mt-3">
         <Field label="Notes">
           <Textarea className="w-full" value={form.notes ?? ""} disabled={!canUpdate} onChange={(e) => setForm({ ...form, notes: e.target.value })} rows={2} />
@@ -676,7 +678,7 @@ function LeadDetailModal({
         )}
         <div className="mt-3 space-y-2">
           {loadingTimeline ? (
-            <p className="text-small text-neutral-600">Loading…</p>
+            <SectionSkeleton variant="text" />
           ) : activities.length === 0 ? (
             <p className="text-small text-neutral-600">No activity logged yet.</p>
           ) : (

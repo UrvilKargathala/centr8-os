@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useOrg } from "@/lib/context/OrgContext";
+import { PageSkeleton } from "@/components/ui/skeleton";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Input, Field } from "@/components/ui/Input";
@@ -81,7 +82,7 @@ export default function AttendanceSettingsPage() {
     showToast("Saved");
   }
 
-  if (orgLoading || loading) return <p className="text-body text-neutral-600">Loading…</p>;
+  if (orgLoading || loading) return <PageSkeleton variant="form" />;
   if (!selectedOrgId) return <p className="text-body text-neutral-600">No organization selected.</p>;
   if (!canEdit) return <p className="text-body text-neutral-600">You don&apos;t have access to this page.</p>;
 
@@ -96,7 +97,7 @@ export default function AttendanceSettingsPage() {
         <form onSubmit={handleSave} className="space-y-4">
           {error && <p className="rounded-md bg-danger-100 p-3 text-body text-danger-600">{error}</p>}
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Field label="Workday start time">
               <Input type="time" className="w-full" value={startTime} onChange={(e) => setStartTime(e.target.value)} />
             </Field>
@@ -104,7 +105,7 @@ export default function AttendanceSettingsPage() {
               <Input type="time" className="w-full" value={endTime} onChange={(e) => setEndTime(e.target.value)} />
             </Field>
           </div>
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <Field label="Target hours/day">
               <Input type="number" step="0.5" className="w-full" value={targetHours} onChange={(e) => setTargetHours(e.target.value)} />
             </Field>

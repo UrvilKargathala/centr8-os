@@ -2,6 +2,7 @@
 
 import { useEffect, useState, use } from "react";
 import { useOrg } from "@/lib/context/OrgContext";
+import { PageSkeleton, SectionSkeleton } from "@/components/ui/skeleton";
 import { createClient } from "@/lib/supabase/client";
 import type { PermissionAction, ResourceType } from "@/lib/api/permissions";
 import { EmploymentStatusBadge, Badge } from "@/components/ui/Badge";
@@ -119,7 +120,7 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
 
   useEffect(loadEmployee, [id]);
 
-  if (loading) return <p className="text-body text-neutral-600">Loading…</p>;
+  if (loading) return <PageSkeleton variant="detail" />;
   if (error) return <p className="rounded-md bg-danger-100 p-3 text-body text-danger-600">{error}</p>;
   if (!employee || !selectedOrgId) return null;
 
@@ -488,7 +489,7 @@ function OnboardingTab({
     if (res.ok) setWorkflow(body.data);
   }
 
-  if (loading) return <p className="text-body text-neutral-600">Loading…</p>;
+  if (loading) return <SectionSkeleton variant="text" />;
   if (error) return <p className="rounded-md bg-danger-100 p-3 text-body text-danger-600">{error}</p>;
 
   if (!workflow) {
@@ -618,7 +619,7 @@ function CompensationTab({ employeeId, orgId, can }: { employeeId: string; orgId
   }
   useEffect(load, [employeeId, orgId]);
 
-  if (loading) return <p className="text-body text-neutral-600">Loading…</p>;
+  if (loading) return <SectionSkeleton variant="text" />;
   if (error) return <p className="rounded-md bg-danger-100 p-3 text-body text-danger-600">{error}</p>;
 
   const current = records.find((r) => !r.endDate) ?? records[0];
@@ -901,7 +902,7 @@ function EntryRows<T extends Record<string, unknown>>({
         </Button>
       </div>
       {entries.map((row, i) => (
-        <div key={i} className="flex items-end gap-2 rounded-md border border-neutral-200 bg-neutral-50 p-2">
+        <div key={i} className="flex flex-wrap items-end gap-2 rounded-md border border-neutral-200 bg-neutral-50 p-2">
           {fields.map((f) => (
             <Field key={f.key} label={f.label}>
               <Input
@@ -954,7 +955,7 @@ function ActivityTab({ employeeId, orgId }: { employeeId: string; orgId: string 
       .finally(() => setLoading(false));
   }, [employeeId, orgId]);
 
-  if (loading) return <p className="text-body text-neutral-600">Loading…</p>;
+  if (loading) return <SectionSkeleton variant="text" />;
 
   return (
     <Card>
@@ -1073,7 +1074,7 @@ function AttendanceTab({
   }
   useEffect(load, [employee.id, orgId]);
 
-  if (loading || !settings) return <p className="text-body text-neutral-600">Loading…</p>;
+  if (loading || !settings) return <SectionSkeleton variant="text" />;
   if (error) return <p className="rounded-md bg-danger-100 p-3 text-body text-danger-600">{error}</p>;
 
   return (
@@ -1167,7 +1168,7 @@ function LeaveTab({
   }
   useEffect(load, [employee.id, orgId]);
 
-  if (loading) return <p className="text-body text-neutral-600">Loading…</p>;
+  if (loading) return <SectionSkeleton variant="text" />;
   if (error) return <p className="rounded-md bg-danger-100 p-3 text-body text-danger-600">{error}</p>;
 
   return (

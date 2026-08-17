@@ -11,6 +11,7 @@ import { CommunicationBanner } from "@/components/CommunicationChrome";
 import { Avatar } from "@/components/ui/Avatar";
 import { useOrg } from "@/lib/context/OrgContext";
 import { generateAI } from "@/lib/ai/generate";
+import { SectionSkeleton, PageSkeleton } from "@/components/ui/skeleton";
 
 type GmailMsg = {
   id: string;
@@ -267,7 +268,7 @@ export default function MailPage() {
 
               <div className="flex-1 space-y-4 overflow-y-auto p-4">
                 {threadLoading ? (
-                  <p className="py-8 text-center text-body text-neutral-500">Loading thread…</p>
+                  <SectionSkeleton variant="text" />
                 ) : thread.length === 0 ? (
                   <p className="text-body text-neutral-600">{openMsg.snippet}</p>
                 ) : (
@@ -311,7 +312,7 @@ export default function MailPage() {
               )}
             </div>
           ) : loading ? (
-            <p className="p-8 text-center text-body text-neutral-500">Loading…</p>
+            <PageSkeleton variant="chat" />
           ) : error ? (
             <div className="p-8 text-center">
               <p className="text-body text-danger-600">{error}</p>

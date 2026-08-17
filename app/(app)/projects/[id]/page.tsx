@@ -2,6 +2,7 @@
 
 import { useEffect, useState, use } from "react";
 import { useOrg } from "@/lib/context/OrgContext";
+import { PageSkeleton, SectionSkeleton } from "@/components/ui/skeleton";
 import { Badge, ProjectStatusBadge, SprintStatusBadge, sprintStatusColor } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Card, CardButton } from "@/components/ui/Card";
@@ -99,7 +100,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
     if (!res.ok) loadAll(); // revert to server truth on failure
   }
 
-  if (loading) return <p className="text-body text-neutral-600">Loading…</p>;
+  if (loading) return <PageSkeleton variant="detail" />;
   if (error) return <p className="rounded-md bg-danger-100 p-3 text-body text-danger-600">{error}</p>;
   if (!project) return null;
 
@@ -1012,7 +1013,7 @@ function PortalAccessSection({ projectId, orgId }: { projectId: string; orgId: s
       {error && <p className="rounded-md bg-danger-100 p-3 text-body text-danger-600">{error}</p>}
 
       {loading ? (
-        <p className="text-body text-neutral-600">Loading…</p>
+        <SectionSkeleton variant="table" />
       ) : grants.length === 0 ? (
         <p className="text-body text-neutral-600">No client access grants yet.</p>
       ) : (
@@ -1096,7 +1097,7 @@ function TeamTab({ projectId, orgId, canEdit }: { projectId: string; orgId: stri
 
   const availableToAdd = people.filter((p) => !members.some((m) => m.personId === p.id));
 
-  if (loading) return <p className="text-body text-neutral-600">Loading team…</p>;
+  if (loading) return <SectionSkeleton variant="list" />;
 
   return (
     <div className="space-y-4">
@@ -1261,7 +1262,7 @@ function ActivityTab({ projectId }: { projectId: string }) {
       .finally(() => setLoading(false));
   }, [projectId]);
 
-  if (loading) return <p className="text-body text-neutral-600">Loading activity…</p>;
+  if (loading) return <SectionSkeleton variant="list" />;
   if (rows.length === 0) {
     return (
       <div className="rounded-md border border-dashed border-neutral-300 bg-neutral-50 p-8 text-center">

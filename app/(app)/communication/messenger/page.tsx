@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useOrg } from "@/lib/context/OrgContext";
+import { SectionSkeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Modal } from "@/components/ui/Modal";
@@ -177,7 +178,7 @@ export default function MessengerPage() {
             <div>
               <p className="mb-2 text-caption font-semibold uppercase tracking-wider text-neutral-500">Channels</p>
               {channelsLoading ? (
-                <p className="text-small text-neutral-500">Loading…</p>
+                <SectionSkeleton variant="list" />
               ) : channelsError ? (
                 <p className="text-small text-danger-600">{channelsError}</p>
               ) : channelList.length === 0 ? (
@@ -257,7 +258,7 @@ export default function MessengerPage() {
 
                 <div className="flex-1 space-y-4 overflow-y-auto p-4">
                   {messagesLoading ? (
-                    <p className="text-center text-body text-neutral-500">Loading messages…</p>
+                    <SectionSkeleton variant="text" />
                   ) : messagesError ? (
                     <p className="text-center text-body text-danger-600">{messagesError}</p>
                   ) : messages.length === 0 ? (
@@ -347,7 +348,7 @@ export default function MessengerPage() {
           <div className="space-y-4">
             <h2 className="text-h3 font-semibold text-neutral-950">Start a direct message</h2>
             {membersLoading ? (
-              <p className="text-body text-neutral-600">Loading workspace members…</p>
+              <SectionSkeleton variant="list" />
             ) : members.length === 0 ? (
               <p className="text-body text-neutral-600">No other workspace members found.</p>
             ) : (

@@ -11,6 +11,7 @@ import { DealStageBadge } from "@/components/ui/Badge";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/Table";
 import { AiButton, AiSuggestionCard, useAiCall } from "@/components/ui/AiTouchpoint";
 import { fmtMoney, isStale } from "../deals/page";
+import { PageSkeleton } from "@/components/ui/skeleton";
 
 type PeriodType = "monthly" | "quarterly" | "annual";
 type Deal = {
@@ -117,7 +118,7 @@ export default function ForecastsPage() {
   const analyzeAI = useAiCall<string>("Analyst", "analyze_forecast");
   const actionsAI = useAiCall<{ actions: { action: string; deal_name: string; reasoning: string }[] }>("Planner", "suggest_pipeline_actions");
 
-  if (orgLoading || loading) return <p className="text-body text-neutral-600">Loading…</p>;
+  if (orgLoading || loading) return <PageSkeleton variant="dashboard" />;
   if (!selectedOrgId) return <p className="text-body text-neutral-600">No organization selected.</p>;
   if (!can("forecast", "read")) return <p className="text-body text-neutral-600">You don&apos;t have access to forecasts.</p>;
   if (!forecast) return <p className="text-body text-neutral-600">No forecast data.</p>;
@@ -281,6 +282,7 @@ export default function ForecastsPage() {
           {sortedDeals.length === 0 ? (
             <p className="text-small text-neutral-600">No deals expected to close in this period.</p>
           ) : (
+            <div className="overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -310,6 +312,7 @@ export default function ForecastsPage() {
                 ))}
               </TableBody>
             </Table>
+            </div>
           )}
         </Card>
 
@@ -319,6 +322,7 @@ export default function ForecastsPage() {
             {sortedByRep.length === 0 ? (
               <p className="text-small text-neutral-600">No reps found.</p>
             ) : (
+              <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -343,6 +347,7 @@ export default function ForecastsPage() {
                   ))}
                 </TableBody>
               </Table>
+              </div>
             )}
           </Card>
         )}
