@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useState } from "react";
+import { Suspense, useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/Button";
@@ -8,6 +8,13 @@ import { Input } from "@/components/ui/Input";
 import { Field, FieldGroup, FieldLabel, FieldDescription, FieldError } from "@/components/ui/field";
 
 export default function LoginPage() {
+  useEffect(() => {
+    const html = document.documentElement;
+    const wasDark = html.classList.contains("dark");
+    html.classList.remove("dark");
+    return () => { if (wasDark) html.classList.add("dark"); };
+  }, []);
+
   return (
     <Suspense>
       <LoginForm />
@@ -45,7 +52,7 @@ function LoginForm() {
   }
 
   return (
-    <div className="flex min-h-screen bg-neutral-50">
+    <div className="flex min-h-screen bg-white">
       {/* Decorative side — purely illustrative (skeleton placeholder bars,
           no invented stats/numbers), hidden below md same as the reference's
           split layout collapsing to a single column on mobile. */}
@@ -73,7 +80,7 @@ function LoginForm() {
       </div>
 
       {/* Form side */}
-      <div className="flex w-full items-center justify-center px-6 py-12 md:w-1/2">
+      <div className="flex w-full items-center justify-center bg-white px-6 py-12 md:w-1/2">
         <div className="w-full max-w-sm">
           <form onSubmit={handleSubmit}>
             <FieldGroup>
