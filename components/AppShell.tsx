@@ -227,17 +227,31 @@ function AppSidebar({
   setCollapsed,
   mobileOpen,
   setMobileOpen,
+  email,
+  onSignOut,
 }: {
   isAdmin: boolean;
   collapsed: boolean;
   setCollapsed: (v: boolean) => void;
   mobileOpen: boolean;
   setMobileOpen: (v: boolean) => void;
+  email: string | null;
+  onSignOut: () => void;
 }) {
   const pathname = usePathname();
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   const [hoverSection, setHoverSection] = useState<string | null>(null);
   const [hoverPos, setHoverPos] = useState<{ top: number; left: number } | null>(null);
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const userMenuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function onClickOutside(e: MouseEvent) {
+      if (userMenuRef.current && !userMenuRef.current.contains(e.target as Node)) setUserMenuOpen(false);
+    }
+    document.addEventListener("mousedown", onClickOutside);
+    return () => document.removeEventListener("mousedown", onClickOutside);
+  }, []);
 
   const groups = [
     { label: "MAIN", sections: NAV_SECTIONS.filter((s) => !s.adminOnly) },
@@ -369,6 +383,49 @@ function AppSidebar({
             <Icon path={ICON.help} />
             {!collapsed && <span>Help</span>}
           </Link>
+
+          <div className="relative" ref={userMenuRef}>
+            <button
+              type="button"
+              onClick={() => setUserMenuOpen((v) => !v)}
+              className={`flex w-full items-center gap-2.5 rounded-sm px-3 py-2 hover:bg-neutral-200 ${
+                collapsed ? "justify-center" : ""
+              }`}
+              title={email ?? "Account"}
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src="/avatar.png"
+                alt={email ?? "Account"}
+                className="h-7 w-7 shrink-0 rounded-full object-cover"
+              />
+              {!collapsed && (
+                <span className="min-w-0 flex-1 truncate text-left text-[13px] font-medium text-neutral-700">
+                  {email ?? "Account"}
+                </span>
+              )}
+            </button>
+
+            {userMenuOpen && (
+              <div className={`absolute z-50 w-48 rounded-md border border-neutral-300 bg-neutral-50 py-1 shadow-lg ${
+                collapsed ? "bottom-0 left-full ml-2" : "bottom-full left-0 mb-1"
+              }`}>
+                <Link
+                  href="/settings/profile"
+                  onClick={() => setUserMenuOpen(false)}
+                  className="block px-3 py-2 text-body text-neutral-800 hover:bg-neutral-200"
+                >
+                  Profile &amp; Settings
+                </Link>
+                <button
+                  onClick={onSignOut}
+                  className="block w-full px-3 py-2 text-left text-body text-danger-600 hover:bg-neutral-200"
+                >
+                  Sign out
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       </aside>
 
@@ -405,8 +462,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const { orgs, selectedOrgId, setSelectedOrgId, loading, can } = useOrg();
   const isAdmin = can("sso", "configure");
   const [email, setEmail] = useState<string | null>(null);
-  const [menuOpen, setMenuOpen] = useState(false);
-  const menuRef = useRef<HTMLDivElement>(null);
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [askOpen, setAskOpen] = useState(false);
@@ -436,7 +491,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     function onClickOutside(e: MouseEvent) {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) setMenuOpen(false);
       if (orgMenuRef.current && !orgMenuRef.current.contains(e.target as Node)) setOrgMenuOpen(false);
     }
     document.addEventListener("mousedown", onClickOutside);
@@ -479,6 +533,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         setCollapsed={setCollapsed}
         mobileOpen={mobileOpen}
         setMobileOpen={setMobileOpen}
+        email={email}
+        onSignOut={handleSignOut}
       />
 
       <div className="flex min-h-0 min-w-0 flex-1 flex-col">
@@ -492,7 +548,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <Icon path="M4 6h16M4 12h16M4 18h16" className="h-5 w-5" />
           </button>
 
-          <div className="relative hidden max-w-sm flex-1 md:block">
+          <div className="relative hidden max-w-[200px] flex-1 md:block">
             <svg
               className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-neutral-400"
               fill="none"
@@ -621,43 +677,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             </button>
 
             <NotificationBell orgId={selectedOrgId} />
-
-            <div className="hidden h-5 w-px bg-neutral-300 sm:block" />
-
-            <div className="relative" ref={menuRef}>
-              <button
-                onClick={() => setMenuOpen((v) => !v)}
-                className="flex items-center gap-2 rounded-sm px-1.5 py-1 hover:bg-neutral-200"
-              >
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src="/avatar.png"
-                  alt={email ?? "Account"}
-                  className="h-7 w-7 shrink-0 rounded-full object-cover"
-                />
-                <span className="hidden max-w-[10rem] truncate text-small font-medium text-neutral-700 sm:inline">
-                  {email ?? "Account"}
-                </span>
-              </button>
-
-              {menuOpen && (
-                <div className="absolute right-0 top-full mt-1 w-48 rounded-md border border-neutral-300 bg-neutral-50 py-1 shadow-lg">
-                  <Link
-                    href="/settings/profile"
-                    onClick={() => setMenuOpen(false)}
-                    className="block px-3 py-2 text-body text-neutral-800 hover:bg-neutral-200"
-                  >
-                    Profile &amp; Settings
-                  </Link>
-                  <button
-                    onClick={handleSignOut}
-                    className="block w-full px-3 py-2 text-left text-body text-danger-600 hover:bg-neutral-200"
-                  >
-                    Sign out
-                  </button>
-                </div>
-              )}
-            </div>
           </div>
         </header>
 
