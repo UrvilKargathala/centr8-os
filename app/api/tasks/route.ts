@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { and, desc, eq, ilike, lt, ne, or, sql, type SQL } from "drizzle-orm";
 import { withOrgContext } from "@/db/withOrgContext";
-import { tasks, taskAttachments } from "@/db/schema";
+import { people, tasks, taskAttachments } from "@/db/schema";
 import { ApiError, handleApiError, requireUserId } from "@/lib/api/helpers";
 import { requirePermission } from "@/lib/api/permissions";
+import { createNotification } from "@/lib/notifications/create";
 
 export async function GET(req: NextRequest) {
   try {
@@ -84,7 +85,7 @@ export async function POST(req: NextRequest) {
 
     const [row] = await withOrgContext(userId, async (db) => {
       await requirePermission(db, userId, body.org_id, "task", "create");
-      return db
+      const [created] = await db
         .insert(tasks)
         .values({
           orgId: body.org_id,
@@ -99,6 +100,23 @@ export async function POST(req: NextRequest) {
           dueDate: body.due_date ?? null,
         })
         .returning();
+
+      if (body.assignee_id) {
+        const [person] = await db.select({ userId: people.userId }).from(people).where(eq(people.id, body.assignee_id));
+        if (person?.userId) {
+          createNotification(db, {
+            orgId: body.org_id,
+            userId: person.userId,
+            type: "task_assigned",
+            title: "Task assigned to you",
+            body: created.title,
+            linkType: "task",
+            linkId: created.id,
+          }).catch(() => {});
+        }
+      }
+
+      return [created];
     });
 
     return NextResponse.json({ data: row }, { status: 201 });

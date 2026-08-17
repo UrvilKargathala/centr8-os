@@ -1,0 +1,11 @@
+-- Google Meet integration: extends the existing integrations table (0052)
+-- the same way ClickUp did (0103) — one new enum value, no new columns.
+-- Deviation from a literal schema request: token/refresh-token/expiry/email
+-- live in the same plaintext `config` jsonb column Slack/Gmail/ClickUp
+-- already use (expiry stored as an ISO string), not dedicated columns —
+-- consistent with every other provider here, and `toPublicIntegration()`
+-- already strips `config` before any client response regardless of shape.
+--
+-- ADD VALUE is its own statement, not used later in this migration (same
+-- rule as every prior enum-value pair in this repo).
+ALTER TYPE "public"."integration_provider" ADD VALUE 'google_meet';

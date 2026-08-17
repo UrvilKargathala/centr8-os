@@ -8,6 +8,7 @@ import type { OrgScopedDb } from "@/db/withOrgContext";
 import { accounts, activities, campaigns, contacts, dealStageHistory, deals, employees, leads } from "@/db/schema";
 import { ApiError } from "./helpers";
 import { requirePermission } from "./permissions";
+import { createNotification } from "@/lib/notifications/create";
 
 // CRM Batch 2 — default probability per stage. A PATCH's explicit
 // `probability` in the request body always wins over this table (see
@@ -226,6 +227,20 @@ export async function closeDeal(
     })
     .where(eq(deals.id, dealId))
     .returning();
+
+  if (outcome === "won" && updated?.ownerId) {
+    const [owner] = await db.select({ userId: employees.userId }).from(employees).where(eq(employees.id, updated.ownerId));
+    if (owner?.userId) {
+      await createNotification(db, {
+        orgId,
+        userId: owner.userId,
+        type: "deal_won",
+        title: `Deal won: ${updated.name}`,
+        linkType: "deal",
+        linkId: updated.id,
+      });
+    }
+  }
 
   return updated;
 }

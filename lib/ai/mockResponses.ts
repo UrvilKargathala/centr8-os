@@ -70,6 +70,26 @@ Out-of-scope: mobile-native experiences, third-party marketplace, self-serve bil
       if (low.includes("hero") || low.includes("design") || low.includes("figma")) return "Really like the softer gradient. One small note — CTA could use a touch more breathing room.";
       return "Thanks — I'll take a look and follow up shortly.";
     },
+    draft_task_comment_reply: (ctx: MockContext) => {
+      const comments = (ctx.comments as { text: string }[]) || [];
+      const last = comments[comments.length - 1]?.text.toLowerCase() ?? "";
+      if (last.includes("blocked") || last.includes("waiting")) return "Thanks for the flag — let me know what's blocking this and I'll help clear it today.";
+      if (last.includes("done") || last.includes("shipped") || last.includes("merged")) return "Nice work — closing this out. Let me know if there's follow-up needed.";
+      if (last.includes("question") || last.includes("?")) return "Good question — let me check and get back to you shortly.";
+      return "Thanks for the update — I'll take a look and follow up here.";
+    },
+    // Video Conferencing (Google Meet) has no transcript/recording data —
+    // this replaces the old transcript-based "Summarize meeting" touchpoint
+    // with something that works from what a calendar event actually has:
+    // title + attendees, generating a fill-in-yourself template rather than
+    // fabricating notes for a meeting that hasn't happened yet (or that we
+    // have no record of the content of).
+    draft_meeting_notes_template: (ctx: MockContext) => {
+      const title = (ctx.title as string) || "Meeting";
+      const attendees = (ctx.attendees as string[]) || [];
+      const attendeeLine = attendees.length > 0 ? attendees.join(", ") : "(add attendees)";
+      return `# ${title}\n\n**Date:** ${new Date().toLocaleDateString()}\n**Attendees:** ${attendeeLine}\n\n## Agenda\n- \n- \n\n## Discussion notes\n- \n\n## Decisions\n- \n\n## Action items\n- [ ] Owner — task — due date\n`;
+    },
     draft_email_reply: (ctx: MockContext) => {
       const subject = (ctx.subject as string) || "";
       if (subject.toLowerCase().includes("sprint")) {
@@ -586,7 +606,25 @@ Follow-ups:
     },
     summarize_channel: (ctx: MockContext) => {
       const name = (ctx.channel as string) || "channel";
-      return `## Today in #${name}\n\n- PR #482 (project_members table) merged and shipped to prod without a rollback.\n- Marco kicked off review of the payments module; asked for one more pair of eyes.\n- Aditi confirmed the review queue is on track for the sprint gate.\n\n**Watch for:** the client review moved from Wednesday → Thursday — calendar is updated but re-check standing invites.`;
+      const messages = (ctx.messages as { text: string; authorName: string }[]) || [];
+      if (messages.length === 0) return `## Today in ${name}\n\nNo messages yet — nothing to summarize.`;
+      const authors = [...new Set(messages.map((m) => m.authorName))];
+      const last = messages[messages.length - 1];
+      return `## Today in ${name}\n\n${authors.length} participant${authors.length === 1 ? "" : "s"} (${authors.join(", ")}) across ${messages.length} message${messages.length === 1 ? "" : "s"}. Most recent, from ${last.authorName}: "${last.text.slice(0, 160)}"\n\n**Suggested next step:** reply to the latest message or flag anything that needs a decision.`;
+    },
+    summarize_task_comments: (ctx: MockContext) => {
+      const taskName = (ctx.taskName as string) || "this task";
+      const comments = (ctx.comments as { text: string; authorName: string }[]) || [];
+      if (comments.length === 0) return `No comments yet on "${taskName}" — nothing to summarize.`;
+      const authors = [...new Set(comments.map((c) => c.authorName))];
+      return `## Discussion on "${taskName}"\n\n${authors.length} participant${authors.length === 1 ? "" : "s"} (${authors.join(", ")}) across ${comments.length} comment${comments.length === 1 ? "" : "s"}. Latest note: "${comments[comments.length - 1].text.slice(0, 160)}"\n\n**Suggested next step:** reply with a status update or unblock the open question above.`;
+    },
+    summarize_doc: (ctx: MockContext) => {
+      const docName = (ctx.docName as string) || "this doc";
+      const content = (ctx.content as string) || "";
+      const words = content.trim().split(/\s+/).filter(Boolean);
+      const preview = words.slice(0, 24).join(" ");
+      return `## Summary of "${docName}"\n\n${words.length} words total. Opens with: "${preview}${words.length > 24 ? "…" : ""}"\n\n**Suggested next step:** skim the full doc for anything actionable that isn't reflected in an open task yet.`;
     },
     summarize_email_thread: (_ctx: MockContext) =>
       "Sarah at Acme is pushing the sprint 3 review from Wed to Thu (same 2pm slot) because something came up on her side. She's asking whether that clashes with anything and expects a same-day reply.",

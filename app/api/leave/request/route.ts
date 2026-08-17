@@ -6,6 +6,7 @@ import { ApiError, handleApiError, requireUserId } from "@/lib/api/helpers";
 import { requirePermission } from "@/lib/api/permissions";
 import { resolveOwnEmployeeId } from "@/lib/api/attendance";
 import { countLeaveDays, getLeaveType, getOrCreateBalance, remainingDays } from "@/lib/api/leave";
+import { createNotification } from "@/lib/notifications/create";
 
 export async function POST(req: NextRequest) {
   try {
@@ -71,17 +72,21 @@ export async function POST(req: NextRequest) {
           .where(eq(leaveBalances.id, balance.id));
       }
 
-      // TODO: real manager notification (email/Slack) once a notification
-      // pipeline exists — logging is the stand-in for now.
       const [employee] = await db.select({ managerId: employees.managerId, fullName: employees.fullName }).from(employees).where(eq(employees.id, employeeId));
-      console.log("leave request notification (stub):", {
-        managerId: employee?.managerId ?? null,
-        requestedBy: employee?.fullName,
-        leaveType: leaveType.name,
-        startDate: body.start_date,
-        endDate: body.end_date,
-        totalDays,
-      });
+      if (employee?.managerId) {
+        const [manager] = await db.select({ userId: employees.userId }).from(employees).where(eq(employees.id, employee.managerId));
+        if (manager?.userId) {
+          await createNotification(db, {
+            orgId,
+            userId: manager.userId,
+            type: "leave_request_pending",
+            title: `${employee.fullName} requested ${leaveType.name}`,
+            body: `${body.start_date} to ${body.end_date} (${totalDays} day${totalDays === 1 ? "" : "s"})`,
+            linkType: "leave_request",
+            linkId: created.id,
+          });
+        }
+      }
 
       return created;
     });

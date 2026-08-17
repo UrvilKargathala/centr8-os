@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { eq } from "drizzle-orm";
 import { withOrgContext } from "@/db/withOrgContext";
-import { leaveRequests } from "@/db/schema";
+import { employees, leaveRequests } from "@/db/schema";
 import { ApiError, handleApiError, requireUserId } from "@/lib/api/helpers";
 import { requireLeaveApproveAccess, settlePendingDays } from "@/lib/api/leave";
+import { createNotification } from "@/lib/notifications/create";
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -28,6 +29,19 @@ export async function POST(req: NextRequest, { params }: Params) {
         .returning();
 
       await settlePendingDays(db, existing.orgId, existing.employeeId, existing.leaveTypeId, existing.startDate, existing.totalDays, "released");
+
+      const [requester] = await db.select({ userId: employees.userId }).from(employees).where(eq(employees.id, existing.employeeId));
+      if (requester?.userId) {
+        await createNotification(db, {
+          orgId: existing.orgId,
+          userId: requester.userId,
+          type: "leave_rejected",
+          title: "Your leave request was rejected",
+          body: body.review_note,
+          linkType: "leave_request",
+          linkId: existing.id,
+        });
+      }
 
       return updated;
     });

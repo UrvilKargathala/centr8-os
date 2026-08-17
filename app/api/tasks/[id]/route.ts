@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { eq } from "drizzle-orm";
 import { withOrgContext } from "@/db/withOrgContext";
-import { tasks } from "@/db/schema";
+import { people, tasks } from "@/db/schema";
 import { ApiError, handleApiError, requireUserId } from "@/lib/api/helpers";
 import { requirePermission } from "@/lib/api/permissions";
+import { createNotification } from "@/lib/notifications/create";
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -30,7 +31,7 @@ export async function PATCH(req: NextRequest, { params }: Params) {
     const body = await req.json();
 
     const row = await withOrgContext(userId, async (db) => {
-      const [existing] = await db.select({ orgId: tasks.orgId }).from(tasks).where(eq(tasks.id, id));
+      const [existing] = await db.select({ orgId: tasks.orgId, assigneeId: tasks.assigneeId }).from(tasks).where(eq(tasks.id, id));
       if (!existing) return undefined;
 
       await requirePermission(db, userId, existing.orgId, "task", "update");
@@ -52,6 +53,24 @@ export async function PATCH(req: NextRequest, { params }: Params) {
         })
         .where(eq(tasks.id, id))
         .returning();
+
+      // Fire task_assigned notification when assignee changes
+      const newAssignee = body.assignee_id;
+      if (newAssignee && newAssignee !== existing.assigneeId) {
+        const [person] = await db.select({ userId: people.userId }).from(people).where(eq(people.id, newAssignee));
+        if (person?.userId) {
+          createNotification(db, {
+            orgId: existing.orgId,
+            userId: person.userId,
+            type: "task_assigned",
+            title: "Task assigned to you",
+            body: updated.title,
+            linkType: "task",
+            linkId: updated.id,
+          }).catch(() => {});
+        }
+      }
+
       return updated;
     });
     if (!row) throw new ApiError(404, "Task not found");

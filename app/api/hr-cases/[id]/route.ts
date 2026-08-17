@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { eq } from "drizzle-orm";
 import { withOrgContext } from "@/db/withOrgContext";
-import { hrCaseComments, hrCases } from "@/db/schema";
+import { employees, hrCaseComments, hrCases } from "@/db/schema";
 import { ApiError, handleApiError, requireUserId } from "@/lib/api/helpers";
 import { getCaseOrThrow, requireCaseManageAccess, requireCaseViewAccess } from "@/lib/api/hrCases";
+import { createNotification } from "@/lib/notifications/create";
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -35,7 +36,10 @@ export async function PATCH(req: NextRequest, { params }: Params) {
     const body = await req.json();
 
     const row = await withOrgContext(userId, async (db) => {
-      const [existing] = await db.select({ orgId: hrCases.orgId, status: hrCases.status }).from(hrCases).where(eq(hrCases.id, id));
+      const [existing] = await db
+        .select({ orgId: hrCases.orgId, status: hrCases.status, employeeId: hrCases.employeeId })
+        .from(hrCases)
+        .where(eq(hrCases.id, id));
       if (!existing) return undefined;
       await requireCaseManageAccess(db, userId, existing.orgId);
 
@@ -53,6 +57,21 @@ export async function PATCH(req: NextRequest, { params }: Params) {
         })
         .where(eq(hrCases.id, id))
         .returning();
+
+      if (updated && nextStatus !== existing.status) {
+        const [raiser] = await db.select({ userId: employees.userId }).from(employees).where(eq(employees.id, existing.employeeId));
+        if (raiser?.userId) {
+          await createNotification(db, {
+            orgId: existing.orgId,
+            userId: raiser.userId,
+            type: "hr_case_update",
+            title: `Your case "${updated.subject}" is now ${nextStatus}`,
+            linkType: "hr_case",
+            linkId: updated.id,
+          });
+        }
+      }
+
       return updated;
     });
     if (!row) throw new ApiError(404, "Case not found");

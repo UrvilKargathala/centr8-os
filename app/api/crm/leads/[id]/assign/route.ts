@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { eq } from "drizzle-orm";
 import { withOrgContext } from "@/db/withOrgContext";
-import { leads } from "@/db/schema";
+import { employees, leads } from "@/db/schema";
 import { ApiError, handleApiError, requireUserId } from "@/lib/api/helpers";
 import { requireLeadAssignAccess } from "@/lib/api/crm";
+import { createNotification } from "@/lib/notifications/create";
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -24,6 +25,19 @@ export async function POST(req: NextRequest, { params }: Params) {
         .set({ ownerId: body.owner_id, updatedAt: new Date() })
         .where(eq(leads.id, id))
         .returning();
+
+      const [owner] = await db.select({ userId: employees.userId }).from(employees).where(eq(employees.id, body.owner_id));
+      if (owner?.userId && updated) {
+        await createNotification(db, {
+          orgId: existing.orgId,
+          userId: owner.userId,
+          type: "lead_assigned",
+          title: `Lead assigned: ${updated.fullName}`,
+          linkType: "lead",
+          linkId: updated.id,
+        });
+      }
+
       return updated;
     });
     if (!row) throw new ApiError(404, "Lead not found");

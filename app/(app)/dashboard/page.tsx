@@ -14,8 +14,7 @@ import { DonutChart } from "@/components/ui/DonutChart";
 import { Avatar } from "@/components/ui/Avatar";
 import { NewProjectWizard } from "@/components/NewProjectWizard";
 import { ChatInput, HeroEmptyState, MessageList, useAskAiConversation } from "@/components/ai/AskAiChat";
-import { generateAI } from "@/lib/ai/generate";
-import { nextMeeting } from "@/lib/mock/communication";
+import { useAiUsage } from "@/lib/context/AiUsageContext";
 
 function timeAgo(iso: string) {
   const diff = Date.now() - new Date(iso).getTime();
@@ -178,6 +177,7 @@ type DashboardData = {
   } | null;
   accounts: { total: number; customers: number; prospects: number } | null;
   communication: { unread_messages: number; unread_emails: number; upcoming_meetings: number; missed_calls: number };
+  next_meeting: { id: string; title: string; startTime: string; endTime: string; meetUrl: string | null; attendees: string[]; htmlLink: string } | null;
   ai: { pending_sprint_plans: number | null; documents_in_draft: number | null };
   recent_activity: Array<{
     type: string;
@@ -278,6 +278,8 @@ export default function DashboardPage() {
   const [briefingDismissed, setBriefingDismissed] = useState(false);
   const [showNewProject, setShowNewProject] = useState(false);
   const chat = useAskAiConversation(selectedOrgId);
+  const { increment: incrementAi, cache: aiCache } = useAiUsage();
+  const [recsLoading, setRecsLoading] = useState(false);
 
   useEffect(() => {
     createClient()
@@ -288,19 +290,17 @@ export default function DashboardPage() {
   const todayKey = new Date().toISOString().slice(0, 10);
   const dismissKey = `centr8_briefing_dismissed_${todayKey}`;
 
-  // `silent` skips the full-page loading gate — used for the window-focus
-  // refetch so the whole page doesn't flash back to "Loading…" every time
-  // the tab regains focus, only the initial load and org switches do.
   function load(silent = false) {
     if (!selectedOrgId) return;
     if (!silent) setLoading(true);
-    Promise.all([
-      fetch(`/api/dashboard?org_id=${selectedOrgId}`).then((r) => r.json()),
-      fetch(`/api/ai/recommendations?org_id=${selectedOrgId}`).then((r) => r.json()),
-    ])
-      .then(([dashBody, recBody]) => {
+    fetch(`/api/dashboard?org_id=${selectedOrgId}`)
+      .then((r) => r.json())
+      .then((dashBody) => {
         setData(dashBody.data ?? null);
-        setRecs((recBody.data ?? []).slice(0, 3));
+        const cachedRecs = aiCache.get(`recs_${selectedOrgId}`) as Recommendation[] | undefined;
+        if (cachedRecs) setRecs(cachedRecs);
+        const cachedBriefing = aiCache.get(`briefing_${selectedOrgId}_${todayKey}`) as Briefing | undefined;
+        if (cachedBriefing) setBriefing(cachedBriefing);
       })
       .finally(() => setLoading(false));
   }
@@ -315,21 +315,39 @@ export default function DashboardPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedOrgId]);
 
-  // Daily briefing: auto-fire once dashboard data has loaded, unless already
-  // dismissed today (localStorage key includes today's date so it naturally
-  // resets tomorrow).
-  useEffect(() => {
-    if (!data || briefing || briefingLoading) return;
-    if (localStorage.getItem(dismissKey)) {
-      setBriefingDismissed(true);
-      return;
-    }
+  function loadRecommendations() {
+    if (!selectedOrgId || recsLoading) return;
+    setRecsLoading(true);
+    fetch(`/api/ai/recommendations?org_id=${selectedOrgId}`)
+      .then((r) => r.json())
+      .then((body) => {
+        const result = (body.data ?? []).slice(0, 3);
+        setRecs(result);
+        aiCache.set(`recs_${selectedOrgId}`, result);
+        incrementAi();
+      })
+      .finally(() => setRecsLoading(false));
+  }
+
+  function loadBriefing() {
+    if (!selectedOrgId || briefingLoading || !data) return;
     setBriefingLoading(true);
-    generateAI("Analyst", "daily_briefing", { dashboard_data: data })
-      .then((res) => setBriefing(res as Briefing))
+    setBriefingDismissed(false);
+    fetch(`/api/ai/daily-briefing`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ org_id: selectedOrgId, dashboard_data: data }),
+    })
+      .then((r) => r.json())
+      .then((body) => {
+        const result = body.data as Briefing;
+        setBriefing(result);
+        aiCache.set(`briefing_${selectedOrgId}_${todayKey}`, result);
+        incrementAi();
+      })
+      .catch(() => setBriefing(null))
       .finally(() => setBriefingLoading(false));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [data]);
+  }
 
   function dismissBriefing() {
     localStorage.setItem(dismissKey, "1");
@@ -356,8 +374,8 @@ export default function DashboardPage() {
       if (p.end_date) upcoming.push({ key: p.id, title: p.name, date: p.end_date });
     }
   }
-  const meeting = nextMeeting();
-  if (meeting) upcoming.push({ key: meeting.id, title: meeting.title, date: meeting.start_time });
+  const meeting = data.next_meeting;
+  if (meeting) upcoming.push({ key: meeting.id, title: meeting.title, date: meeting.startTime });
   upcoming.sort((a, b) => +new Date(a.date) - +new Date(b.date));
   const upcomingTop3 = upcoming.slice(0, 3);
 
@@ -376,16 +394,14 @@ export default function DashboardPage() {
             variant="secondary"
             className="!rounded-full !border-ai-600 !text-ai-600 hover:!bg-ai-100"
             onClick={() => {
-              setBriefingDismissed(false);
-              if (!briefing) {
-                setBriefingLoading(true);
-                generateAI("Analyst", "daily_briefing", { dashboard_data: data })
-                  .then((res) => setBriefing(res as Briefing))
-                  .finally(() => setBriefingLoading(false));
+              if (briefing) {
+                setBriefingDismissed(false);
+              } else {
+                loadBriefing();
               }
             }}
           >
-            AI: Daily Briefing
+            {briefingLoading ? "Generating…" : "AI: Daily Briefing"}
           </Button>
         </div>
       </div>
@@ -719,9 +735,6 @@ export default function DashboardPage() {
         </div>
 
         <div className="space-y-6 lg:col-span-2">
-          {/* Next Meeting — mocked (no real Communication connector yet,
-              CLAUDE.md §11a), but a genuine mocked row from
-              lib/mock/communication.ts, not a fabricated placeholder. */}
           <Card className="!rounded-2xl !border-none !bg-neutral-950 !p-5 text-neutral-50">
             <div className="mb-8 flex items-start justify-between">
               <p className="text-body-medium font-medium">Next Meeting</p>
@@ -731,11 +744,22 @@ export default function DashboardPage() {
               <>
                 <h3 className="text-h3 font-semibold">{meeting.title}</h3>
                 <p className="mt-1 text-small text-neutral-400">
-                  {new Date(meeting.start_time).toLocaleString(undefined, { weekday: "short", hour: "numeric", minute: "2-digit" })}
+                  {new Date(meeting.startTime).toLocaleString(undefined, { weekday: "short", hour: "numeric", minute: "2-digit" })}
                 </p>
-                <Button href="/communication/video" className="!mt-5 !w-full !rounded-full !bg-ai-600 hover:!bg-ai-600/90">
-                  Join Meeting
-                </Button>
+                {meeting.meetUrl ? (
+                  <a
+                    href={meeting.meetUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="mt-5 block w-full rounded-full bg-ai-600 px-4 py-2 text-center text-body-medium font-medium text-white hover:bg-ai-600/90"
+                  >
+                    Join Meeting
+                  </a>
+                ) : (
+                  <Button href="/communication/video" className="!mt-5 !w-full !rounded-full !bg-ai-600 hover:!bg-ai-600/90">
+                    Join Meeting
+                  </Button>
+                )}
               </>
             ) : (
               <p className="text-small text-neutral-400">Nothing scheduled right now.</p>
@@ -762,7 +786,7 @@ export default function DashboardPage() {
               <MessageList messages={chat.messages} sending={chat.sending} streamingId={chat.streamingId} />
             )}
             {chat.conversationId && <ChatInput disabled={chat.sending} onSend={(text) => chat.sendMessage(text)} />}
-            {recs.length > 0 && (
+            {recs.length > 0 ? (
               <div className="flex gap-2 overflow-x-auto border-t border-neutral-200 p-3">
                 {recs.map((r) => {
                   const accent = r.priority === "critical" ? "danger" : r.priority === "high" ? "warning" : "neutral";
@@ -777,6 +801,17 @@ export default function DashboardPage() {
                     </a>
                   );
                 })}
+              </div>
+            ) : (
+              <div className="border-t border-neutral-200 p-3">
+                <button
+                  type="button"
+                  onClick={loadRecommendations}
+                  disabled={recsLoading}
+                  className="w-full rounded-lg bg-ai-50 px-3 py-2 text-small font-medium text-ai-600 hover:bg-ai-100 disabled:opacity-50"
+                >
+                  {recsLoading ? "Loading…" : "Load AI recommendations"}
+                </button>
               </div>
             )}
           </Card>

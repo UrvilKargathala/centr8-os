@@ -5,6 +5,7 @@ import { generatedDocuments, projects } from "@/db/schema";
 import { ApiError, handleApiError, requireUserId } from "@/lib/api/helpers";
 import { requirePermission } from "@/lib/api/permissions";
 import { generateAI } from "@/lib/ai/generate";
+import { createNotification } from "@/lib/notifications/create";
 
 const DOC_TYPES = ["prd", "sop", "meeting_summary", "release_notes", "bug_report", "test_cases", "client_update", "executive_summary"];
 
@@ -41,6 +42,15 @@ export async function POST(req: NextRequest) {
           createdBy: userId,
         })
         .returning();
+
+      await createNotification(db, {
+        orgId: body.org_id,
+        userId,
+        type: "document_ready",
+        title: `Document ready: ${doc.title}`,
+        linkType: "document",
+        linkId: doc.id,
+      });
 
       return doc;
     });

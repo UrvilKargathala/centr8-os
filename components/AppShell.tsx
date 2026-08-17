@@ -4,9 +4,11 @@ import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { useOrg } from "@/lib/context/OrgContext";
+import { useAiUsage } from "@/lib/context/AiUsageContext";
 import { createClient } from "@/lib/supabase/client";
 import { ToastProvider } from "@/components/ui/Toast";
 import { AttendanceWidget } from "@/components/hr/AttendanceWidget";
+import { NotificationBell } from "@/components/notifications/NotificationBell";
 import {
   ChatInput,
   HeroEmptyState,
@@ -105,12 +107,14 @@ const NAV_SECTIONS: NavSection[] = [
       { href: "/communication/mail", label: "Mail", icon: ICON.mail },
       { href: "/communication/calls", label: "Calls", icon: ICON.phone },
       { href: "/communication/video", label: "Video", icon: ICON.video },
+      { href: "/communication/clickup", label: "ClickUp", icon: ICON.clipboard },
     ],
   },
   {
     title: "Resources",
     icon: ICON.gauge,
     items: [
+      { href: "/capacity", label: "Capacity Planning", icon: ICON.gauge },
       { href: "/budgets", label: "Budgets", icon: ICON.currency },
     ],
   },
@@ -137,10 +141,10 @@ const NAV_SECTIONS: NavSection[] = [
     adminOnly: true,
     items: [
       { href: "/admin/members", label: "Members & Roles", icon: ICON.users },
-      { href: "/profile", label: "SSO & Security", icon: ICON.shield },
+      { href: "/admin/sso-security", label: "SSO & Security", icon: ICON.shield, comingSoon: true },
       { href: "/admin/automations", label: "Automations", icon: ICON.robot, comingSoon: true },
-      { href: "/profile", label: "API Keys", icon: ICON.key },
-      { href: "/admin/audit-log", label: "Audit Log", icon: ICON.clipboard, comingSoon: true },
+      { href: "/admin/api-keys", label: "API Keys", icon: ICON.key, comingSoon: true },
+      { href: "/admin/audit-log", label: "Audit Log", icon: ICON.clipboard },
       { href: "/admin/integrations", label: "Integrations", icon: ICON.plug },
     ],
   },
@@ -407,34 +411,30 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [approvalsOpen, setApprovalsOpen] = useState(false);
   const [askOpen, setAskOpen] = useState(false);
+  const { callCount: aiCallCount } = useAiUsage();
   const [orgMenuOpen, setOrgMenuOpen] = useState(false);
   const approvalsRef = useRef<HTMLDivElement>(null);
   const orgMenuRef = useRef<HTMLDivElement>(null);
 
-  // Mock pending Tier 1 AI actions until the queue table + endpoint exist.
-  // Shape mirrors what /api/ai/approvals will return: id, tier, agent, action,
-  // context blurb, drafted output. Reject removes the row; Approve TODO —
-  // will POST to the corresponding action endpoint once wired.
-  const [approvals, setApprovals] = useState([
-    {
-      id: "a1",
-      agent: "Writer",
-      action: "Client status email — Website relaunch",
-      preview: "Hi team — quick update on Week 3: two milestones are done, one at-risk from an unassigned task…",
-    },
-    {
-      id: "a2",
-      agent: "Planner",
-      action: "Reassign 'Design homepage' from unassigned to project lead",
-      preview: "Task has been sitting unassigned for 5 days; auto-assign to unblock the sprint.",
-    },
-    {
-      id: "a3",
-      agent: "Analyst",
-      action: "Flag Demo Project as at-risk (health scan)",
-      preview: "1/5 tasks done at 60% timeline elapsed — pace suggests missing end date by ~2 weeks.",
-    },
-  ]);
+  const [approvals, setApprovals] = useState<Array<{ id: string; agent: string; action: string; preview: string }>>([]);
+
+  useEffect(() => {
+    if (!selectedOrgId) return;
+    fetch(`/api/ai/sprint-plans?org_id=${selectedOrgId}&status=pending`)
+      .then((r) => (r.ok ? r.json() : { data: [] }))
+      .then((json) => {
+        const plans = (json.data ?? []) as Array<{ id: string; sprintName: string; reasoning?: string }>;
+        setApprovals(
+          plans.map((p) => ({
+            id: p.id,
+            agent: "Planner",
+            action: `Sprint plan: ${p.sprintName}`,
+            preview: p.reasoning?.slice(0, 120) ?? "AI-generated sprint plan awaiting your review.",
+          })),
+        );
+      })
+      .catch(() => {});
+  }, [selectedOrgId]);
 
   useEffect(() => {
     const v = localStorage.getItem("centr8:sidebar-collapsed");
@@ -595,11 +595,18 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               type="button"
               onClick={() => setAskOpen(true)}
               title="Ask AI"
-              className="flex h-9 items-center gap-1.5 rounded-sm border border-ai-600 px-2.5 text-small font-medium text-ai-600 hover:bg-ai-100"
+              className="relative flex h-9 items-center gap-1.5 rounded-sm border border-ai-600 px-2.5 text-small font-medium text-ai-600 hover:bg-ai-100"
             >
               <Icon path={ICON.sparkle} className="h-4 w-4" />
               <span className="hidden sm:inline">Ask AI</span>
+              {aiCallCount > 0 && (
+                <span className="absolute -right-1.5 -top-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-ai-600 px-1 text-[10px] font-bold text-white">
+                  {aiCallCount}
+                </span>
+              )}
             </button>
+
+            <NotificationBell orgId={selectedOrgId} />
 
             <div className="relative" ref={approvalsRef}>
               <button
@@ -644,14 +651,25 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                           <div className="flex gap-2">
                             <button
                               type="button"
-                              onClick={() => setApprovals((list) => list.filter((x) => x.id !== a.id))}
+                              onClick={() => {
+                                fetch(`/api/ai/sprint-plans/${a.id}/approve`, { method: "POST" })
+                                  .then((r) => { if (r.ok) setApprovals((list) => list.filter((x) => x.id !== a.id)); });
+                              }}
                               className="rounded-sm bg-primary-600 px-2.5 py-1 text-small font-medium text-neutral-50 hover:bg-primary-700"
                             >
                               Approve
                             </button>
                             <button
                               type="button"
-                              onClick={() => setApprovals((list) => list.filter((x) => x.id !== a.id))}
+                              onClick={() => {
+                                const reason = prompt("Rejection reason:");
+                                if (!reason) return;
+                                fetch(`/api/ai/sprint-plans/${a.id}/reject`, {
+                                  method: "POST",
+                                  headers: { "Content-Type": "application/json" },
+                                  body: JSON.stringify({ rejection_reason: reason }),
+                                }).then((r) => { if (r.ok) setApprovals((list) => list.filter((x) => x.id !== a.id)); });
+                              }}
                               className="rounded-sm border border-neutral-300 px-2.5 py-1 text-small font-medium text-neutral-700 hover:bg-neutral-200"
                             >
                               Reject

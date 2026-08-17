@@ -7,8 +7,17 @@ import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { Modal } from "@/components/ui/Modal";
+import { Input } from "@/components/ui/Input";
 
-type Integration = { id: string; provider: string; status: string; connectedAt: string | null; accountLabel: string | null };
+type Integration = {
+  id: string;
+  provider: string;
+  status: string;
+  connectedAt: string | null;
+  accountLabel: string | null;
+  lastSyncedAt: string | null;
+  lastError: string | null;
+};
 
 const PROVIDERS = [
   {
@@ -17,20 +26,36 @@ const PROVIDERS = [
     description: "Send messages to a Slack channel from within Centr8 OS (e.g. project updates).",
     available: true,
     connectedLabel: "Workspace",
+    connectRoute: "slack",
   },
   {
     key: "gmail",
     name: "Gmail",
-    description: "Send generated documents and updates via Gmail.",
+    description: "Read your inbox and send replies via Gmail.",
     available: true,
     connectedLabel: "Connected as",
+    connectRoute: "gmail",
   },
   {
-    key: "google-meet",
+    key: "google_meet",
     name: "Google Meet",
-    description: "Schedule and link video meetings.",
+    description: "Schedule and link video meetings, with a real Meet link on every event.",
     available: true,
     connectedLabel: "Connected as",
+    // Route folder is "google" (app/api/integrations/google/*), not
+    // "google_meet" — Gmail and Google Meet share one OAuth client
+    // (lib/api/googleOAuth.ts) but are still two separate integrations
+    // rows/routes, so the URL segment doesn't just mirror the provider key
+    // here the way it does for slack/gmail/clickup.
+    connectRoute: "google",
+  },
+  {
+    key: "clickup",
+    name: "ClickUp",
+    description: "Sync tasks, comments, and docs from your ClickUp workspace.",
+    available: true,
+    connectedLabel: "Connected to",
+    connectRoute: "clickup",
   },
 ] as const;
 
@@ -63,10 +88,21 @@ function GoogleMeetIcon() {
   );
 }
 
+function ClickUpIcon() {
+  return (
+    <svg className="h-8 w-8" viewBox="0 0 24 24" fill="none">
+      <rect width="24" height="24" rx="5" fill="#7B68EE" />
+      <path d="M6 15.5L12 10.5L18 15.5" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M6 11L12 6L18 11" stroke="#FD71AF" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
 const PROVIDER_ICON: Record<(typeof PROVIDERS)[number]["key"], () => React.ReactElement> = {
   slack: SlackIcon,
   gmail: GmailIcon,
-  "google-meet": GoogleMeetIcon,
+  google_meet: GoogleMeetIcon,
+  clickup: ClickUpIcon,
 };
 
 const CONTACT_ICON = "M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z";
@@ -75,16 +111,21 @@ const BASIC_ICON = "M13 10V3L4 14h7v7l9-11h-7z";
 
 // Scopes shown in the pre-connect consent modal — mirrors what the actual
 // OAuth grant covers for each provider, so nothing here overstates access.
-const PROVIDER_SCOPES: Record<(typeof PROVIDERS)[number]["key"], { icon: string; title: string; description: string }[]> = {
+// ClickUp has no entry: it's a Personal API Token, not an OAuth grant, so
+// it never renders through this consent-screen modal at all (see
+// ClickUpConnectModal below).
+type OAuthProviderKey = Exclude<(typeof PROVIDERS)[number]["key"], "clickup">;
+const PROVIDER_SCOPES: Record<OAuthProviderKey, { icon: string; title: string; description: string }[]> = {
   slack: [
     { icon: CONTACT_ICON, title: "Post messages", description: "Send messages to a Slack channel on your behalf." },
     { icon: BASIC_ICON, title: "Basic functionality", description: "The basic scope required for authentication." },
   ],
   gmail: [
-    { icon: CONTACT_ICON, title: "Send email", description: "Send generated documents and updates via Gmail." },
+    { icon: CONTACT_ICON, title: "Read inbox", description: "View your emails and threads inside Centr8 OS." },
+    { icon: CONTACT_ICON, title: "Send email", description: "Send replies and generated documents via Gmail." },
     { icon: BASIC_ICON, title: "Basic functionality", description: "The basic scope required for authentication." },
   ],
-  "google-meet": [
+  google_meet: [
     { icon: CALENDAR_ICON, title: "Create meetings", description: "Schedule and link video meetings on your calendar." },
     { icon: BASIC_ICON, title: "Basic functionality", description: "The basic scope required for authentication." },
   ],
@@ -105,7 +146,7 @@ function ConnectModal({
   connectHref,
   onClose,
 }: {
-  provider: (typeof PROVIDERS)[number];
+  provider: Extract<(typeof PROVIDERS)[number], { key: OAuthProviderKey }>;
   connectHref: string;
   onClose: () => void;
 }) {
@@ -178,7 +219,9 @@ function IntegrationsPageInner() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [busyProvider, setBusyProvider] = useState<string | null>(null);
-  const [connectingProvider, setConnectingProvider] = useState<(typeof PROVIDERS)[number]["key"] | null>(null);
+  const [connectingProvider, setConnectingProvider] = useState<OAuthProviderKey | null>(null);
+  const [connectingClickUp, setConnectingClickUp] = useState(false);
+  const [disconnectConfirm, setDisconnectConfirm] = useState<{ id: string; providerKey: string; providerName: string } | null>(null);
 
   const canConfigure = can("integration", "configure");
   const callbackMessage = searchParams.get("message");
@@ -202,7 +245,17 @@ function IntegrationsPageInner() {
 
   async function disconnect(id: string, providerKey: string) {
     setBusyProvider(providerKey);
-    await fetch(`/api/integrations/${id}`, { method: "DELETE" });
+    if (providerKey === "google_meet") {
+      // Dedicated route — unlike the generic DELETE, this one actually
+      // calls Google's revoke endpoint before clearing the stored tokens.
+      await fetch(`/api/integrations/google/disconnect`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ org_id: selectedOrgId }),
+      });
+    } else {
+      await fetch(`/api/integrations/${id}`, { method: "DELETE" });
+    }
     setBusyProvider(null);
     loadAll();
   }
@@ -213,6 +266,7 @@ function IntegrationsPageInner() {
   if (error) return <p className="rounded-md bg-danger-100 p-3 text-body text-danger-600">{error}</p>;
 
   const connectedByProvider = new Map(integrations.filter((i) => i.status === "connected").map((i) => [i.provider, i]));
+  const erroredByProvider = new Map(integrations.filter((i) => i.status === "error").map((i) => [i.provider, i]));
 
   return (
     <div className="space-y-6">
@@ -239,7 +293,11 @@ function IntegrationsPageInner() {
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {PROVIDERS.map((provider) => {
           const connected = connectedByProvider.get(provider.key);
+          const errored = erroredByProvider.get(provider.key);
           const Icon = PROVIDER_ICON[provider.key];
+          const isClickUp = provider.key === "clickup";
+          const isGoogleMeet = provider.key === "google_meet";
+          const needsDisconnectConfirm = isClickUp || isGoogleMeet;
           return (
             <Card key={provider.key} padding="md" className="flex flex-col gap-3">
               <div className="flex items-start justify-between gap-2">
@@ -249,6 +307,8 @@ function IntegrationsPageInner() {
                 </div>
                 {connected ? (
                   <Badge color="success">Connected</Badge>
+                ) : errored ? (
+                  <Badge color="danger">Connection error</Badge>
                 ) : provider.available ? (
                   <Badge color="neutral">Not connected</Badge>
                 ) : (
@@ -261,16 +321,26 @@ function IntegrationsPageInner() {
                   {provider.connectedLabel}: {connected.accountLabel}
                 </p>
               )}
+              {connected?.lastSyncedAt && (
+                <p className="text-caption text-neutral-400">Last synced: {new Date(connected.lastSyncedAt).toLocaleString()}</p>
+              )}
+              {errored?.lastError && <p className="text-small text-danger-600">{errored.lastError} — reconnect to fix.</p>}
 
               {provider.available &&
                 (connected ? (
                   <Button
                     variant="secondary"
-                    onClick={() => disconnect(connected.id, provider.key)}
+                    onClick={() =>
+                      needsDisconnectConfirm
+                        ? setDisconnectConfirm({ id: connected.id, providerKey: provider.key, providerName: provider.name })
+                        : disconnect(connected.id, provider.key)
+                    }
                     disabled={busyProvider === provider.key}
                   >
                     {busyProvider === provider.key ? "Disconnecting…" : "Disconnect"}
                   </Button>
+                ) : isClickUp ? (
+                  <Button onClick={() => setConnectingClickUp(true)}>{errored ? "Reconnect" : "Connect"}</Button>
                 ) : (
                   <Button onClick={() => setConnectingProvider(provider.key)}>Connect</Button>
                 ))}
@@ -281,11 +351,115 @@ function IntegrationsPageInner() {
 
       {connectingProvider && (
         <ConnectModal
-          provider={PROVIDERS.find((p) => p.key === connectingProvider)!}
-          connectHref={`/api/integrations/${connectingProvider}/connect?org_id=${selectedOrgId}`}
+          provider={PROVIDERS.find((p) => p.key === connectingProvider) as Extract<(typeof PROVIDERS)[number], { key: OAuthProviderKey }>}
+          connectHref={`/api/integrations/${PROVIDERS.find((p) => p.key === connectingProvider)?.connectRoute}/connect?org_id=${selectedOrgId}`}
           onClose={() => setConnectingProvider(null)}
         />
       )}
+
+      {connectingClickUp && selectedOrgId && (
+        <ClickUpConnectModal
+          orgId={selectedOrgId}
+          onClose={() => setConnectingClickUp(false)}
+          onConnected={() => {
+            setConnectingClickUp(false);
+            loadAll();
+          }}
+        />
+      )}
+
+      {disconnectConfirm && (
+        <Modal onClose={() => setDisconnectConfirm(null)} maxWidth="max-w-sm">
+          <div className="space-y-4">
+            <h3 className="font-heading text-h3 font-semibold text-neutral-950">Disconnect {disconnectConfirm.providerName}?</h3>
+            <p className="text-body text-neutral-700">
+              {disconnectConfirm.providerKey === "google_meet"
+                ? "Centr8 OS will no longer be able to create or read meetings on this Google Calendar until you reconnect."
+                : "Centr8 OS will no longer be able to read tasks or post comments to your ClickUp workspace until you reconnect."}
+            </p>
+            <div className="flex justify-end gap-3">
+              <Button variant="secondary" onClick={() => setDisconnectConfirm(null)}>
+                Cancel
+              </Button>
+              <Button
+                onClick={async () => {
+                  const { id, providerKey } = disconnectConfirm;
+                  setDisconnectConfirm(null);
+                  await disconnect(id, providerKey);
+                }}
+              >
+                Disconnect
+              </Button>
+            </div>
+          </div>
+        </Modal>
+      )}
     </div>
+  );
+}
+
+function ClickUpConnectModal({ orgId, onClose, onConnected }: { orgId: string; onClose: () => void; onConnected: () => void }) {
+  const [token, setToken] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function submit() {
+    if (!token.trim()) return;
+    setSubmitting(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/integrations/clickup/connect", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ org_id: orgId, api_token: token.trim() }),
+      });
+      const body = await res.json();
+      if (!res.ok) throw new Error(body.error ?? "Failed to connect");
+      onConnected();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to connect");
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  return (
+    <Modal onClose={onClose} maxWidth="max-w-sm">
+      <div className="space-y-4">
+        <div className="flex items-center gap-2.5">
+          <ClickUpIcon />
+          <h2 className="text-h3 font-semibold text-neutral-950">Enter your ClickUp API Token</h2>
+        </div>
+        <p className="text-small text-neutral-600">
+          Centr8 OS stores this token server-side to sync tasks, comments, and docs from your ClickUp workspace. It is never
+          shown in your browser after connecting.
+        </p>
+        <Input
+          type="password"
+          autoFocus
+          placeholder="pk_1234567_ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+          value={token}
+          onChange={(e) => setToken(e.target.value)}
+          className="w-full"
+        />
+        <a
+          href="https://app.clickup.com/settings/apps"
+          target="_blank"
+          rel="noreferrer"
+          className="block text-small text-primary-700 underline"
+        >
+          How to find my token
+        </a>
+        {error && <p className="rounded-md bg-danger-100 p-3 text-small text-danger-600">{error}</p>}
+        <div className="flex gap-3">
+          <Button variant="secondary" className="flex-1" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button className="flex-1" onClick={submit} disabled={submitting || !token.trim()}>
+            {submitting ? "Connecting…" : "Connect"}
+          </Button>
+        </div>
+      </div>
+    </Modal>
   );
 }

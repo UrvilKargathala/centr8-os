@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useOrg } from "@/lib/context/OrgContext";
+import { useAiUsage } from "@/lib/context/AiUsageContext";
 import { Card } from "@/components/ui/Card";
 import { Badge, cardAccentClass } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
@@ -42,22 +43,39 @@ function getDismissed(): string[] {
 
 export default function RecommendationsPage() {
   const { selectedOrgId, loading: orgLoading } = useOrg();
+  const { increment: incrementAi, cache: aiCache } = useAiUsage();
   const [recs, setRecs] = useState<Recommendation[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
+  const [loaded, setLoaded] = useState(false);
   const [category, setCategory] = useState<(typeof CATEGORIES)[number]>("All");
   const [dismissed, setDismissed] = useState<string[]>([]);
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
 
   function load() {
-    if (!selectedOrgId) return;
+    if (!selectedOrgId || loading) return;
     setLoading(true);
     fetch(`/api/ai/recommendations?org_id=${selectedOrgId}`)
       .then((r) => r.json())
-      .then((body) => setRecs(body.data ?? []))
+      .then((body) => {
+        const result = body.data ?? [];
+        setRecs(result);
+        aiCache.set(`recs_${selectedOrgId}`, result);
+        incrementAi();
+        setLoaded(true);
+      })
       .finally(() => setLoading(false));
   }
-  useEffect(load, [selectedOrgId]); // eslint-disable-line react-hooks/exhaustive-deps
-  useEffect(() => setDismissed(getDismissed()), []);
+
+  useEffect(() => {
+    setDismissed(getDismissed());
+    if (selectedOrgId) {
+      const cached = aiCache.get(`recs_${selectedOrgId}`) as Recommendation[] | undefined;
+      if (cached) {
+        setRecs(cached);
+        setLoaded(true);
+      }
+    }
+  }, [selectedOrgId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   function dismiss(id: string) {
     const next = [...dismissed, id];
@@ -72,8 +90,28 @@ export default function RecommendationsPage() {
   const critical = visible.filter((r) => r.priority === "critical").length;
   const high = visible.filter((r) => r.priority === "high").length;
 
-  if (orgLoading || loading) return <p className="text-body text-neutral-600">Loading…</p>;
+  if (orgLoading) return <p className="text-body text-neutral-600">Loading…</p>;
   if (!selectedOrgId) return <p className="text-body text-neutral-600">No organization selected.</p>;
+
+  if (!loaded && !loading) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-h2 font-semibold text-neutral-950">Recommendations</h1>
+          <p className="text-body text-neutral-600">AI-surfaced actions worth your attention.</p>
+        </div>
+        <Empty>
+          <EmptyHeader>
+            <EmptyTitle>No recommendations loaded</EmptyTitle>
+            <EmptyDescription>Click below to generate AI-powered recommendations based on your workspace data.</EmptyDescription>
+          </EmptyHeader>
+          <Button onClick={load}>Load recommendations</Button>
+        </Empty>
+      </div>
+    );
+  }
+
+  if (loading) return <p className="text-body text-neutral-600">Generating recommendations…</p>;
 
   return (
     <div className="space-y-6">
@@ -82,8 +120,8 @@ export default function RecommendationsPage() {
           <h1 className="text-h2 font-semibold text-neutral-950">Recommendations</h1>
           <p className="text-body text-neutral-600">AI-surfaced actions worth your attention.</p>
         </div>
-        <Button variant="secondary" onClick={load}>
-          Refresh
+        <Button variant="secondary" onClick={load} disabled={loading}>
+          {loading ? "Refreshing…" : "Refresh"}
         </Button>
       </div>
 

@@ -21,7 +21,9 @@ import {
   tasks,
 } from "@/db/schema";
 import { hasPermission } from "./permissions";
-import { callsMissedToday, gmailUnread, nextMeeting, slackTotalUnread } from "@/lib/mock/communication";
+import { callsMissedToday, gmailUnread, slackTotalUnread } from "@/lib/mock/communication";
+import { integrations } from "@/db/schema";
+import { getValidGoogleToken, listGoogleMeetings, type GoogleMeeting } from "./googleMeet";
 
 const OPEN_DEAL_STAGES = ["prospecting", "discovery", "proposal", "negotiation", "contract_sent"] as const;
 
@@ -313,13 +315,29 @@ export async function loadActivityFeed(db: OrgScopedDb, orgId: string) {
   return [...fromAudit, ...fromCrm].sort((a, b) => +new Date(b.timestamp) - +new Date(a.timestamp)).slice(0, 15);
 }
 
+async function loadNextMeeting(db: OrgScopedDb, orgId: string): Promise<GoogleMeeting | null> {
+  try {
+    const { accessToken, calendarId } = await getValidGoogleToken(db, orgId);
+    const now = new Date();
+    const dayEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
+    const meetings = await listGoogleMeetings(accessToken, calendarId, {
+      timeMin: now.toISOString(),
+      timeMax: dayEnd.toISOString(),
+    });
+    return meetings[0] ?? null;
+  } catch {
+    return null;
+  }
+}
+
 export async function loadDashboard(db: OrgScopedDb, userId: string, orgId: string) {
-  const [pm, hr, crm, ai, recentActivity] = await Promise.all([
+  const [pm, hr, crm, ai, recentActivity, nextMeeting] = await Promise.all([
     loadProjectsSection(db, userId, orgId),
     loadHrSection(db, userId, orgId),
     loadCrmSection(db, userId, orgId),
     loadAiSection(db, userId, orgId),
     loadActivityFeed(db, orgId),
+    loadNextMeeting(db, orgId),
   ]);
 
   return {
@@ -335,15 +353,13 @@ export async function loadDashboard(db: OrgScopedDb, userId: string, orgId: stri
     leads: crm?.leads ?? null,
     deals: crm?.deals ?? null,
     accounts: crm?.accounts ?? null,
-    // Mock — no real connector wired yet (CLAUDE.md §11a: Communication is
-    // integration-only). Never gated by permission: it's the same fixture
-    // data everyone with Communication sidebar access already sees.
     communication: {
       unread_messages: slackTotalUnread(),
       unread_emails: gmailUnread(),
-      upcoming_meetings: nextMeeting() ? 1 : 0,
+      upcoming_meetings: nextMeeting ? 1 : 0,
       missed_calls: callsMissedToday(),
     },
+    next_meeting: nextMeeting,
     ai,
     recent_activity: recentActivity,
   };

@@ -50,6 +50,10 @@ const writerPrompts: Record<string, PromptBuilder> = {
     prompt: `Draft a professional email reply. Original subject: "${ctx.subject || ""}". Return JSON: {"subject": "Re: ...", "body": "..."}. Sign off as "Urvil".`,
     json: true,
   }),
+  draft_meeting_notes_template: (ctx) => ({
+    prompt: `Generate a structured meeting notes template (markdown) for a meeting titled "${ctx.title || "Meeting"}" with attendees: ${((ctx.attendees as string[] | undefined) ?? []).join(", ") || "(none listed)"}. Include sections for Agenda, Discussion notes, Decisions, and Action items — leave the content blank/fill-in-able, this is a template for the user to complete during/after the meeting, not fabricated content. Return plain text (markdown).`,
+    json: false,
+  }),
   summarize_call: (ctx) => ({
     prompt: `Summarize a call with ${ctx.participant || "the caller"}. ${ctx.notes ? `Notes: "${ctx.notes}"` : "No notes provided."}. Return JSON: {"summary": "2-3 sentence summary", "action_items": ["item1", "item2", "item3"]}`,
     json: true,
@@ -139,10 +143,16 @@ Return JSON: {"summary": "3-5 sentence overview of the day", "highlights": [{"ty
     prompt: `Recommend 3 team members for the role of "${ctx.role || "Team Member"}". Return a JSON array: [{"name": "Full Name", "reason": "why they fit"}]. Use plausible professional names.`,
     json: true,
   }),
-  summarize_channel: (ctx) => ({
-    prompt: `Summarize today's activity in the "${ctx.channel || "general"}" Slack channel in 3-4 sentences. Mention key topics and any action items. Return plain text (can include markdown).`,
-    json: false,
-  }),
+  summarize_channel: (ctx) => {
+    const messages = (ctx.messages as { text: string; authorName: string }[] | undefined) ?? [];
+    const transcript = messages.map((m) => `${m.authorName}: ${m.text}`).join("\n");
+    return {
+      prompt: transcript
+        ? `Summarize this chat channel's discussion in 3-4 sentences, mentioning key topics and any action items. Return plain text (can include markdown).\n\nTranscript:\n${transcript}`
+        : `The "${ctx.channel || "channel"}" channel has no messages yet. Say briefly that there's nothing to summarize.`,
+      json: false,
+    };
+  },
   summarize_email_thread: () => ({
     prompt: `Summarize an email thread briefly in 1-2 sentences. The thread is about a client project status update. Return plain text only.`,
     json: false,

@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import { and, eq, notInArray } from "drizzle-orm";
+import { and, eq, inArray, isNull, notInArray } from "drizzle-orm";
 import { withOrgContext } from "@/db/withOrgContext";
-import { people, projects, sprintPlanProposals, tasks } from "@/db/schema";
+import { orgMemberships, people, projects, sprintPlanProposals, tasks } from "@/db/schema";
 import { ApiError, handleApiError, requireUserId } from "@/lib/api/helpers";
 import { requirePermission } from "@/lib/api/permissions";
 import { generateAI } from "@/lib/ai/generate";
+import { createNotification } from "@/lib/notifications/create";
 
 export async function POST(req: NextRequest) {
   try {
@@ -54,6 +55,25 @@ export async function POST(req: NextRequest) {
           reasoning: ai.reasoning,
         })
         .returning();
+
+      // Notify everyone who can approve it (sprint_plan:approve is granted
+      // owner/admin/member) rather than a single "approver" — this resource
+      // type has no assignee concept, see permissions.ts.
+      const approvers = await db
+        .select({ userId: orgMemberships.userId })
+        .from(orgMemberships)
+        .where(and(eq(orgMemberships.orgId, body.org_id), inArray(orgMemberships.role, ["owner", "admin", "member"]), isNull(orgMemberships.deactivatedAt)));
+      for (const approver of approvers) {
+        await createNotification(db, {
+          orgId: body.org_id,
+          userId: approver.userId,
+          type: "sprint_plan_pending",
+          title: `Sprint plan ready for review: ${proposal.sprintName}`,
+          body: `${project.name} — ${ai.tasks.length} task(s) proposed`,
+          linkType: "sprint_plan",
+          linkId: proposal.id,
+        });
+      }
 
       return proposal;
     });

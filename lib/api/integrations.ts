@@ -17,5 +17,7 @@ export function toPublicIntegration(row: IntegrationRow) {
     // Display-only: Slack's workspace/team name, or Gmail's connected email
     // address — whichever the provider's callback stored. Never a token.
     accountLabel: typeof config.team_name === "string" ? config.team_name : null,
+    lastSyncedAt: row.lastSyncedAt,
+    lastError: row.lastError,
   };
 }

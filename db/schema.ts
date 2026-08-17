@@ -3,6 +3,7 @@ import {
   boolean,
   check,
   date,
+  index,
   integer,
   jsonb,
   numeric,
@@ -939,7 +940,7 @@ export const accountStatusEnum = pgEnum("account_status", ["active", "inactive",
 // matches the new spec's draft/active/paused/completed vocabulary.
 export const campaignStatusEnum = pgEnum("campaign_status", ["planned", "draft", "active", "paused", "completed", "cancelled"]);
 export const forecastPeriodTypeEnum = pgEnum("forecast_period_type", ["monthly", "quarterly", "annual"]);
-export const integrationProviderEnum = pgEnum("integration_provider", ["slack", "gmail", "zoom"]);
+export const integrationProviderEnum = pgEnum("integration_provider", ["slack", "gmail", "zoom", "clickup", "google_meet"]);
 export const integrationStatusEnum = pgEnum("integration_status", ["connected", "disconnected", "error"]);
 
 export const employmentStatusEnum = pgEnum("employment_status", [
@@ -2060,6 +2061,7 @@ export const people = pgTable(
     roles: jsonb("roles").notNull().default([]),
     skills: jsonb("skills").notNull().default([]),
     isActive: boolean("is_active").notNull().default(true),
+    userId: uuid("user_id"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
     createdByUserId: uuid("created_by_user_id"),
@@ -2442,6 +2444,13 @@ export const integrations = pgTable(
     connectedByUserId: uuid("connected_by_user_id"),
     connectedAt: timestamp("connected_at", { withTimezone: true }),
     status: integrationStatusEnum("status").notNull().default("disconnected"),
+    // ClickUp (Personal API Token, no OAuth redirect) needs these two that
+    // Slack/Gmail's OAuth flow never did: a token can silently expire
+    // between requests, so lastError/status='error' surfaces that without
+    // crashing the calling route, and lastSyncedAt is genuinely new
+    // information (OAuth providers' "connectedAt" was good enough before).
+    lastSyncedAt: timestamp("last_synced_at", { withTimezone: true }),
+    lastError: text("last_error"),
   },
   () => [
     pgPolicy("integrations_isolation", {
@@ -2626,6 +2635,59 @@ export const generatedDocuments = pgTable(
       to: authenticatedRole,
       using: inUserOrgs,
       withCheck: inUserOrgs,
+    }),
+  ],
+).enableRLS();
+
+// In-app notifications feed. No dedicated resourceType. Split per-action
+// policies (unlike ai_conversations' single "for all" policy) because
+// inserts and reads have different actors: the *recipient* reads/marks
+// their own notifications, but the *insert* is always done on someone
+// else's behalf (a manager approves leave -> notifies the requester), so
+// insert can't require user_id = auth.uid() the way select/update/delete
+// do. Insert is org-scoped only; a caller still can't write into an org
+// they're not a member of.
+const ownNotification = sql`user_id = auth.uid()`;
+export const notifications = pgTable(
+  "notifications",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    orgId: uuid("org_id")
+      .notNull()
+      .references(() => organizations.id, { onDelete: "cascade" }),
+    userId: uuid("user_id").notNull(),
+    type: text("type").notNull(),
+    title: text("title").notNull(),
+    body: text("body"),
+    icon: text("icon"),
+    linkType: text("link_type"),
+    linkId: uuid("link_id"),
+    isRead: boolean("is_read").notNull().default(false),
+    readAt: timestamp("read_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index("notifications_user_unread_idx").on(table.userId, table.isRead, table.createdAt),
+    pgPolicy("notifications_select", {
+      for: "select",
+      to: authenticatedRole,
+      using: sql`${inUserOrgs} and ${ownNotification}`,
+    }),
+    pgPolicy("notifications_insert", {
+      for: "insert",
+      to: authenticatedRole,
+      withCheck: inUserOrgs,
+    }),
+    pgPolicy("notifications_update", {
+      for: "update",
+      to: authenticatedRole,
+      using: sql`${inUserOrgs} and ${ownNotification}`,
+      withCheck: sql`${inUserOrgs} and ${ownNotification}`,
+    }),
+    pgPolicy("notifications_delete", {
+      for: "delete",
+      to: authenticatedRole,
+      using: sql`${inUserOrgs} and ${ownNotification}`,
     }),
   ],
 ).enableRLS();

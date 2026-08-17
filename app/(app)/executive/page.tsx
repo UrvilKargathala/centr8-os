@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useOrg } from "@/lib/context/OrgContext";
+import { useAiUsage } from "@/lib/context/AiUsageContext";
 import { StatTile } from "@/components/ui/StatTile";
 import { Badge, projectStatusColor, cardAccentClass } from "@/components/ui/Badge";
 import { Card } from "@/components/ui/Card";
@@ -26,9 +27,11 @@ type Recommendation = {
 
 export default function ExecutivePage() {
   const { selectedOrgId, loading: orgLoading } = useOrg();
+  const { increment: incrementAi, cache: aiCache } = useAiUsage();
   const [projects, setProjects] = useState<Project[]>([]);
   const [health, setHealth] = useState<HealthSnapshot[]>([]);
   const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
+  const [recsLoading, setRecsLoading] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -40,17 +43,31 @@ export default function ExecutivePage() {
     Promise.all([
       fetch(`/api/projects?org_id=${selectedOrgId}`).then((r) => r.json()),
       fetch(`/api/ai/project-health?org_id=${selectedOrgId}`).then((r) => r.json()),
-      fetch(`/api/ai/recommendations?org_id=${selectedOrgId}`).then((r) => r.json()),
     ])
-      .then(([projectsBody, healthBody, recBody]) => {
+      .then(([projectsBody, healthBody]) => {
         if (!projectsBody.data) throw new Error(projectsBody.error ?? "Failed to load projects");
         setProjects(projectsBody.data);
         setHealth(healthBody.data ?? []);
-        setRecommendations(recBody.data ?? []);
+        const cachedRecs = aiCache.get(`recs_${selectedOrgId}`) as Recommendation[] | undefined;
+        if (cachedRecs) setRecommendations(cachedRecs);
       })
       .catch((err) => setError(err instanceof Error ? err.message : "Failed to load executive dashboard"))
       .finally(() => setLoading(false));
-  }, [selectedOrgId]);
+  }, [selectedOrgId]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  function loadRecommendations() {
+    if (!selectedOrgId || recsLoading) return;
+    setRecsLoading(true);
+    fetch(`/api/ai/recommendations?org_id=${selectedOrgId}`)
+      .then((r) => r.json())
+      .then((body) => {
+        const result = body.data ?? [];
+        setRecommendations(result);
+        aiCache.set(`recs_${selectedOrgId}`, result);
+        incrementAi();
+      })
+      .finally(() => setRecsLoading(false));
+  }
 
   if (orgLoading || loading) return <p className="text-body text-neutral-600">Loading…</p>;
   if (!selectedOrgId) return <p className="text-body text-neutral-600">No organization selected.</p>;
@@ -120,12 +137,21 @@ export default function ExecutivePage() {
       <section className="space-y-3">
         <div className="flex items-center justify-between">
           <h2 className="text-h3 font-semibold text-neutral-800">Recommended actions</h2>
-          <Button href="/ai/recommendations" variant="secondary">
-            View all →
-          </Button>
+          <div className="flex gap-2">
+            <Button onClick={loadRecommendations} disabled={recsLoading} variant="secondary">
+              {recsLoading ? "Loading…" : recommendations.length > 0 ? "Refresh" : "Load recommendations"}
+            </Button>
+            {recommendations.length > 0 && (
+              <Button href="/ai/recommendations" variant="secondary">
+                View all →
+              </Button>
+            )}
+          </div>
         </div>
-        {recommendations.length === 0 ? (
-          <p className="text-small text-neutral-600">No open recommendations.</p>
+        {recommendations.length === 0 && !recsLoading ? (
+          <p className="text-small text-neutral-600">Click &quot;Load recommendations&quot; to get AI-powered suggestions.</p>
+        ) : recommendations.length === 0 ? (
+          <p className="text-small text-neutral-600">Generating recommendations…</p>
         ) : (
           <div className="space-y-2">
             {[...recommendations]

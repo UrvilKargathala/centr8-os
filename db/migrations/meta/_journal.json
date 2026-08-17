@@ -715,6 +715,41 @@
       "when": 1785832924000,
       "tag": "0101_task_detail_card_fields",
       "breakpoints": true
+    },
+    {
+      "idx": 102,
+      "version": "7",
+      "when": 1785832925000,
+      "tag": "0102_add_notifications",
+      "breakpoints": true
+    },
+    {
+      "idx": 103,
+      "version": "7",
+      "when": 1785832926000,
+      "tag": "0103_add_clickup_integration",
+      "breakpoints": true
+    },
+    {
+      "idx": 104,
+      "version": "7",
+      "when": 1785832927000,
+      "tag": "0104_widen_integration_read",
+      "breakpoints": true
+    },
+    {
+      "idx": 105,
+      "version": "7",
+      "when": 1785832928000,
+      "tag": "0105_add_google_meet_provider",
+      "breakpoints": true
+    },
+    {
+      "idx": 106,
+      "version": "7",
+      "when": 1786003200000,
+      "tag": "0106_add_people_user_id",
+      "breakpoints": true
     }
   ]
 }
