@@ -568,16 +568,58 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </div>
 
           <div className="ml-auto flex items-center gap-2 sm:gap-3">
+            <AttendanceWidget />
+
+            <div className="hidden h-5 w-px bg-neutral-300 sm:block" />
+
+            <button
+              type="button"
+              onClick={() => setAskOpen(true)}
+              title="Ask AI"
+              className="relative flex h-9 items-center gap-1.5 rounded-sm border border-ai-600 px-2.5 text-small font-medium text-ai-600 hover:bg-ai-100"
+            >
+              <Icon path={ICON.sparkle} className="h-4 w-4" />
+              <span className="hidden sm:inline">Ask AI</span>
+              {aiCallCount > 0 && (
+                <span className="absolute -right-1.5 -top-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-ai-600 px-1 text-[10px] font-bold text-white">
+                  {aiCallCount}
+                </span>
+              )}
+            </button>
+
+            <div className="hidden h-5 w-px bg-neutral-300 sm:block" />
+
+            <button
+              type="button"
+              onClick={toggleTheme}
+              title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-sm text-neutral-600 hover:bg-neutral-200"
+            >
+              {theme === "dark" ? (
+                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+                </svg>
+              ) : (
+                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+                </svg>
+              )}
+            </button>
+
+            <NotificationBell orgId={selectedOrgId} />
+
+            <div className="hidden h-5 w-px bg-neutral-300 sm:block" />
+
             {loading ? (
-              <span className="hidden text-body text-neutral-600 sm:inline">Loading orgs…</span>
+              <span className="hidden text-body text-neutral-600 sm:inline">Loading…</span>
             ) : orgs.length === 0 ? (
-              <span className="hidden text-body text-warning-600 sm:inline">Not a member of any organization</span>
+              <span className="hidden text-body text-warning-600 sm:inline">No org</span>
             ) : (
               <div className="relative" ref={orgMenuRef}>
                 <button
                   type="button"
                   onClick={() => setOrgMenuOpen((v) => !v)}
-                  className="flex items-center gap-2 rounded-md border border-neutral-300 bg-neutral-50 px-2 py-1 hover:bg-neutral-100"
+                  className="flex items-center gap-2 rounded-sm px-1.5 py-1 hover:bg-neutral-200"
                 >
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
@@ -585,10 +627,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                     alt=""
                     className="h-7 w-7 shrink-0 rounded-md object-cover"
                   />
-                  <span className="hidden max-w-[10rem] truncate text-body-medium font-medium text-neutral-950 sm:inline">
+                  <span className="hidden max-w-[10rem] truncate text-small font-medium text-neutral-700 sm:inline">
                     {orgs.find((o) => o.id === selectedOrgId)?.name ?? "Select org"}
                   </span>
-                  <Icon path={ICON.chevronDown} className="h-3.5 w-3.5 text-neutral-500" />
+                  <Icon path={ICON.chevronDown} className="h-3 w-3 text-neutral-400" />
                 </button>
 
                 {orgMenuOpen && (
@@ -637,46 +679,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 )}
               </div>
             )}
-
-            <AttendanceWidget />
-
-            <div className="hidden h-5 w-px bg-neutral-300 sm:block" />
-
-            <button
-              type="button"
-              onClick={() => setAskOpen(true)}
-              title="Ask AI"
-              className="relative flex h-9 items-center gap-1.5 rounded-sm border border-ai-600 px-2.5 text-small font-medium text-ai-600 hover:bg-ai-100"
-            >
-              <Icon path={ICON.sparkle} className="h-4 w-4" />
-              <span className="hidden sm:inline">Ask AI</span>
-              {aiCallCount > 0 && (
-                <span className="absolute -right-1.5 -top-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-ai-600 px-1 text-[10px] font-bold text-white">
-                  {aiCallCount}
-                </span>
-              )}
-            </button>
-
-            <div className="hidden h-5 w-px bg-neutral-300 sm:block" />
-
-            <button
-              type="button"
-              onClick={toggleTheme}
-              title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
-              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-sm text-neutral-600 hover:bg-neutral-200"
-            >
-              {theme === "dark" ? (
-                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
-                </svg>
-              ) : (
-                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
-                </svg>
-              )}
-            </button>
-
-            <NotificationBell orgId={selectedOrgId} />
           </div>
         </header>
 
