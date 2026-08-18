@@ -563,6 +563,8 @@ export const resourceTypeEnum = pgEnum("resource_type", [
   // live with no persisted row to gate.
   "sprint_plan",
   "document",
+  "time",
+  "resource_forecast",
 ]);
 export const permissionActionEnum = pgEnum("permission_action", [
   "create",
@@ -658,6 +660,13 @@ export const permissionActionEnum = pgEnum("permission_action", [
   // setting quota targets is a manager/admin action distinct from viewing
   // the (always-computed-live) forecast itself.
   "set_target",
+  // PM Time Tracking — semantically distinct from attendance's "record_own"
+  // (logging task-level hours vs. daily check-in/out).
+  "log_own",
+  // PM Time Tracking — submitting a weekly timesheet for approval.
+  // "approve" already exists (HR leave approval); reused here for
+  // timesheet approval, same generic-action-across-resourceTypes shape.
+  "submit",
 ]);
 
 // org_id nullable, same pattern as `templates`: null rows are the built-in
@@ -2036,6 +2045,133 @@ export const projectMembers = pgTable(
       to: authenticatedRole,
       using: inUserOrgs,
       withCheck: inUserOrgs,
+    }),
+  ],
+).enableRLS();
+
+// PM Time Tracking — task-level time logging (timesheets), distinct from
+// HR's Attendance & Time Tracking (which is daily check-in/check-out, not
+// task-level hours). project_id is denormalized for fast project-level
+// rollups — always derived from the task's project at insert time, or
+// set directly for project-level entries without a specific task.
+export const timeEntries = pgTable(
+  "time_entries",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    orgId: uuid("org_id").notNull().references(() => organizations.id, { onDelete: "cascade" }),
+    taskId: uuid("task_id").references(() => tasks.id, { onDelete: "cascade" }),
+    projectId: uuid("project_id").notNull().references(() => projects.id, { onDelete: "cascade" }),
+    personId: uuid("person_id").notNull().references(() => people.id, { onDelete: "cascade" }),
+    date: date("date").notNull(),
+    hours: numeric("hours", { precision: 5, scale: 2 }).notNull(),
+    description: text("description"),
+    isBillable: boolean("is_billable").notNull().default(true),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+    createdBy: uuid("created_by"),
+  },
+  (t) => [
+    pgPolicy("time_entries_select", {
+      for: "select",
+      to: authenticatedRole,
+      using: inUserOrgs,
+    }),
+    pgPolicy("time_entries_insert", {
+      for: "insert",
+      to: authenticatedRole,
+      withCheck: inUserOrgs,
+    }),
+    pgPolicy("time_entries_update", {
+      for: "update",
+      to: authenticatedRole,
+      using: inUserOrgs,
+      withCheck: inUserOrgs,
+    }),
+    pgPolicy("time_entries_delete", {
+      for: "delete",
+      to: authenticatedRole,
+      using: inUserOrgs,
+    }),
+  ],
+).enableRLS();
+
+// PM Time Tracking — weekly timesheet submission / approval workflow.
+// draft → submitted → approved → rejected. One row per person per week.
+export const timesheetSubmissions = pgTable(
+  "timesheet_submissions",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    orgId: uuid("org_id").notNull().references(() => organizations.id, { onDelete: "cascade" }),
+    personId: uuid("person_id").notNull().references(() => people.id, { onDelete: "cascade" }),
+    weekStart: date("week_start").notNull(),
+    status: text("status").notNull().default("draft"),
+    submittedAt: timestamp("submitted_at", { withTimezone: true }),
+    reviewedBy: uuid("reviewed_by"),
+    reviewedAt: timestamp("reviewed_at", { withTimezone: true }),
+    rejectionReason: text("rejection_reason"),
+    totalHours: numeric("total_hours", { precision: 5, scale: 2 }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    pgPolicy("ts_sub_select", {
+      for: "select",
+      to: authenticatedRole,
+      using: inUserOrgs,
+    }),
+    pgPolicy("ts_sub_insert", {
+      for: "insert",
+      to: authenticatedRole,
+      withCheck: inUserOrgs,
+    }),
+    pgPolicy("ts_sub_update", {
+      for: "update",
+      to: authenticatedRole,
+      using: inUserOrgs,
+      withCheck: inUserOrgs,
+    }),
+  ],
+).enableRLS();
+
+// Resource Forecasting — forward-looking allocation of people to projects
+// by week. One row per (org, project, person, week_start). Used by the
+// Forecasting module under RESOURCES for utilization heatmaps, project
+// allocation grids, and AI-powered capacity insights.
+export const resourceForecastEntries = pgTable(
+  "resource_forecast_entries",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    orgId: uuid("org_id").notNull().references(() => organizations.id, { onDelete: "cascade" }),
+    projectId: uuid("project_id").notNull().references(() => projects.id, { onDelete: "cascade" }),
+    personId: uuid("person_id").notNull().references(() => people.id, { onDelete: "cascade" }),
+    weekStart: date("week_start").notNull(),
+    plannedHours: numeric("planned_hours", { precision: 5, scale: 2 }).notNull().default("0"),
+    isBillable: boolean("is_billable").notNull().default(true),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+    createdBy: uuid("created_by"),
+  },
+  () => [
+    pgPolicy("rfe_select", {
+      for: "select",
+      to: authenticatedRole,
+      using: inUserOrgs,
+    }),
+    pgPolicy("rfe_insert", {
+      for: "insert",
+      to: authenticatedRole,
+      withCheck: inUserOrgs,
+    }),
+    pgPolicy("rfe_update", {
+      for: "update",
+      to: authenticatedRole,
+      using: inUserOrgs,
+      withCheck: inUserOrgs,
+    }),
+    pgPolicy("rfe_delete", {
+      for: "delete",
+      to: authenticatedRole,
+      using: inUserOrgs,
     }),
   ],
 ).enableRLS();

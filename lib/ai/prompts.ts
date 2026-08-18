@@ -376,6 +376,27 @@ Return JSON:
     prompt: `Assess risk for a CRM deal. Days in current stage: ${ctx.days_in_stage || 0}, Days since last activity: ${ctx.days_since_last_activity || 0}, Past expected close: ${ctx.is_past_due || false}, Stage: "${ctx.stage || "prospecting"}". Return JSON: {"risk_level": "low"/"medium"/"high", "reasoning": "one sentence", "suggested_actions": ["action1", "action2"]}`,
     json: true,
   }),
+  resource_forecast_insights: (ctx) => ({
+    prompt: `Analyze resource forecasting data for an organization and provide actionable insights.
+
+Data: ${JSON.stringify(ctx.data)}
+
+Return JSON with this exact structure:
+{
+  "executive_summary": "2-3 sentence overview of the org's resource utilization and allocation health",
+  "metrics": {
+    "forecasted_vs_actual": {"forecastedHours": number, "actualHours": number, "variancePercent": number},
+    "shortfall_summary": [{"role": "string", "unallocated_hours": number}],
+    "warning_count": number
+  },
+  "recommendations": [
+    {"priority": "high"|"medium"|"low", "title": "short title", "description": "actionable description"}
+  ]
+}
+
+Generate 4-6 recommendations covering: over-allocated resources (burnout risk), time-logging compliance gaps, rebalancing opportunities, leave impact on capacity, and underutilized resources. Base all insights on the actual data provided — no generic advice.`,
+    json: true,
+  }),
 };
 
 const PROMPT_MAP: Record<string, Record<string, PromptBuilder>> = {

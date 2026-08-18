@@ -2,6 +2,8 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
+import lottie from "lottie-web/build/player/lottie_light";
+import aiAnimationData from "@/public/ai-animation.json";
 import { usePathname, useRouter } from "next/navigation";
 import { useOrg } from "@/lib/context/OrgContext";
 import { useAiUsage } from "@/lib/context/AiUsageContext";
@@ -64,6 +66,7 @@ const NAV_SECTIONS: NavSection[] = [
       { href: "/projects", label: "Projects", icon: ICON.folder },
       { href: "/tasks", label: "Tasks", icon: ICON.checklist },
       { href: "/team", label: "Team", icon: ICON.users },
+      { href: "/projects/time-tracking", label: "Time Tracking", icon: ICON.gauge },
     ],
   },
   {
@@ -116,6 +119,7 @@ const NAV_SECTIONS: NavSection[] = [
     items: [
       { href: "/capacity", label: "Capacity Planning", icon: ICON.gauge },
       { href: "/budgets", label: "Budgets", icon: ICON.currency },
+      { href: "/resources/forecasting", label: "Forecasting", icon: ICON.bars },
     ],
   },
   {
@@ -192,6 +196,22 @@ function Icon({ path, className = "h-4 w-4" }: { path: string; className?: strin
       <path strokeLinecap="round" strokeLinejoin="round" d={path} />
     </svg>
   );
+}
+
+function AskAiLottie() {
+  const container = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!container.current) return;
+    const anim = lottie.loadAnimation({
+      container: container.current,
+      animationData: aiAnimationData,
+      renderer: "svg",
+      loop: true,
+      autoplay: true,
+    });
+    return () => anim.destroy();
+  }, []);
+  return <div ref={container} className="h-5 w-5" />;
 }
 
 // Item rendered in a flyout (collapsed-hover) or inline (expanded).
@@ -578,7 +598,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               title="Ask AI"
               className="relative flex h-9 items-center gap-1.5 rounded-sm border border-ai-600 px-2.5 text-small font-medium text-ai-600 hover:bg-ai-100"
             >
-              <Icon path={ICON.sparkle} className="h-4 w-4" />
+              <AskAiLottie />
               <span className="hidden sm:inline">Ask AI</span>
               {aiCallCount > 0 && (
                 <span className="absolute -right-1.5 -top-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-ai-600 px-1 text-[10px] font-bold text-white">
@@ -692,7 +712,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 }
 
 function AskAiDialog({ onClose, orgId }: { onClose: () => void; orgId: string | null }) {
-  const { conversationId, messages, sending, streamingId, sendMessage, sendStarter } = useAskAiConversation(orgId);
+  const { conversationId, messages, sending, streamingId, error, sendMessage, sendStarter } = useAskAiConversation(orgId);
 
   return (
     <div className="fixed inset-0 z-50 flex justify-end bg-neutral-950/40" onClick={onClose}>
@@ -718,7 +738,7 @@ function AskAiDialog({ onClose, orgId }: { onClose: () => void; orgId: string | 
         {!conversationId ? (
           <HeroEmptyState compact onPick={(text) => sendStarter(text)} />
         ) : (
-          <MessageList messages={messages} sending={sending} streamingId={streamingId} />
+          <MessageList messages={messages} sending={sending} streamingId={streamingId} error={error} />
         )}
 
         {conversationId && <ChatInput disabled={sending} onSend={(text) => sendMessage(text)} />}

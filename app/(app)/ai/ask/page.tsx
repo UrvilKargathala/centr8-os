@@ -32,7 +32,7 @@ export default function AskAiPage() {
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [titleEditing, setTitleEditing] = useState(false);
   const [titleDraft, setTitleDraft] = useState("");
-  const { conversationId, setConversationId, messages, sending, streamingId, sendMessage, sendStarter, createConversation } =
+  const { conversationId, setConversationId, messages, sending, streamingId, error, sendMessage, sendStarter, createConversation } =
     useAskAiConversation(selectedOrgId);
 
   function loadConversations() {
@@ -148,7 +148,7 @@ export default function AskAiPage() {
           />
         ) : (
           <>
-            <MessageList messages={messages} sending={sending} streamingId={streamingId} />
+            <MessageList messages={messages} sending={sending} streamingId={streamingId} error={error} />
             {messages.length === 0 && (
               <div className="px-4 pb-2">
                 <StarterChips onPick={(text) => sendMessage(text)} />

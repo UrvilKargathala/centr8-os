@@ -784,7 +784,7 @@ export default function DashboardPage() {
             {!chat.conversationId ? (
               <HeroEmptyState compact onPick={(text) => chat.sendStarter(text)} />
             ) : (
-              <MessageList messages={chat.messages} sending={chat.sending} streamingId={chat.streamingId} />
+              <MessageList messages={chat.messages} sending={chat.sending} streamingId={chat.streamingId} error={chat.error} />
             )}
             {chat.conversationId && <ChatInput disabled={chat.sending} onSend={(text) => chat.sendMessage(text)} />}
             {recs.length > 0 ? (

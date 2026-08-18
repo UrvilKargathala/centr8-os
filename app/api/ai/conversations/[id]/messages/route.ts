@@ -53,6 +53,12 @@ export async function POST(req: NextRequest, { params }: Params) {
 
     return NextResponse.json({ data: result }, { status: 201 });
   } catch (err) {
+    if (err instanceof Error && !(err instanceof ApiError) && err.message.includes("rate limit")) {
+      return NextResponse.json({ error: err.message }, { status: 429 });
+    }
+    if (err instanceof Error && !(err instanceof ApiError) && (err.message.includes("AI ") || err.message.includes("OpenRouter"))) {
+      return NextResponse.json({ error: err.message }, { status: 502 });
+    }
     return handleApiError(err);
   }
 }

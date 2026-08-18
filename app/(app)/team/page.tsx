@@ -46,6 +46,8 @@ export default function TeamPage() {
   const [error, setError] = useState<string | null>(null);
   const [q, setQ] = useState("");
   const [roleFilter, setRoleFilter] = useState("");
+  const [deptFilter, setDeptFilter] = useState("");
+  const [statusFilter, setStatusFilter] = useState<"all" | "active" | "inactive">("active");
   const [editing, setEditing] = useState<Person | null | "new">(null);
   const [taskEstimates, setTaskEstimates] = useState<Record<string, number>>({});
 
@@ -53,7 +55,7 @@ export default function TeamPage() {
     if (!selectedOrgId) return;
     setLoading(true);
     setError(null);
-    const params = new URLSearchParams({ org_id: selectedOrgId });
+    const params = new URLSearchParams({ org_id: selectedOrgId, active: "all" });
     Promise.all([
       fetch(`/api/team?${params}`).then((r) => r.json()),
       fetch(`/api/tasks?${params}`).then((r) => r.json()),
@@ -76,9 +78,17 @@ export default function TeamPage() {
 
   useEffect(loadAll, [selectedOrgId]);
 
+  const departments = useMemo(() => {
+    const set = new Set(people.map((p) => p.department).filter(Boolean) as string[]);
+    return Array.from(set).sort();
+  }, [people]);
+
   const filtered = useMemo(() => {
     return people.filter((p) => {
+      if (statusFilter === "active" && !p.isActive) return false;
+      if (statusFilter === "inactive" && p.isActive) return false;
       if (roleFilter && !p.roles.includes(roleFilter)) return false;
+      if (deptFilter && p.department !== deptFilter) return false;
       if (!q.trim()) return true;
       const needle = q.toLowerCase();
       return (
@@ -87,7 +97,7 @@ export default function TeamPage() {
         (p.jobTitle ?? "").toLowerCase().includes(needle)
       );
     });
-  }, [people, q, roleFilter]);
+  }, [people, q, roleFilter, deptFilter, statusFilter]);
 
   async function handleDeactivate(id: string) {
     await fetch(`/api/team/${id}`, { method: "DELETE" });
@@ -116,7 +126,11 @@ export default function TeamPage() {
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h1 className="font-heading text-display font-semibold text-neutral-950">Team</h1>
-          <p className="mt-1 text-body text-neutral-600">Manage the people in your organization</p>
+          <p className="mt-1 text-body text-neutral-600">
+            {filtered.length === people.length
+              ? `${people.length} members`
+              : `Showing ${filtered.length} of ${people.length} members`}
+          </p>
         </div>
       </div>
 
@@ -135,14 +149,32 @@ export default function TeamPage() {
             onChange={(e) => setQ(e.target.value)}
             className="w-56"
           />
-          <Select value={roleFilter} onChange={(e) => setRoleFilter(e.target.value)} className="w-40">
+          <Select value={roleFilter} onChange={(e) => setRoleFilter(e.target.value)} className="w-36">
             <option value="">All roles</option>
             {ROLE_OPTIONS.map((r) => (
-              <option key={r} value={r}>
-                {r}
-              </option>
+              <option key={r} value={r}>{r}</option>
             ))}
           </Select>
+          <Select value={deptFilter} onChange={(e) => setDeptFilter(e.target.value)} className="w-40">
+            <option value="">All departments</option>
+            {departments.map((d) => (
+              <option key={d} value={d}>{d}</option>
+            ))}
+          </Select>
+          <Select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value as "all" | "active" | "inactive")} className="w-32">
+            <option value="active">Active</option>
+            <option value="inactive">Inactive</option>
+            <option value="all">All status</option>
+          </Select>
+          {(q || roleFilter || deptFilter || statusFilter !== "active") && (
+            <button
+              type="button"
+              onClick={() => { setQ(""); setRoleFilter(""); setDeptFilter(""); setStatusFilter("active"); }}
+              className="text-small text-neutral-500 hover:text-neutral-800 dark:hover:text-neutral-200"
+            >
+              Clear filters
+            </button>
+          )}
         </div>
         {can("team", "create") && <Button onClick={() => setEditing("new")}>+ Add person</Button>}
       </div>
@@ -161,7 +193,7 @@ export default function TeamPage() {
             </EmptyMedia>
             <EmptyTitle>{people.length === 0 ? "No team members yet" : "No people match this filter"}</EmptyTitle>
             <EmptyDescription>
-              {people.length === 0 ? "Add the people who will work on your projects." : "Try clearing the search or role filter."}
+              {people.length === 0 ? "Add the people who will work on your projects." : "Try clearing some filters."}
             </EmptyDescription>
           </EmptyHeader>
           {people.length === 0 && can("team", "create") && (

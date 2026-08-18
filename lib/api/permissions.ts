@@ -60,7 +60,9 @@ export type ResourceType =
   // Documents (draft -> reviewed -> finalized). "Ask AI" and
   // "Recommendations" need no resourceType here (see db/schema.ts).
   | "sprint_plan"
-  | "document";
+  | "document"
+  | "time"
+  | "resource_forecast";
 
 export type PermissionAction =
   | "create"
@@ -113,7 +115,9 @@ export type PermissionAction =
   // CRM Batch 2
   | "close"
   // CRM Batch 3
-  | "set_target";
+  | "set_target"
+  | "log_own"
+  | "submit";
 
 // Non-throwing check — for response shaping (e.g. trimming fields to a
 // "basic" subset when the caller lacks a *:view_full grant) rather than

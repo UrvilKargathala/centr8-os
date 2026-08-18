@@ -4,11 +4,30 @@
 // so every AI-assisted form (project wizard, HR employee/onboarding
 // screens) uses the same provisional-banner + Accept/Reject/Edit pattern
 // (DESIGN_SYSTEM.md §5) instead of re-implementing it per screen.
-import { useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
+import lottie from "lottie-web/build/player/lottie_light";
 import { Button } from "@/components/ui/Button";
 import { AiBanner } from "@/components/ui/AiBanner";
 import { generateAI } from "@/lib/ai/generate";
 import type { mockResponses } from "@/lib/ai/mockResponses";
+
+import aiAnimationData from "@/public/ai-animation.json";
+
+function AiLottie({ className }: { className?: string }) {
+  const container = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!container.current) return;
+    const anim = lottie.loadAnimation({
+      container: container.current,
+      animationData: aiAnimationData,
+      renderer: "svg",
+      loop: true,
+      autoplay: true,
+    });
+    return () => anim.destroy();
+  }, []);
+  return <div ref={container} className={className} />;
+}
 
 export function AiIcon() {
   return (
@@ -27,10 +46,7 @@ export function AiButton({ label, onClick, loading }: { label: string; onClick: 
       className="inline-flex items-center gap-1.5 rounded-md border border-ai-600 px-2.5 py-1 text-small font-medium text-ai-600 hover:bg-ai-100 disabled:opacity-60"
     >
       {loading ? (
-        <svg className="h-3.5 w-3.5 animate-spin" fill="none" viewBox="0 0 24 24">
-          <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" opacity="0.25" />
-          <path d="M22 12a10 10 0 00-10-10" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
-        </svg>
+        <AiLottie className="h-5 w-5" />
       ) : (
         <AiIcon />
       )}

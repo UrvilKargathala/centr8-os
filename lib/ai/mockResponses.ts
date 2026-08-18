@@ -892,6 +892,27 @@ Follow-ups:
       const roiNote = roi === null || roi === undefined ? "no spend logged yet, so ROI isn't calculable" : roi >= 0 ? `a positive ROI of ${Math.round(roi)}%` : `a negative ROI of ${Math.round(roi)}% — spend currently exceeds revenue won`;
       return `${name} generated ${leads} lead${leads === 1 ? "" : "s"}${costPerLead ? ` at ${Math.round(costPerLead).toLocaleString()}/lead` : ""}, with ${deals} converting to deal${deals === 1 ? "" : "s"} (${conversionRate}% lead-to-deal rate). Currently showing ${roiNote}.`;
     },
+    resource_forecast_insights: (ctx: MockContext) => {
+      const data = ctx.data as Record<string, unknown> | undefined;
+      const total = Number(data?.totalResources) || 12;
+      const util = Number(data?.currentUtilization) || 72;
+      const over = Number(data?.overUtilizedCount) || 0;
+      return {
+        executive_summary: `The organization has ${total} active resources with an average utilization of ${util}%. ${over > 0 ? `${over} team member${over > 1 ? "s are" : " is"} over-allocated and at risk of burnout.` : "No team members are currently over-allocated."} Resource allocation is concentrated on a few key projects — consider balancing workloads to reduce single-project dependency risk.`,
+        metrics: {
+          forecasted_vs_actual: data?.forecastedVsActual ?? { forecastedHours: 0, actualHours: 0, variancePercent: 0 },
+          shortfall_summary: [{ role: "QA Engineer", unallocated_hours: 48 }, { role: "Frontend Developer", unallocated_hours: 24 }],
+          warning_count: over,
+        },
+        recommendations: [
+          { priority: "high" as const, title: "Address over-allocated resources", description: `${over || 1} team member(s) exceed 100% utilization in upcoming weeks. Redistribute workload or adjust timelines to prevent burnout and quality issues.` },
+          { priority: "high" as const, title: "Review time-logging compliance", description: "Ensure all team members are logging actual hours against forecasted allocations for accurate variance tracking." },
+          { priority: "medium" as const, title: "Rebalance project allocations", description: "Top projects consume a disproportionate share of resources. Consider cross-training to reduce key-person dependency." },
+          { priority: "medium" as const, title: "Plan for upcoming leave", description: "Factor approved leave into capacity planning to avoid last-minute resource gaps during critical delivery periods." },
+          { priority: "low" as const, title: "Identify underutilized resources", description: `Team members below 50% utilization may have capacity for additional project work or skill development.` },
+        ],
+      };
+    },
   },
   Planner: {
     create_project_draft: (ctx: MockContext) => {

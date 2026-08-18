@@ -16,6 +16,8 @@ export async function GET(req: NextRequest) {
     const active = req.nextUrl.searchParams.get("active") ?? "true";
     if (!orgId) throw new ApiError(400, "org_id is required");
 
+    const department = req.nextUrl.searchParams.get("department");
+
     const conditions = [eq(people.orgId, orgId)];
     if (active === "true") conditions.push(eq(people.isActive, true));
     else if (active === "false") conditions.push(eq(people.isActive, false));
@@ -29,8 +31,10 @@ export async function GET(req: NextRequest) {
       );
     }
     if (role) {
-      // roles is jsonb array — cast to text for a simple contains check.
       conditions.push(sql`${people.roles}::text ilike ${`%"${role}"%`}`);
+    }
+    if (department) {
+      conditions.push(ilike(people.department, department));
     }
 
     const rows = await withOrgContext(userId, (db) =>

@@ -1,9 +1,11 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import lottie from "lottie-web/build/player/lottie_light";
 import { AiBanner } from "@/components/ui/AiBanner";
 import { Avatar, Pill } from "@/components/ui/Avatar";
 import { createClient } from "@/lib/supabase/client";
+import aiAnimationData from "@/public/ai-animation.json";
 
 export const ASK_AI_CONVERSATION_KEY = "centr8_ask_ai_conversation_id";
 
@@ -55,6 +57,7 @@ export function useAskAiConversation(orgId: string | null) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [sending, setSending] = useState(false);
   const [streamingId, setStreamingId] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     setConversationIdState(localStorage.getItem(ASK_AI_CONVERSATION_KEY));
@@ -94,17 +97,25 @@ export function useAskAiConversation(orgId: string | null) {
     const id = convId ?? conversationId;
     if (!id || !question.trim()) return;
     setSending(true);
+    setError(null);
     setMessages((cur) => [...cur, { id: `temp-${Date.now()}`, role: "user", content: question }]);
-    const res = await fetch(`/api/ai/conversations/${id}/messages`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ question }),
-    });
-    const body = await res.json();
-    setSending(false);
-    if (res.ok) {
-      setStreamingId(body.data.assistantMessage.id);
-      loadMessages(id);
+    try {
+      const res = await fetch(`/api/ai/conversations/${id}/messages`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ question }),
+      });
+      const body = await res.json();
+      setSending(false);
+      if (res.ok) {
+        setStreamingId(body.data.assistantMessage.id);
+        loadMessages(id);
+      } else {
+        setError(body.error ?? "Failed to get a response. Try again.");
+      }
+    } catch {
+      setSending(false);
+      setError("Network error — check your connection and try again.");
     }
   }
 
@@ -113,7 +124,7 @@ export function useAskAiConversation(orgId: string | null) {
     if (id) await sendMessage(text, id);
   }
 
-  return { conversationId, setConversationId, messages, sending, streamingId, sendMessage, sendStarter, createConversation, loadMessages };
+  return { conversationId, setConversationId, messages, sending, streamingId, error, sendMessage, sendStarter, createConversation, loadMessages };
 }
 
 export function StarterChips({ onPick }: { onPick: (text: string) => void }) {
@@ -168,12 +179,27 @@ function renderMarkdown(text: string) {
   });
 }
 
+function AiThinkingLottie() {
+  const container = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!container.current) return;
+    const anim = lottie.loadAnimation({
+      container: container.current,
+      animationData: aiAnimationData,
+      renderer: "svg",
+      loop: true,
+      autoplay: true,
+    });
+    return () => anim.destroy();
+  }, []);
+  return <div ref={container} className="h-8 w-8" />;
+}
+
 function TypingDots() {
   return (
-    <div className="flex items-center gap-1 px-4 py-3">
-      {[0, 1, 2].map((i) => (
-        <span key={i} className="h-1.5 w-1.5 animate-bounce rounded-full bg-ai-600" style={{ animationDelay: `${i * 120}ms` }} />
-      ))}
+    <div className="flex items-center gap-2 px-4 py-3">
+      <AiThinkingLottie />
+      <span className="text-small text-ai-600">Thinking...</span>
     </div>
   );
 }
@@ -231,7 +257,7 @@ function Greeting() {
   );
 }
 
-export function MessageList({ messages, sending, streamingId }: { messages: Message[]; sending: boolean; streamingId?: string | null }) {
+export function MessageList({ messages, sending, streamingId, error }: { messages: Message[]; sending: boolean; streamingId?: string | null; error?: string | null }) {
   const bottomRef = useRef<HTMLDivElement>(null);
   const userName = useCurrentUserName();
   useEffect(() => {
@@ -256,6 +282,14 @@ export function MessageList({ messages, sending, streamingId }: { messages: Mess
           <AiAvatar />
           <div className="overflow-hidden rounded-md border border-ai-600/40">
             <TypingDots />
+          </div>
+        </div>
+      )}
+      {error && (
+        <div className="flex justify-start gap-2">
+          <AiAvatar />
+          <div className="max-w-[85%] rounded-md border border-danger-100 bg-danger-100 px-4 py-3 text-body text-danger-600">
+            {error}
           </div>
         </div>
       )}
