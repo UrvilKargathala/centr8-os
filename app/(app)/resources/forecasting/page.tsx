@@ -154,7 +154,7 @@ export default function ForecastingPage() {
             className={`flex-1 border-b-2 px-4 py-3 text-center text-body-medium font-medium transition-colors ${
               tab === t.value
                 ? "-mb-px border-primary-600 text-primary-600"
-                : "-mb-px border-transparent text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300"
+                : "-mb-px border-transparent text-neutral-500"
             }`}
           >
             {t.label}
