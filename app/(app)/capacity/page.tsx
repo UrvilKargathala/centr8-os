@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { Pagination, usePagination } from "@/components/ui/Pagination";
 import { useOrg } from "@/lib/context/OrgContext";
 import { PageSkeleton } from "@/components/ui/skeleton";
 import { Card } from "@/components/ui/Card";
@@ -97,39 +98,7 @@ export default function CapacityPlanningPage() {
             </EmptyHeader>
           </Empty>
         ) : (
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Role</TableHead>
-                  <TableHead className="text-right">Capacity</TableHead>
-                  <TableHead className="text-right">Allocated</TableHead>
-                  <TableHead className="text-right">Tasks</TableHead>
-                  <TableHead className="text-right">Utilization</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {byPerson.map((p) => (
-                  <TableRow key={p.id}>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        <Avatar name={p.fullName} />
-                        <span className="font-medium">{p.fullName}</span>
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-neutral-500">{p.jobTitle ?? "—"}</TableCell>
-                    <TableCell className="text-right">{p.availableHoursPerWeek}h</TableCell>
-                    <TableCell className="text-right">{p.allocated}h</TableCell>
-                    <TableCell className="text-right">{p.taskCount}</TableCell>
-                    <TableCell className="text-right">
-                      <Badge color={p.util > 100 ? "danger" : p.util > 80 ? "warning" : "success"}>{p.util}%</Badge>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
+          <TeamAllocationTable byPerson={byPerson} />
         )}
       </Card>
 
@@ -138,28 +107,76 @@ export default function CapacityPlanningPage() {
           <h2 className="mb-4 text-body-medium font-semibold text-neutral-950">
             Unassigned Tasks <Badge color="warning">{unassignedTasks.length}</Badge>
           </h2>
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Task</TableHead>
-                  <TableHead className="text-right">Estimate</TableHead>
-                  <TableHead>Status</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {unassignedTasks.slice(0, 20).map((t) => (
-                  <TableRow key={t.id}>
-                    <TableCell className="font-medium">{t.title}</TableCell>
-                    <TableCell className="text-right">{t.estimate ? `${t.estimate}h` : "—"}</TableCell>
-                    <TableCell><Badge>{t.status.replace(/_/g, " ")}</Badge></TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
+          <UnassignedTasksTable tasks={unassignedTasks} />
         </Card>
       )}
+    </div>
+  );
+}
+
+function TeamAllocationTable({ byPerson }: { byPerson: { id: string; fullName: string; jobTitle: string | null; availableHoursPerWeek: number; allocated: number; taskCount: number; util: number }[] }) {
+  const { page, setPage, pageSize, total, paged } = usePagination(byPerson, 10);
+  return (
+    <div className="overflow-x-auto">
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>Name</TableHead>
+            <TableHead>Role</TableHead>
+            <TableHead className="text-right">Capacity</TableHead>
+            <TableHead className="text-right">Allocated</TableHead>
+            <TableHead className="text-right">Tasks</TableHead>
+            <TableHead className="text-right">Utilization</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {paged.map((p) => (
+            <TableRow key={p.id}>
+              <TableCell>
+                <div className="flex items-center gap-2">
+                  <Avatar name={p.fullName} />
+                  <span className="font-medium">{p.fullName}</span>
+                </div>
+              </TableCell>
+              <TableCell className="text-neutral-500">{p.jobTitle ?? "—"}</TableCell>
+              <TableCell className="text-right">{p.availableHoursPerWeek}h</TableCell>
+              <TableCell className="text-right">{p.allocated}h</TableCell>
+              <TableCell className="text-right">{p.taskCount}</TableCell>
+              <TableCell className="text-right">
+                <Badge color={p.util > 100 ? "danger" : p.util > 80 ? "warning" : "success"}>{p.util}%</Badge>
+              </TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+      <Pagination page={page} pageSize={pageSize} total={total} onPageChange={setPage} />
+    </div>
+  );
+}
+
+function UnassignedTasksTable({ tasks }: { tasks: Task[] }) {
+  const { page, setPage, pageSize, total, paged } = usePagination(tasks, 10);
+  return (
+    <div className="overflow-x-auto">
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>Task</TableHead>
+            <TableHead className="text-right">Estimate</TableHead>
+            <TableHead>Status</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {paged.map((t) => (
+            <TableRow key={t.id}>
+              <TableCell className="font-medium">{t.title}</TableCell>
+              <TableCell className="text-right">{t.estimate ? `${t.estimate}h` : "—"}</TableCell>
+              <TableCell><Badge>{t.status.replace(/_/g, " ")}</Badge></TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+      <Pagination page={page} pageSize={pageSize} total={total} onPageChange={setPage} />
     </div>
   );
 }

@@ -140,16 +140,27 @@ export default function ForecastingPage() {
         </div>
       </div>
 
-      <Segmented
-        value={tab}
-        onChange={(v) => setTab(v as Tab)}
-        options={[
-          { value: "summary", label: "Summary & Insights" },
-          { value: "planning", label: "Resource Planning" },
-          { value: "allocation", label: "Project Allocation" },
-          { value: "utilization", label: "Utilization Matrix" },
-        ]}
-      />
+      <nav className="flex border-b border-neutral-200 dark:border-neutral-700">
+        {([
+          { value: "summary", label: "Overview & AI Summary" },
+          { value: "planning", label: "Resource Forecast Input" },
+          { value: "allocation", label: "Resource Forecast by Projects" },
+          { value: "utilization", label: "Resource Workload %" },
+        ] as const).map((t) => (
+          <button
+            key={t.value}
+            type="button"
+            onClick={() => setTab(t.value as Tab)}
+            className={`flex-1 border-b-2 px-4 py-3 text-center text-body-medium font-medium transition-colors ${
+              tab === t.value
+                ? "-mb-px border-primary-600 text-primary-600"
+                : "-mb-px border-transparent text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300"
+            }`}
+          >
+            {t.label}
+          </button>
+        ))}
+      </nav>
 
       {tab === "summary" && <SummaryTab orgId={selectedOrgId} />}
       {tab === "planning" && <PlanningTab orgId={selectedOrgId} />}
@@ -236,16 +247,14 @@ function SummaryTab({ orgId }: { orgId: string }) {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-3">
-        <Segmented
-          value={period}
-          onChange={setPeriod}
-          options={[
-            { value: "month", label: "This Month" },
-            { value: "quarter", label: "This Quarter" },
-            { value: "next_quarter", label: "Next Quarter" },
-          ]}
-        />
+      <div className="flex items-center justify-end">
+        <div className="w-44">
+          <Select value={period} onChange={(e) => setPeriod(e.target.value)}>
+            <option value="month">This Month</option>
+            <option value="quarter">This Quarter</option>
+            <option value="next_quarter">Next Quarter</option>
+          </Select>
+        </div>
       </div>
 
       {/* KPI Cards */}
@@ -376,7 +385,7 @@ function SummaryTab({ orgId }: { orgId: string }) {
                       <td className="px-4 py-2.5"><Badge color={st.color}>{st.label}</Badge></td>
                       <td className="px-4 py-2.5">
                         <div className="flex items-center gap-2">
-                          <div className="h-2 w-24 overflow-hidden rounded-full bg-neutral-200">
+                          <div className="h-2 w-24 bar-track overflow-hidden rounded-full bg-neutral-200">
                             <div
                               className={`h-full rounded-full ${barColor(p.avgUtil)}`}
                               style={{ width: `${Math.min(p.avgUtil, 100)}%` }}
@@ -425,7 +434,7 @@ function SummaryTab({ orgId }: { orgId: string }) {
                 const uH = Math.max(0, h - bH - nbH - lH);
                 return (
                   <div key={m} className="flex flex-1 flex-col items-center gap-1.5">
-                    <div className="flex w-3/4 flex-col overflow-hidden rounded-t-md" style={{ height: h }}>
+                    <div className="bar-stack flex w-3/4 flex-col overflow-hidden rounded-t-md" style={{ height: h }}>
                       <div className="bg-primary-500" style={{ height: bH }} title={`Billable: ${billable}h`} />
                       <div className="bg-success-500" style={{ height: nbH }} title={`Non-Billable: ${nonBillable}h`} />
                       <div className="bg-warning-400" style={{ height: lH }} title={`Leave: ${leave}h`} />
@@ -451,7 +460,7 @@ function SummaryTab({ orgId }: { orgId: string }) {
                 <span className="text-neutral-600">Forecasted</span>
                 <span className="font-heading font-semibold text-neutral-800">{summary.forecastedVsActual.forecastedHours}h</span>
               </div>
-              <div className="h-3 w-full overflow-hidden rounded-full bg-neutral-100">
+              <div className="h-3 w-full bar-track overflow-hidden rounded-full bg-neutral-100">
                 <div className="h-full rounded-full bg-primary-500" style={{ width: "100%" }} />
               </div>
             </div>
@@ -460,7 +469,7 @@ function SummaryTab({ orgId }: { orgId: string }) {
                 <span className="text-neutral-600">Actual</span>
                 <span className="font-heading font-semibold text-neutral-800">{summary.forecastedVsActual.actualHours}h</span>
               </div>
-              <div className="h-3 w-full overflow-hidden rounded-full bg-neutral-100">
+              <div className="h-3 w-full bar-track overflow-hidden rounded-full bg-neutral-100">
                 <div
                   className="h-full rounded-full bg-success-500"
                   style={{
@@ -505,7 +514,7 @@ function SummaryTab({ orgId }: { orgId: string }) {
                           <span className="font-heading font-semibold text-neutral-800">{pct}%</span>
                         </div>
                       </div>
-                      <div className="h-2.5 w-full overflow-hidden rounded-full bg-neutral-100">
+                      <div className="h-2.5 w-full bar-track overflow-hidden rounded-full bg-neutral-100">
                         <div className={`h-full rounded-full ${barColor(pct)}`} style={{ width: `${Math.min(pct, 100)}%` }} />
                       </div>
                     </div>

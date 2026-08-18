@@ -265,7 +265,7 @@ export default function ForecastsPage() {
                 <span>{fmtMoney(t.target, "INR")} target</span>
               </div>
               <div className="relative h-4 rounded-sm bg-neutral-200">
-                <div className="absolute inset-y-0 left-0 flex">
+                <div className="bar-track absolute inset-y-0 left-0 flex">
                   <div className="h-4 rounded-l-sm bg-danger-600" style={{ width: `${(t.won / maxTrend) * 100}%` }} />
                   <div className="h-4 bg-danger-300" style={{ width: `${(t.weighted / maxTrend) * 100}%` }} />
                 </div>

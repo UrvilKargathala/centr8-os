@@ -11,6 +11,7 @@ import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@
 import { Empty, EmptyHeader, EmptyTitle, EmptyDescription } from "@/components/ui/Empty";
 import { AiButton, AiSuggestionCard, useAiCall } from "@/components/ui/AiTouchpoint";
 import { SectionSkeleton } from "@/components/ui/skeleton";
+import { Pagination, usePagination } from "@/components/ui/Pagination";
 
 type Cycle = {
   id: string;
@@ -382,6 +383,8 @@ function AllReviewsTab({ orgId }: { orgId: string }) {
       .finally(() => setLoading(false));
   }, [orgId, cycleFilter, statusFilter]);
 
+  const { page, setPage, pageSize, total, paged: pagedRows } = usePagination(rows, 10);
+
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap gap-3">
@@ -417,7 +420,7 @@ function AllReviewsTab({ orgId }: { orgId: string }) {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {rows.map((r) => (
+              {pagedRows.map((r) => (
                 <TableRow key={r.id}>
                   <TableCell>{employees.find((e) => e.id === r.employeeId)?.fullName ?? "—"}</TableCell>
                   <TableCell>{cycles.find((c) => c.id === r.cycleId)?.name ?? "—"}</TableCell>
@@ -427,6 +430,7 @@ function AllReviewsTab({ orgId }: { orgId: string }) {
               ))}
             </TableBody>
           </Table>
+          <Pagination page={page} pageSize={pageSize} total={total} onPageChange={setPage} />
         </Card>
       )}
     </div>
@@ -446,6 +450,7 @@ function CyclesTab({ orgId }: { orgId: string }) {
       .finally(() => setLoading(false));
   }
   useEffect(load, [orgId]);
+  const { page: cyclePage, setPage: setCyclePage, pageSize: cyclePageSize, total: cycleTotal, paged: pagedCycles } = usePagination(cycles, 10);
 
   async function updateStatus(cycle: Cycle, status: string) {
     await fetch(`/api/review-cycles/${cycle.id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ status }) });
@@ -473,7 +478,7 @@ function CyclesTab({ orgId }: { orgId: string }) {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {cycles.map((c) => (
+              {pagedCycles.map((c) => (
                 <TableRow key={c.id}>
                   <TableCell>{c.name}</TableCell>
                   <TableCell className="text-neutral-600">{c.cycleType}</TableCell>
@@ -491,6 +496,7 @@ function CyclesTab({ orgId }: { orgId: string }) {
               ))}
             </TableBody>
           </Table>
+          <Pagination page={cyclePage} pageSize={cyclePageSize} total={cycleTotal} onPageChange={setCyclePage} />
         </Card>
       )}
       {showNew && <NewCycleModal orgId={orgId} onClose={() => setShowNew(false)} onSaved={() => { setShowNew(false); load(); }} />}

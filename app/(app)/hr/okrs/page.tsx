@@ -157,7 +157,7 @@ function OkrCard({ okr, employeeName, onChanged }: { okr: Okr; employeeName?: st
         </div>
         <Badge color={OKR_STATUS_COLOR[okr.status] ?? "neutral"}>{okr.status}</Badge>
       </div>
-      <div className="h-1.5 w-full overflow-hidden rounded-full bg-neutral-200">
+      <div className="h-1.5 w-full bar-track overflow-hidden rounded-full bg-neutral-200">
         <div className="h-full bg-success-600" style={{ width: `${pct}%` }} />
       </div>
       <p className="text-caption text-neutral-500">{pct}% complete</p>

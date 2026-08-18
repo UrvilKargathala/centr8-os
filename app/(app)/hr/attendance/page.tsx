@@ -12,6 +12,7 @@ import { AiButton, AiSuggestionCard, useAiCall } from "@/components/ui/AiTouchpo
 import { AttendanceCalendar, isLate, type AttendanceRecord, type AttendanceSettings } from "@/components/hr/AttendanceCalendar";
 import { AttendanceHistoryList } from "@/components/hr/AttendanceHistoryList";
 import { ManualEntryModal } from "@/components/hr/ManualEntryModal";
+import { Pagination, usePagination } from "@/components/ui/Pagination";
 
 type Employee = { id: string; fullName: string; departmentId: string | null; employmentType: string; location: string | null };
 type Stats = { attendance_rate_percent: number; avg_hours_per_day: number; late_arrivals_this_week: number; on_time_rate: number };
@@ -225,6 +226,8 @@ function TeamTodayView({ orgId, canEditAny }: { orgId: string; canEditAny: boole
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [employees, records, deptFilter, typeFilter, locationFilter, statusFilter, sortBy]);
 
+  const { page, setPage, pageSize, total, paged: pagedRows } = usePagination(rows, 10);
+
   const kpis = useMemo(() => {
     const checkedIn = rows.filter((r) => r.record?.status === "checked_in").length;
     const checkedOut = rows.filter((r) => r.record?.status === "checked_out" || r.record?.status === "half_day").length;
@@ -375,7 +378,7 @@ function TeamTodayView({ orgId, canEditAny }: { orgId: string; canEditAny: boole
               </TableRow>
             </TableHeader>
             <TableBody>
-              {rows.map(({ employee, record }) => (
+              {pagedRows.map(({ employee, record }) => (
                 <TableRow key={employee.id}>
                   <TableCell>
                     <a href={`/hr/employees/${employee.id}`} className="font-medium text-neutral-950 hover:underline">
@@ -404,6 +407,7 @@ function TeamTodayView({ orgId, canEditAny }: { orgId: string; canEditAny: boole
               ))}
             </TableBody>
           </Table>
+          <Pagination page={page} pageSize={pageSize} total={total} onPageChange={setPage} />
         </Card>
       )}
     </div>

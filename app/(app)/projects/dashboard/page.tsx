@@ -463,7 +463,7 @@ export default function DashboardPage() {
                       </span>
                     </div>
                     {total > 0 ? (
-                      <div className="flex h-2 w-full overflow-hidden rounded-full bg-neutral-200">
+                      <div className="flex h-2 w-full bar-track overflow-hidden rounded-full bg-neutral-200">
                         <div className="bg-success-600" style={{ width: `${pct(done)}%` }} />
                         <div className="bg-info-600" style={{ width: `${pct(inProg)}%` }} />
                         <div className="bg-neutral-300" style={{ width: `${pct(pending)}%` }} />

@@ -533,7 +533,7 @@ function OnboardingTab({
         </Badge>
       </div>
       <div className="space-y-1">
-        <div className="h-2 w-full overflow-hidden rounded-full bg-neutral-200">
+        <div className="h-2 w-full bar-track overflow-hidden rounded-full bg-neutral-200">
           <div className="h-full rounded-full bg-success-600" style={{ width: `${pct}%` }} />
         </div>
         <p className="text-caption text-neutral-600">

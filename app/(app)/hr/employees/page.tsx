@@ -11,6 +11,7 @@ import { Select, Field, Input } from "@/components/ui/Input";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/Table";
 import { Empty, EmptyHeader, EmptyMedia, EmptyTitle, EmptyDescription } from "@/components/ui/Empty";
 import { EmployeeWizard } from "@/components/hr/EmployeeWizard";
+import { Pagination, usePagination } from "@/components/ui/Pagination";
 
 export type Employee = {
   id: string;
@@ -312,6 +313,7 @@ function ViewToggle({ view, onChange }: { view: ViewMode; onChange: (v: ViewMode
 }
 
 function EmployeeTable({ employees }: { employees: Employee[] }) {
+  const { page, setPage, pageSize, total, paged } = usePagination(employees, 10);
   return (
     <Card padding="sm">
       <Table>
@@ -328,7 +330,7 @@ function EmployeeTable({ employees }: { employees: Employee[] }) {
           </TableRow>
         </TableHeader>
         <TableBody>
-          {employees.map((e) => (
+          {paged.map((e) => (
             <TableRow key={e.id}>
               <TableCell>
                 <a href={`/hr/employees/${e.id}`} className="font-medium text-neutral-950 hover:underline">
@@ -350,6 +352,7 @@ function EmployeeTable({ employees }: { employees: Employee[] }) {
           ))}
         </TableBody>
       </Table>
+      <Pagination page={page} pageSize={pageSize} total={total} onPageChange={setPage} />
     </Card>
   );
 }

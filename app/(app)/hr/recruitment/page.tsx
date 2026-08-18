@@ -11,6 +11,7 @@ import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@
 import { Empty, EmptyHeader, EmptyTitle, EmptyDescription } from "@/components/ui/Empty";
 import { AiButton, AiSuggestionCard, useAiCall } from "@/components/ui/AiTouchpoint";
 import { SectionSkeleton } from "@/components/ui/skeleton";
+import { Pagination, usePagination } from "@/components/ui/Pagination";
 
 // Schema-accurate enums (db/schema.ts) — lib/constants.ts's
 // JOB_POSTING_STATUSES/CANDIDATE_STAGES predate Batch 3's real values.
@@ -170,6 +171,8 @@ function AllCandidatesTab({ orgId }: { orgId: string }) {
       .finally(() => setLoading(false));
   }, [orgId, jobFilter, stageFilter]);
 
+  const { page, setPage, pageSize, total, paged: pagedCandidates } = usePagination(candidates, 10);
+
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap gap-3">
@@ -205,7 +208,7 @@ function AllCandidatesTab({ orgId }: { orgId: string }) {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {candidates.map((c) => (
+              {pagedCandidates.map((c) => (
                 <TableRow key={c.id}>
                   <TableCell>
                     <a href={`/hr/recruitment/${c.jobPostingId}`} className="font-medium text-neutral-950 hover:underline">{c.fullName}</a>
@@ -218,6 +221,7 @@ function AllCandidatesTab({ orgId }: { orgId: string }) {
               ))}
             </TableBody>
           </Table>
+          <Pagination page={page} pageSize={pageSize} total={total} onPageChange={setPage} />
         </Card>
       )}
     </div>

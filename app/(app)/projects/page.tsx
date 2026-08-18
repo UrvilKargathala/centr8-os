@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { Pagination, usePagination } from "@/components/ui/Pagination";
 import { useOrg } from "@/lib/context/OrgContext";
 import { PageSkeleton } from "@/components/ui/skeleton";
 import { ProjectStatusBadge, Badge, projectStatusColor } from "@/components/ui/Badge";
@@ -282,65 +283,12 @@ export default function ProjectsPage() {
           {projects.length === 0 ? "No projects yet." : "No projects match this filter."}
         </p>
       ) : view === "list" ? (
-        <div className="overflow-x-auto rounded-md border border-neutral-300">
-          <table className="w-full min-w-[640px] text-body">
-            <thead>
-              <tr className="border-b border-neutral-200 bg-neutral-100 text-left text-caption font-medium uppercase tracking-wide text-neutral-500">
-                <th className="px-4 py-2">Name</th>
-                <th className="px-4 py-2">Status</th>
-                <th className="px-4 py-2">Milestones</th>
-                <th className="px-4 py-2">Progress</th>
-                <th className="px-4 py-2">Health</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-neutral-200 bg-neutral-50">
-              {filteredProjects.map((project) => {
-                const progress = taskProgress[project.id];
-                const pct = progress && progress.total > 0 ? Math.round((progress.done / progress.total) * 100) : 0;
-                const snapshot = health[project.id];
-                const overdue = snapshot?.signals.overdueTasks ?? 0;
-                const blocked = snapshot?.signals.blockedTasks ?? 0;
-                return (
-                  <tr
-                    key={project.id}
-                    onClick={() => (window.location.href = `/projects/${project.id}`)}
-                    className="cursor-pointer hover:bg-neutral-100"
-                  >
-                    <td className="px-4 py-3 font-medium text-neutral-950">{project.name}</td>
-                    <td className="px-4 py-3">
-                      <ProjectStatusBadge status={project.status} />
-                    </td>
-                    <td className="px-4 py-3 text-neutral-600">{milestoneCounts[project.id] ?? 0}</td>
-                    <td className="px-4 py-3">
-                      {progress && progress.total > 0 ? (
-                        <div className="flex items-center gap-2">
-                          <div className="h-1.5 w-24 overflow-hidden rounded-full bg-neutral-200">
-                            <div className="h-full rounded-full bg-primary-600" style={{ width: `${pct}%` }} />
-                          </div>
-                          <span className="text-small text-neutral-600">{pct}%</span>
-                        </div>
-                      ) : (
-                        <span className="text-small text-neutral-400">—</span>
-                      )}
-                    </td>
-                    <td className="px-4 py-3">
-                      {!snapshot ? (
-                        <span className="text-small text-neutral-400">No scan</span>
-                      ) : overdue === 0 && blocked === 0 ? (
-                        <Badge color="success">On track</Badge>
-                      ) : (
-                        <div className="flex gap-1">
-                          {overdue > 0 && <Badge color="danger">{overdue} overdue</Badge>}
-                          {blocked > 0 && <Badge color="warning">{blocked} blocked</Badge>}
-                        </div>
-                      )}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
+        <ProjectListView
+          projects={filteredProjects}
+          taskProgress={taskProgress}
+          health={health}
+          milestoneCounts={milestoneCounts}
+        />
       ) : view === "timeline" ? (
         <TimelineView projects={filteredProjects} />
       ) : (
@@ -378,7 +326,7 @@ export default function ProjectsPage() {
                         </span>
                         <span>{pct}%</span>
                       </div>
-                      <div className="h-1.5 w-full overflow-hidden rounded-full bg-neutral-200">
+                      <div className="h-1.5 w-full bar-track overflow-hidden rounded-full bg-neutral-200">
                         <div className="h-full rounded-full bg-primary-600" style={{ width: `${pct}%` }} />
                       </div>
                     </div>
@@ -458,6 +406,82 @@ function MemberStack({ members }: { members: ProjectMember[] }) {
           +{overflow}
         </span>
       )}
+    </div>
+  );
+}
+
+function ProjectListView({
+  projects,
+  taskProgress,
+  health,
+  milestoneCounts,
+}: {
+  projects: Project[];
+  taskProgress: Record<string, { done: number; total: number }>;
+  health: Record<string, HealthSnapshot>;
+  milestoneCounts: Record<string, number>;
+}) {
+  const { page, setPage, pageSize, total, paged } = usePagination(projects, 10);
+  return (
+    <div className="overflow-x-auto rounded-md border border-neutral-300">
+      <table className="w-full min-w-[640px] text-body">
+        <thead>
+          <tr className="border-b border-neutral-200 bg-neutral-100 text-left text-caption font-medium uppercase tracking-wide text-neutral-500">
+            <th className="px-4 py-2">Name</th>
+            <th className="px-4 py-2">Status</th>
+            <th className="px-4 py-2">Milestones</th>
+            <th className="px-4 py-2">Progress</th>
+            <th className="px-4 py-2">Health</th>
+          </tr>
+        </thead>
+        <tbody className="divide-y divide-neutral-200 bg-neutral-50">
+          {paged.map((project) => {
+            const progress = taskProgress[project.id];
+            const pct = progress && progress.total > 0 ? Math.round((progress.done / progress.total) * 100) : 0;
+            const snapshot = health[project.id];
+            const overdue = snapshot?.signals.overdueTasks ?? 0;
+            const blocked = snapshot?.signals.blockedTasks ?? 0;
+            return (
+              <tr
+                key={project.id}
+                onClick={() => (window.location.href = `/projects/${project.id}`)}
+                className="cursor-pointer hover:bg-neutral-100"
+              >
+                <td className="px-4 py-3 font-medium text-neutral-950">{project.name}</td>
+                <td className="px-4 py-3">
+                  <ProjectStatusBadge status={project.status} />
+                </td>
+                <td className="px-4 py-3 text-neutral-600">{milestoneCounts[project.id] ?? 0}</td>
+                <td className="px-4 py-3">
+                  {progress && progress.total > 0 ? (
+                    <div className="flex items-center gap-2">
+                      <div className="h-1.5 w-24 bar-track overflow-hidden rounded-full bg-neutral-200">
+                        <div className="h-full rounded-full bg-primary-600" style={{ width: `${pct}%` }} />
+                      </div>
+                      <span className="text-small text-neutral-600">{pct}%</span>
+                    </div>
+                  ) : (
+                    <span className="text-small text-neutral-400">—</span>
+                  )}
+                </td>
+                <td className="px-4 py-3">
+                  {!snapshot ? (
+                    <span className="text-small text-neutral-400">No scan</span>
+                  ) : overdue === 0 && blocked === 0 ? (
+                    <Badge color="success">On track</Badge>
+                  ) : (
+                    <div className="flex gap-1">
+                      {overdue > 0 && <Badge color="danger">{overdue} overdue</Badge>}
+                      {blocked > 0 && <Badge color="warning">{blocked} blocked</Badge>}
+                    </div>
+                  )}
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+      <Pagination page={page} pageSize={pageSize} total={total} onPageChange={setPage} />
     </div>
   );
 }

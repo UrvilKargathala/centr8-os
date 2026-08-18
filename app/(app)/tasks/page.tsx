@@ -14,6 +14,7 @@ import { KpiCard } from "@/components/ui/KpiCard";
 import { Empty, EmptyHeader, EmptyMedia, EmptyTitle, EmptyDescription } from "@/components/ui/Empty";
 import { useToast } from "@/components/ui/Toast";
 import { TaskDetailModal } from "@/components/TaskDetailModal";
+import { Pagination, usePagination } from "@/components/ui/Pagination";
 import { generateAI } from "@/lib/ai/generate";
 import { TASK_PRIORITIES } from "@/lib/constants";
 
@@ -167,6 +168,8 @@ function TasksInner() {
     return () => window.removeEventListener("keydown", onKey);
   }, []);
 
+  const { page, setPage, pageSize, total, paged } = usePagination(rows, 10);
+
   const anyFilterActive = !!(projectFilter || priorityFilter || assigneeFilter);
   const projectName = (id: string) => projects.find((p) => p.id === id)?.name ?? "";
 
@@ -236,8 +239,8 @@ function TasksInner() {
       </div>
 
       {/* Tab bar + secondary filters */}
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex flex-wrap gap-1 rounded-md border border-neutral-300 bg-neutral-50 p-0.5">
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex shrink-0 gap-1 rounded-md border border-neutral-300 bg-neutral-50 p-0.5">
           {TABS.map((t) => {
             const active = tab === t.id;
             const n =
@@ -262,7 +265,7 @@ function TasksInner() {
           })}
         </div>
 
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex shrink-0 items-center gap-2">
           <Select value={projectFilter} onChange={(e) => setParam("project", e.target.value || null)} className="w-40">
             <option value="">All projects</option>
             {projects.map((p) => (
@@ -356,7 +359,7 @@ function TasksInner() {
               </tr>
             </thead>
             <tbody className="divide-y divide-neutral-200 bg-neutral-50">
-              {rows.map((r) => {
+              {paged.map((r) => {
                 const overdue = r.dueDate && r.dueDate < new Date().toISOString().slice(0, 10) && r.status !== "done" && r.status !== "cancelled";
                 const person = r.assigneeId ? peopleById[r.assigneeId] : null;
                 const flash = flashId === r.id;
@@ -418,6 +421,7 @@ function TasksInner() {
               })}
             </tbody>
           </table>
+          <Pagination page={page} pageSize={pageSize} total={total} onPageChange={setPage} />
         </div>
         </>
       )}

@@ -11,6 +11,7 @@ import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@
 import { Empty, EmptyHeader, EmptyTitle, EmptyDescription } from "@/components/ui/Empty";
 import { AiButton, AiSuggestionCard, useAiCall } from "@/components/ui/AiTouchpoint";
 import { SectionSkeleton } from "@/components/ui/skeleton";
+import { Pagination, usePagination } from "@/components/ui/Pagination";
 
 type Category = { id: string; name: string; description: string | null; defaultAssigneeId: string | null; isActive: boolean };
 type HrCase = {
@@ -288,6 +289,8 @@ function AllCasesTab({ orgId, refreshKey, onOpen }: { orgId: string; refreshKey:
       (!categoryFilter || r.categoryId === categoryFilter),
   );
 
+  const { page, setPage, pageSize, total, paged: pagedFiltered } = usePagination(filtered, 10);
+
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap gap-3">
@@ -330,7 +333,7 @@ function AllCasesTab({ orgId, refreshKey, onOpen }: { orgId: string; refreshKey:
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filtered.map((c) => (
+              {pagedFiltered.map((c) => (
                 <TableRow key={c.id} className="cursor-pointer" onClick={() => onOpen(c.id)}>
                   <TableCell>
                     {c.isConfidential && <span className="mr-1.5 inline-block text-neutral-500">&#128274;</span>}
@@ -343,6 +346,7 @@ function AllCasesTab({ orgId, refreshKey, onOpen }: { orgId: string; refreshKey:
               ))}
             </TableBody>
           </Table>
+          <Pagination page={page} pageSize={pageSize} total={total} onPageChange={setPage} />
         </Card>
       )}
     </div>
@@ -357,6 +361,7 @@ function CategoriesTab({ orgId }: { orgId: string }) {
   const [description, setDescription] = useState("");
   const [assigneeId, setAssigneeId] = useState("");
   const [saving, setSaving] = useState(false);
+  const { page: catPage, setPage: setCatPage, pageSize: catPageSize, total: catTotal, paged: pagedCategories } = usePagination(categories, 10);
 
   function load() {
     fetch(`/api/hr-cases/categories?org_id=${orgId}`).then((r) => r.json()).then((b) => setCategories(b.data ?? []));
@@ -419,7 +424,7 @@ function CategoriesTab({ orgId }: { orgId: string }) {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {categories.map((c) => (
+            {pagedCategories.map((c) => (
               <TableRow key={c.id}>
                 <TableCell>{c.name}</TableCell>
                 <TableCell className="text-neutral-600">{c.description ?? "—"}</TableCell>
@@ -428,6 +433,7 @@ function CategoriesTab({ orgId }: { orgId: string }) {
             ))}
           </TableBody>
         </Table>
+        <Pagination page={catPage} pageSize={catPageSize} total={catTotal} onPageChange={setCatPage} />
       </Card>
     </div>
   );

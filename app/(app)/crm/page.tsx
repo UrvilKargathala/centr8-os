@@ -186,7 +186,7 @@ export default function CrmDashboardPage() {
                   title={`${STAGE_LABELS[s.stage] ?? s.stage}: ${s.count} deal${s.count === 1 ? "" : "s"}, ₹${s.total_value.toLocaleString()}, avg ${Math.round(s.avg_days_in_stage)}d in stage`}
                 >
                   <span className="w-28 shrink-0 text-caption text-neutral-600">{STAGE_LABELS[s.stage] ?? s.stage}</span>
-                  <div className="h-2 flex-1 overflow-hidden rounded-full bg-neutral-100">
+                  <div className="h-2 flex-1 bar-track overflow-hidden rounded-full bg-neutral-100">
                     <div className="h-full rounded-full bg-primary-600" style={{ width: `${(s.total_value / maxStageValue) * 100}%` }} />
                   </div>
                   <span className="w-24 shrink-0 text-right text-caption text-neutral-600">
@@ -213,7 +213,7 @@ export default function CrmDashboardPage() {
                   title={`${SOURCE_LABELS[source] ?? source}: ${count} lead${count === 1 ? "" : "s"}`}
                 >
                   <span className="w-28 shrink-0 truncate text-caption text-neutral-600">{SOURCE_LABELS[source] ?? source}</span>
-                  <div className="h-2 flex-1 overflow-hidden rounded-full bg-neutral-100">
+                  <div className="h-2 flex-1 bar-track overflow-hidden rounded-full bg-neutral-100">
                     <div className="h-full rounded-full bg-primary-600" style={{ width: `${(count / maxSourceCount) * 100}%` }} />
                   </div>
                   <span className="w-8 shrink-0 text-right text-caption text-neutral-600">{count}</span>

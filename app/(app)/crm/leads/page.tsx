@@ -10,6 +10,7 @@ import { Input, Select, Field, Textarea } from "@/components/ui/Input";
 import { LeadStatusBadge } from "@/components/ui/Badge";
 import { Avatar } from "@/components/ui/Avatar";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/Table";
+import { Pagination, usePagination } from "@/components/ui/Pagination";
 import { Empty, EmptyHeader, EmptyTitle, EmptyDescription } from "@/components/ui/Empty";
 import { AiButton, AiSuggestionCard, useAiCall } from "@/components/ui/AiTouchpoint";
 import { LEAD_STATUSES, ACTIVITY_TYPES } from "@/lib/constants";
@@ -122,6 +123,8 @@ export default function LeadsPage() {
     setLeads((prev) => prev.map((l) => (l.id === id ? { ...l, status: newStatus } : l)));
     await fetch(`/api/crm/leads/${id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ status: newStatus }) });
   }
+
+  const { page, setPage, pageSize, total, paged } = usePagination(leads, 10);
 
   if (orgLoading || loading) return <PageSkeleton variant="table" />;
   if (!selectedOrgId) return <p className="text-body text-neutral-600">No organization selected.</p>;
@@ -250,7 +253,7 @@ export default function LeadsPage() {
               </TableRow>
             </TableHeader>
             <TableBody className="bg-neutral-50">
-              {leads.map((lead) => (
+              {paged.map((lead) => (
                 <TableRow key={lead.id} className="cursor-pointer" onClick={() => setSelected(lead)}>
                   <TableCell>
                     <div className="flex items-center gap-3">
@@ -293,6 +296,7 @@ export default function LeadsPage() {
               ))}
             </TableBody>
           </Table>
+          <Pagination page={page} pageSize={pageSize} total={total} onPageChange={setPage} />
         </div>
       ) : (
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">

@@ -276,7 +276,7 @@ function OverviewTab({
             <p className="mt-4 text-body text-neutral-600">No tasks yet — add one in the Tasks tab to start tracking.</p>
           ) : (
             <>
-              <div className="mt-3 h-2 w-full overflow-hidden rounded-full bg-neutral-200">
+              <div className="mt-3 h-2 w-full bar-track overflow-hidden rounded-full bg-neutral-200">
                 <div className="h-full rounded-full bg-success-600" style={{ width: `${pct}%` }} />
               </div>
               <div className="mt-4 grid grid-cols-2 gap-2 text-small">
@@ -308,7 +308,7 @@ function OverviewTab({
                   of <span className="font-medium text-neutral-950">${budgetAllocated.toLocaleString()}</span>
                 </span>
               </div>
-              <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-neutral-200">
+              <div className="mt-2 h-2 w-full bar-track overflow-hidden rounded-full bg-neutral-200">
                 <div className={`h-full rounded-full ${overBudget ? "bg-danger-600" : "bg-primary-600"}`} style={{ width: `${budgetPct}%` }} />
               </div>
               <p className="mt-2 text-caption text-neutral-500">{budgetPct}% used</p>
@@ -450,7 +450,7 @@ function BudgetSummary({ project }: { project: Project }) {
         </span>
       </div>
       {project.budgetAllocated != null && (
-        <div className="h-1.5 w-full overflow-hidden rounded-full bg-neutral-200">
+        <div className="h-1.5 w-full bar-track overflow-hidden rounded-full bg-neutral-200">
           <div
             className={`h-full rounded-full ${overBudget ? "bg-danger-600" : "bg-primary-600"}`}
             style={{ width: `${pctUsed}%` }}
@@ -866,7 +866,7 @@ function SettingsTab({ project, orgId, onSaved }: { project: Project; orgId: str
 
           {budgetAllocated && Number(budgetAllocated) > 0 && (
             <div className="mt-4">
-              <div className="h-2 w-full overflow-hidden rounded-full bg-neutral-200">
+              <div className="h-2 w-full bar-track overflow-hidden rounded-full bg-neutral-200">
                 <div
                   className={`h-full rounded-full ${overBudget ? "bg-danger-600" : "bg-primary-600"}`}
                   style={{ width: `${budgetPct}%` }}

@@ -11,6 +11,7 @@ import { Select, Field } from "@/components/ui/Input";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/Table";
 import { Empty, EmptyHeader, EmptyMedia, EmptyTitle, EmptyDescription } from "@/components/ui/Empty";
 import { useToast } from "@/components/ui/Toast";
+import { Pagination, usePagination } from "@/components/ui/Pagination";
 
 type Period = { period_start: string; period_end: string; label: string };
 type PayslipRecord = {
@@ -92,6 +93,8 @@ export default function PayrollPage() {
     if (deptFilter && employees.find((e) => e.id === r.employeeId)?.departmentId !== deptFilter) return false;
     return true;
   });
+
+  const { page, setPage, pageSize, total, paged: pagedFiltered } = usePagination(filtered, 10);
 
   const kpis = useMemo(() => {
     const totalGross = filtered.reduce((s, r) => s + r.grossAmount, 0);
@@ -256,7 +259,7 @@ export default function PayrollPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filtered.map((r) => {
+                {pagedFiltered.map((r) => {
                   const emp = employees.find((e) => e.id === r.employeeId);
                   return (
                     <TableRow key={r.id}>
@@ -295,6 +298,7 @@ export default function PayrollPage() {
                 })}
               </TableBody>
             </Table>
+            <Pagination page={page} pageSize={pageSize} total={total} onPageChange={setPage} />
           </Card>
         </>
       )}

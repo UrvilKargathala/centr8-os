@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { Pagination, usePagination } from "@/components/ui/Pagination";
 import { useOrg } from "@/lib/context/OrgContext";
 import { PageSkeleton } from "@/components/ui/skeleton";
 import { Card } from "@/components/ui/Card";
@@ -103,7 +104,7 @@ export default function BudgetsPage() {
             <Card padding="sm">
               <p className="text-small text-neutral-600">Total spent</p>
               <p className="mt-1 text-h1 font-semibold text-neutral-950">{formatCurrency(totalSpent)}</p>
-              <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-neutral-200">
+              <div className="mt-2 h-1.5 w-full bar-track overflow-hidden rounded-full bg-neutral-200">
                 <div
                   className={`h-full rounded-full ${totalSpent > totalAllocated ? "bg-danger-600" : "bg-primary-600"}`}
                   style={{ width: `${pctUsed}%` }}
@@ -116,58 +117,80 @@ export default function BudgetsPage() {
             </Card>
           </div>
 
-          <Card padding="sm">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Project</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Allocated</TableHead>
-                  <TableHead>Spent</TableHead>
-                  {canEdit && <TableHead>Actions</TableHead>}
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {projects.map((p) =>
-                  editingId === p.id ? (
-                    <BudgetEditRow key={p.id} project={p} saving={saving} onCancel={() => setEditingId(null)} onSave={save} />
-                  ) : (
-                    <TableRow key={p.id}>
-                      <TableCell>
-                        <a href={`/projects/${p.id}`} className="font-medium text-neutral-950 hover:underline">
-                          {p.name}
-                        </a>
-                      </TableCell>
-                      <TableCell>
-                        <ProjectStatusBadge status={p.status} />
-                      </TableCell>
-                      <TableCell className="text-neutral-600">
-                        {p.budgetAllocated != null ? formatCurrency(p.budgetAllocated) : "Not set"}
-                      </TableCell>
-                      <TableCell className="text-neutral-600">
-                        <span className="flex items-center gap-2">
-                          {p.budgetSpent != null ? formatCurrency(p.budgetSpent) : "Not set"}
-                          {p.budgetAllocated != null && (p.budgetSpent ?? 0) > p.budgetAllocated && (
-                            <Badge color="danger">Over</Badge>
-                          )}
-                        </span>
-                      </TableCell>
-                      {canEdit && (
-                        <TableCell>
-                          <Button variant="secondary" onClick={() => setEditingId(p.id)}>
-                            Edit
-                          </Button>
-                        </TableCell>
-                      )}
-                    </TableRow>
-                  ),
-                )}
-              </TableBody>
-            </Table>
-          </Card>
+          <BudgetTable projects={projects} editingId={editingId} setEditingId={setEditingId} saving={saving} canEdit={canEdit} onSave={save} />
         </>
       )}
     </div>
+  );
+}
+
+function BudgetTable({
+  projects,
+  editingId,
+  setEditingId,
+  saving,
+  canEdit,
+  onSave,
+}: {
+  projects: Project[];
+  editingId: string | null;
+  setEditingId: (id: string | null) => void;
+  saving: boolean;
+  canEdit: boolean;
+  onSave: (id: string, allocated: string, spent: string) => void;
+}) {
+  const { page, setPage, pageSize, total, paged } = usePagination(projects, 10);
+  return (
+    <Card padding="sm">
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>Project</TableHead>
+            <TableHead>Status</TableHead>
+            <TableHead>Allocated</TableHead>
+            <TableHead>Spent</TableHead>
+            {canEdit && <TableHead>Actions</TableHead>}
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {paged.map((p) =>
+            editingId === p.id ? (
+              <BudgetEditRow key={p.id} project={p} saving={saving} onCancel={() => setEditingId(null)} onSave={onSave} />
+            ) : (
+              <TableRow key={p.id}>
+                <TableCell>
+                  <a href={`/projects/${p.id}`} className="font-medium text-neutral-950 hover:underline">
+                    {p.name}
+                  </a>
+                </TableCell>
+                <TableCell>
+                  <ProjectStatusBadge status={p.status} />
+                </TableCell>
+                <TableCell className="text-neutral-600">
+                  {p.budgetAllocated != null ? formatCurrency(p.budgetAllocated) : "Not set"}
+                </TableCell>
+                <TableCell className="text-neutral-600">
+                  <span className="flex items-center gap-2">
+                    {p.budgetSpent != null ? formatCurrency(p.budgetSpent) : "Not set"}
+                    {p.budgetAllocated != null && (p.budgetSpent ?? 0) > p.budgetAllocated && (
+                      <Badge color="danger">Over</Badge>
+                    )}
+                  </span>
+                </TableCell>
+                {canEdit && (
+                  <TableCell>
+                    <Button variant="secondary" onClick={() => setEditingId(p.id)}>
+                      Edit
+                    </Button>
+                  </TableCell>
+                )}
+              </TableRow>
+            ),
+          )}
+        </TableBody>
+      </Table>
+      <Pagination page={page} pageSize={pageSize} total={total} onPageChange={setPage} />
+    </Card>
   );
 }
 

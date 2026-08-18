@@ -10,6 +10,7 @@ import { Input, Select, Field } from "@/components/ui/Input";
 import { AccountTypeBadge, AccountStatusBadge } from "@/components/ui/Badge";
 import { Avatar, ViewIconLink } from "@/components/ui/Avatar";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/Table";
+import { Pagination, usePagination } from "@/components/ui/Pagination";
 import { Empty, EmptyHeader, EmptyTitle, EmptyDescription } from "@/components/ui/Empty";
 import { ACCOUNT_TYPES, ACCOUNT_STATUSES } from "@/lib/constants";
 import { PageSkeleton } from "@/components/ui/skeleton";
@@ -79,6 +80,8 @@ export default function AccountsPage() {
     }),
     [accounts],
   );
+
+  const { page, setPage, pageSize, total, paged } = usePagination(accounts, 10);
 
   if (orgLoading || loading) return <PageSkeleton variant="table" />;
   if (!selectedOrgId) return <p className="text-body text-neutral-600">No organization selected.</p>;
@@ -183,7 +186,7 @@ export default function AccountsPage() {
               </TableRow>
             </TableHeader>
             <TableBody className="bg-neutral-50">
-              {accounts.map((a) => (
+              {paged.map((a) => (
                 <TableRow key={a.id} className="cursor-pointer" onClick={() => router.push(`/crm/accounts/${a.id}`)}>
                   <TableCell>
                     <div className="flex items-center gap-3">
@@ -213,6 +216,7 @@ export default function AccountsPage() {
               ))}
             </TableBody>
           </Table>
+          <Pagination page={page} pageSize={pageSize} total={total} onPageChange={setPage} />
         </div>
       )}
 

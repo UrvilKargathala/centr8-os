@@ -10,6 +10,7 @@ import { Input, Select, Field, Textarea } from "@/components/ui/Input";
 import { Badge } from "@/components/ui/Badge";
 import { Avatar } from "@/components/ui/Avatar";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/Table";
+import { Pagination, usePagination } from "@/components/ui/Pagination";
 import { Empty, EmptyHeader, EmptyTitle, EmptyDescription } from "@/components/ui/Empty";
 import { AiButton, AiSuggestionCard, useAiCall } from "@/components/ui/AiTouchpoint";
 import { LogActivityForm } from "../leads/page";
@@ -91,6 +92,8 @@ export default function ContactsPage() {
     }),
     [contacts],
   );
+
+  const { page, setPage, pageSize, total, paged } = usePagination(contacts, 10);
 
   if (orgLoading || loading) return <PageSkeleton variant="table" />;
   if (!selectedOrgId) return <p className="text-body text-neutral-600">No organization selected.</p>;
@@ -186,7 +189,7 @@ export default function ContactsPage() {
               </TableRow>
             </TableHeader>
             <TableBody className="bg-neutral-50">
-              {contacts.map((c) => (
+              {paged.map((c) => (
                 <TableRow key={c.id} className="cursor-pointer" onClick={() => setSelected(c)}>
                   <TableCell>
                     <div className="flex items-center gap-3">
@@ -236,6 +239,7 @@ export default function ContactsPage() {
               ))}
             </TableBody>
           </Table>
+          <Pagination page={page} pageSize={pageSize} total={total} onPageChange={setPage} />
         </div>
       )}
 

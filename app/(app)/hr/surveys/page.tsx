@@ -504,7 +504,7 @@ function ResultsTab({ orgId, refreshKey }: { orgId: string; refreshKey: number }
                     {[5, 4, 3, 2, 1].map((n) => (
                       <div key={n} className="flex items-center gap-2">
                         <span className="w-4 text-caption text-neutral-500">{n}</span>
-                        <div className="h-2 flex-1 overflow-hidden rounded-full bg-neutral-200">
+                        <div className="h-2 flex-1 bar-track overflow-hidden rounded-full bg-neutral-200">
                           <div
                             className="h-full bg-success-600"
                             style={{ width: `${q.response_count ? (q.distribution[n] / q.response_count) * 100 : 0}%` }}
@@ -520,7 +520,7 @@ function ResultsTab({ orgId, refreshKey }: { orgId: string; refreshKey: number }
                     {Object.entries(q.distribution).map(([option, count]) => (
                       <div key={option} className="flex items-center gap-2">
                         <span className="w-32 truncate text-caption text-neutral-600">{option}</span>
-                        <div className="h-2 flex-1 overflow-hidden rounded-full bg-neutral-200">
+                        <div className="h-2 flex-1 bar-track overflow-hidden rounded-full bg-neutral-200">
                           <div className="h-full bg-success-600" style={{ width: `${q.response_count ? (count / q.response_count) * 100 : 0}%` }} />
                         </div>
                         <span className="w-6 text-caption text-neutral-500">{count}</span>

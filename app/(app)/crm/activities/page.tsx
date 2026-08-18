@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Input, Select, Field } from "@/components/ui/Input";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/Table";
+import { Pagination, usePagination } from "@/components/ui/Pagination";
 import { Empty, EmptyHeader, EmptyTitle, EmptyDescription } from "@/components/ui/Empty";
 import { ACTIVITY_TYPES } from "@/lib/constants";
 import { PageSkeleton } from "@/components/ui/skeleton";
@@ -63,6 +64,8 @@ export default function ActivitiesPage() {
   useEffect(load, [selectedOrgId, relatedType, activityType, performedBy, dateFrom, dateTo]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const employeeName = (id: string | null) => employees.find((e) => e.id === id)?.fullName ?? "—";
+
+  const { page, setPage, pageSize, total, paged } = usePagination(activities, 10);
 
   if (orgLoading || loading) return <PageSkeleton variant="table" />;
   if (!selectedOrgId) return <p className="text-body text-neutral-600">No organization selected.</p>;
@@ -144,7 +147,7 @@ export default function ActivitiesPage() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {activities.map((a) => (
+            {paged.map((a) => (
               <TableRow key={a.id}>
                 <TableCell>
                   <Badge color="neutral">{a.relatedType}</Badge>
@@ -157,6 +160,7 @@ export default function ActivitiesPage() {
             ))}
           </TableBody>
         </Table>
+        <Pagination page={page} pageSize={pageSize} total={total} onPageChange={setPage} />
         </div>
       )}
     </div>

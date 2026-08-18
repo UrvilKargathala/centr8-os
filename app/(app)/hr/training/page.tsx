@@ -10,6 +10,7 @@ import { Input, Select, Field, Textarea } from "@/components/ui/Input";
 import { Empty, EmptyHeader, EmptyTitle, EmptyDescription } from "@/components/ui/Empty";
 import { AiButton, AiSuggestionCard, useAiCall } from "@/components/ui/AiTouchpoint";
 import { SectionSkeleton } from "@/components/ui/skeleton";
+import { Pagination, usePagination } from "@/components/ui/Pagination";
 
 type Course = {
   id: string;
@@ -162,7 +163,7 @@ function CatalogTab({
                     <Badge color="success">Completed</Badge>
                   ) : (
                     <div className="space-y-1">
-                      <div className="h-1.5 w-full overflow-hidden rounded-full bg-neutral-200">
+                      <div className="h-1.5 w-full bar-track overflow-hidden rounded-full bg-neutral-200">
                         <div className="h-full bg-success-600" style={{ width: `${enrollment.progressPercent}%` }} />
                       </div>
                       <p className="text-caption text-neutral-500">{enrollment.progressPercent}% complete</p>
@@ -356,7 +357,7 @@ function MyLearningTab({ orgId, refreshKey, onChanged }: { orgId: string; refres
                 <p className="text-body-medium font-semibold text-neutral-950">{course?.title ?? "—"}</p>
                 <Badge color={STATUS_COLOR[e.status]}>{e.status.replace(/_/g, " ")}</Badge>
               </div>
-              <div className="h-1.5 w-full overflow-hidden rounded-full bg-neutral-200">
+              <div className="h-1.5 w-full bar-track overflow-hidden rounded-full bg-neutral-200">
                 <div className="h-full bg-success-600" style={{ width: `${e.progressPercent}%` }} />
               </div>
               <p className="text-caption text-neutral-500">{e.progressPercent}% complete</p>
@@ -402,6 +403,7 @@ function ProgressOverviewTab({ orgId }: { orgId: string }) {
   if (loading) return <SectionSkeleton variant="table" />;
 
   const requiredCourses = courses.filter((c) => c.requiredForRoles?.length > 0);
+  const { page, setPage, pageSize, total, paged: pagedEmployees } = usePagination(employees, 10);
   if (requiredCourses.length === 0) {
     return (
       <Empty>
@@ -425,7 +427,7 @@ function ProgressOverviewTab({ orgId }: { orgId: string }) {
           </tr>
         </thead>
         <tbody>
-          {employees.map((emp) => (
+          {pagedEmployees.map((emp) => (
             <tr key={emp.id} className="border-b border-neutral-100">
               <td className="px-3 py-2.5 text-neutral-950">{emp.fullName}</td>
               {requiredCourses.map((c) => {
@@ -445,6 +447,7 @@ function ProgressOverviewTab({ orgId }: { orgId: string }) {
           ))}
         </tbody>
       </table>
+      <Pagination page={page} pageSize={pageSize} total={total} onPageChange={setPage} />
     </div>
   );
 }

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { Pagination, usePagination } from "@/components/ui/Pagination";
 import { useOrg } from "@/lib/context/OrgContext";
 import { PageSkeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/Button";
@@ -99,6 +100,8 @@ export default function TeamPage() {
     });
   }, [people, q, roleFilter, deptFilter, statusFilter]);
 
+  const { page, setPage, pageSize, total, paged } = usePagination(filtered, 10);
+
   async function handleDeactivate(id: string) {
     await fetch(`/api/team/${id}`, { method: "DELETE" });
     loadAll();
@@ -130,6 +133,7 @@ export default function TeamPage() {
             {filtered.length === people.length
               ? `${people.length} members`
               : `Showing ${filtered.length} of ${people.length} members`}
+            {filtered.length > pageSize && ` (page ${page} of ${Math.ceil(total / pageSize)})`}
           </p>
         </div>
       </div>
@@ -141,42 +145,42 @@ export default function TeamPage() {
         <KpiCard title="Departments" value={kpis.depts} pattern={kpis.depts * 4} tone="warning" />
       </div>
 
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex flex-wrap items-center gap-2">
-          <Input
-            placeholder="Search name, email, title…"
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-            className="w-56"
-          />
-          <Select value={roleFilter} onChange={(e) => setRoleFilter(e.target.value)} className="w-36">
-            <option value="">All roles</option>
-            {ROLE_OPTIONS.map((r) => (
-              <option key={r} value={r}>{r}</option>
-            ))}
-          </Select>
-          <Select value={deptFilter} onChange={(e) => setDeptFilter(e.target.value)} className="w-40">
-            <option value="">All departments</option>
-            {departments.map((d) => (
-              <option key={d} value={d}>{d}</option>
-            ))}
-          </Select>
-          <Select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value as "all" | "active" | "inactive")} className="w-32">
-            <option value="active">Active</option>
-            <option value="inactive">Inactive</option>
-            <option value="all">All status</option>
-          </Select>
-          {(q || roleFilter || deptFilter || statusFilter !== "active") && (
-            <button
-              type="button"
-              onClick={() => { setQ(""); setRoleFilter(""); setDeptFilter(""); setStatusFilter("active"); }}
-              className="text-small text-neutral-500 hover:text-neutral-800 dark:hover:text-neutral-200"
-            >
-              Clear filters
-            </button>
-          )}
+      <div className="flex items-center gap-3">
+        <Input
+          placeholder="Search name, email, title…"
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+          className="w-56"
+        />
+        <Select value={roleFilter} onChange={(e) => setRoleFilter(e.target.value)} className="w-36">
+          <option value="">All roles</option>
+          {ROLE_OPTIONS.map((r) => (
+            <option key={r} value={r}>{r}</option>
+          ))}
+        </Select>
+        <Select value={deptFilter} onChange={(e) => setDeptFilter(e.target.value)} className="w-40">
+          <option value="">All departments</option>
+          {departments.map((d) => (
+            <option key={d} value={d}>{d}</option>
+          ))}
+        </Select>
+        <Select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value as "all" | "active" | "inactive")} className="w-32">
+          <option value="active">Active</option>
+          <option value="inactive">Inactive</option>
+          <option value="all">All status</option>
+        </Select>
+        {(q || roleFilter || deptFilter || statusFilter !== "active") && (
+          <button
+            type="button"
+            onClick={() => { setQ(""); setRoleFilter(""); setDeptFilter(""); setStatusFilter("active"); }}
+            className="shrink-0 text-small text-neutral-500 hover:text-neutral-800 dark:hover:text-neutral-200"
+          >
+            Clear filters
+          </button>
+        )}
+        <div className="ml-auto">
+          {can("team", "create") && <Button onClick={() => setEditing("new")}>+ Add person</Button>}
         </div>
-        {can("team", "create") && <Button onClick={() => setEditing("new")}>+ Add person</Button>}
       </div>
 
       {filtered.length === 0 ? (
@@ -217,7 +221,7 @@ export default function TeamPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-neutral-200 bg-neutral-50">
-              {filtered.map((p) => (
+              {paged.map((p) => (
                 <tr key={p.id} className="hover:bg-neutral-100">
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-3">
@@ -239,7 +243,7 @@ export default function TeamPage() {
                       const color = pct > 90 ? "bg-danger-600" : pct > 70 ? "bg-warning-600" : "bg-primary-600";
                       return (
                         <div className="flex items-center gap-2">
-                          <div className="h-1.5 w-16 overflow-hidden rounded-full bg-neutral-200">
+                          <div className="h-1.5 w-16 bar-track overflow-hidden rounded-full bg-neutral-200">
                             <div className={`h-full rounded-full ${color}`} style={{ width: `${pct}%` }} />
                           </div>
                           <span className="text-small text-neutral-600">{used}/{p.availableHoursPerWeek}h</span>
@@ -318,6 +322,7 @@ export default function TeamPage() {
               ))}
             </tbody>
           </table>
+          <Pagination page={page} pageSize={pageSize} total={total} onPageChange={setPage} />
         </div>
       )}
 

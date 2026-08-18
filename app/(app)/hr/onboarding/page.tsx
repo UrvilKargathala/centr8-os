@@ -11,6 +11,7 @@ import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@
 import { Empty, EmptyHeader, EmptyMedia, EmptyTitle, EmptyDescription } from "@/components/ui/Empty";
 import { AiButton, AiSuggestionCard, useAiCall } from "@/components/ui/AiTouchpoint";
 import { SectionSkeleton } from "@/components/ui/skeleton";
+import { Pagination, usePagination } from "@/components/ui/Pagination";
 
 type Step = {
   step_id: string;
@@ -101,6 +102,7 @@ function ActiveOnboardingTab({ orgId }: { orgId: string }) {
   }
 
   const employeeName = (id: string) => employees.find((e) => e.id === id)?.fullName ?? "Unknown";
+  const { page, setPage, pageSize, total, paged: pagedWorkflows } = usePagination(workflows, 10);
 
   return (
     <Card padding="sm">
@@ -114,7 +116,7 @@ function ActiveOnboardingTab({ orgId }: { orgId: string }) {
           </TableRow>
         </TableHeader>
         <TableBody>
-          {workflows.map((w) => {
+          {pagedWorkflows.map((w) => {
             const done = w.steps.filter((s) => s.status === "completed" || s.status === "skipped").length;
             const pct = w.steps.length ? Math.round((done / w.steps.length) * 100) : 0;
             return (
@@ -126,7 +128,7 @@ function ActiveOnboardingTab({ orgId }: { orgId: string }) {
                 </TableCell>
                 <TableCell>
                   <div className="flex items-center gap-2">
-                    <div className="h-1.5 w-32 overflow-hidden rounded-full bg-neutral-200">
+                    <div className="h-1.5 w-32 bar-track overflow-hidden rounded-full bg-neutral-200">
                       <div className="h-full rounded-full bg-success-600" style={{ width: `${pct}%` }} />
                     </div>
                     <span className="text-caption text-neutral-600">
@@ -147,6 +149,7 @@ function ActiveOnboardingTab({ orgId }: { orgId: string }) {
           })}
         </TableBody>
       </Table>
+      <Pagination page={page} pageSize={pageSize} total={total} onPageChange={setPage} />
     </Card>
   );
 }

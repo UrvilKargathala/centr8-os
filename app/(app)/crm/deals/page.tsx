@@ -10,6 +10,7 @@ import { Input, Select, Field } from "@/components/ui/Input";
 import { Badge } from "@/components/ui/Badge";
 import { Avatar, ViewIconLink } from "@/components/ui/Avatar";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/Table";
+import { Pagination, usePagination } from "@/components/ui/Pagination";
 import { Empty, EmptyHeader, EmptyTitle, EmptyDescription } from "@/components/ui/Empty";
 import { useToast } from "@/components/ui/Toast";
 import { PageSkeleton } from "@/components/ui/skeleton";
@@ -152,7 +153,7 @@ export default function DealsPage() {
     }
   }
 
-  function sortedDeals() {
+  const sortedDeals = useMemo(() => {
     return [...filteredDeals].sort((a, b) => {
       const av = a[sortKey] ?? "";
       const bv = b[sortKey] ?? "";
@@ -160,7 +161,7 @@ export default function DealsPage() {
       if (av > bv) return 1 * sortDir;
       return 0;
     });
-  }
+  }, [filteredDeals, sortKey, sortDir]);
   function toggleSort(key: keyof Deal) {
     if (sortKey === key) setSortDir((d) => (d === 1 ? -1 : 1));
     else {
@@ -168,6 +169,8 @@ export default function DealsPage() {
       setSortDir(1);
     }
   }
+
+  const { page, setPage, pageSize, total, paged } = usePagination(sortedDeals, 10);
 
   if (orgLoading || loading) return <PageSkeleton variant="table" />;
   if (!selectedOrgId) return <p className="text-body text-neutral-600">No organization selected.</p>;
@@ -322,7 +325,7 @@ export default function DealsPage() {
               </TableRow>
             </TableHeader>
             <TableBody className="bg-neutral-50">
-              {sortedDeals().map((deal) => (
+              {paged.map((deal) => (
                 <TableRow key={deal.id} className="cursor-pointer" onClick={() => router.push(`/crm/deals/${deal.id}`)}>
                   <TableCell>
                     <div className="flex items-center gap-3">
@@ -351,6 +354,7 @@ export default function DealsPage() {
               ))}
             </TableBody>
           </Table>
+          <Pagination page={page} pageSize={pageSize} total={total} onPageChange={setPage} />
         </div>
       ) : (
         <ForecastView deals={deals} stats={stats} />
@@ -420,7 +424,7 @@ function ForecastView({ deals, stats }: { deals: Deal[]; stats: PipelineStats | 
           {byMonth.map(([month, value]) => (
             <div key={month} className="flex items-center gap-2">
               <span className="w-24 shrink-0 text-caption text-neutral-600">{month}</span>
-              <div className="h-4 flex-1 rounded-sm bg-neutral-200">
+              <div className="bar-track h-4 flex-1 rounded-sm bg-neutral-200">
                 <div className="h-4 rounded-sm bg-danger-600" style={{ width: `${(value / maxMonth) * 100}%` }} />
               </div>
               <span className="w-24 shrink-0 text-right text-caption text-neutral-600">{fmtMoney(value, "INR")}</span>

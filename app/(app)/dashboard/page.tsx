@@ -123,7 +123,7 @@ function MiniBars({ values, color }: { values: number[]; color: BadgeColor }) {
   return (
     <div className="flex h-8 items-end gap-1">
       {values.map((v, i) => (
-        <div key={i} className="flex h-full w-2 items-end rounded-full bg-neutral-100">
+        <div key={i} className="bar-stack flex h-full w-2 items-end rounded-full bg-neutral-100">
           <div className={`w-2 rounded-full ${bg[color]}`} style={{ height: `${Math.max(v > 0 ? 12 : 4, (v / max) * 100)}%` }} />
         </div>
       ))}
@@ -546,7 +546,7 @@ export default function DashboardPage() {
                     </span>
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-body-medium font-medium text-neutral-950">{p.name}</p>
-                      <div className="mt-1 h-1.5 w-full max-w-[10rem] overflow-hidden rounded-full bg-neutral-100">
+                      <div className="mt-1 h-1.5 w-full max-w-[10rem] bar-track overflow-hidden rounded-full bg-neutral-100">
                         <div
                           className="h-full rounded-full bg-primary-600"
                           style={{ width: `${p.task_progress.total > 0 ? (p.task_progress.done / p.task_progress.total) * 100 : 0}%` }}
@@ -599,7 +599,7 @@ export default function DashboardPage() {
                           </span>
                         </div>
                         <p className="truncate text-caption text-neutral-500">{t.project_name}</p>
-                        <div className="mt-1 h-2 w-full overflow-hidden rounded-full bg-neutral-100">
+                        <div className="mt-1 h-2 w-full bar-track overflow-hidden rounded-full bg-neutral-100">
                           <div
                             className={`h-full rounded-full ${overdue ? "bg-danger-600" : "bg-primary-600"}`}
                             style={{ width: `${barPercent}%` }}

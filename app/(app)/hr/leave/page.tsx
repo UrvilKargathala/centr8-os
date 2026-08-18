@@ -13,6 +13,7 @@ import { Empty, EmptyHeader, EmptyMedia, EmptyTitle, EmptyDescription } from "@/
 import { AiButton, useAiCall } from "@/components/ui/AiTouchpoint";
 import { useToast } from "@/components/ui/Toast";
 import { RequestLeaveModal } from "@/components/hr/RequestLeaveModal";
+import { Pagination, usePagination } from "@/components/ui/Pagination";
 
 export type LeaveType = { id: string; name: string; color: string; isPaid: boolean; isActive: boolean; requiresApproval: boolean; maxConsecutiveDays: number | null };
 export type LeavePolicy = { id: string; leaveTypeId: string; name: string; appliesTo: string; annualAllotmentDays: number; carryForwardMaxDays: number; effectiveFrom: string; isActive: boolean };
@@ -119,6 +120,7 @@ function MyLeaveTab({ orgId, refreshKey, onRequestLeave }: { orgId: string; refr
   const [loading, setLoading] = useState(true);
   const [cancelTarget, setCancelTarget] = useState<LeaveRequest | null>(null);
   const { show: showToast } = useToast();
+  const { page: leavePage, setPage: setLeavePage, pageSize: leavePageSize, total: leaveTotal, paged: pagedRequests } = usePagination(requests, 10);
 
   function load() {
     setLoading(true);
@@ -156,7 +158,7 @@ function MyLeaveTab({ orgId, refreshKey, onRequestLeave }: { orgId: string; refr
                   <p className="text-caption text-neutral-600">
                     of {allotted} · {balance?.usedDays ?? 0} used, {balance?.pendingDays ?? 0} pending
                   </p>
-                  <div className="flex h-1.5 w-full overflow-hidden rounded-full bg-neutral-200">
+                  <div className="flex h-1.5 w-full bar-track overflow-hidden rounded-full bg-neutral-200">
                     <div className="h-full" style={{ width: `${usedPct}%`, backgroundColor: leave_type.color }} />
                     <div className="h-full opacity-40" style={{ width: `${pendingPct}%`, backgroundColor: leave_type.color }} />
                   </div>
@@ -198,7 +200,7 @@ function MyLeaveTab({ orgId, refreshKey, onRequestLeave }: { orgId: string; refr
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {requests.map((r) => {
+                {pagedRequests.map((r) => {
                   const type = balances.find((b) => b.leave_type.id === r.leaveTypeId)?.leave_type;
                   return (
                     <TableRow key={r.id}>
@@ -232,6 +234,7 @@ function MyLeaveTab({ orgId, refreshKey, onRequestLeave }: { orgId: string; refr
                 })}
               </TableBody>
             </Table>
+            <Pagination page={leavePage} pageSize={leavePageSize} total={leaveTotal} onPageChange={setLeavePage} />
           </Card>
         )}
       </div>
@@ -659,6 +662,8 @@ function PoliciesTab({ orgId }: { orgId: string }) {
     if (res.ok) load();
   }
 
+  const { page: policyPage, setPage: setPolicyPage, pageSize: policyPageSize, total: policyTotal, paged: pagedPolicies } = usePagination(policies, 10);
+
   if (loading) return <SectionSkeleton variant="table" />;
 
   return (
@@ -712,7 +717,7 @@ function PoliciesTab({ orgId }: { orgId: string }) {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {policies.map((p) => (
+              {pagedPolicies.map((p) => (
                 <TableRow key={p.id}>
                   <TableCell>{types.find((t) => t.id === p.leaveTypeId)?.name ?? "—"}</TableCell>
                   <TableCell className="text-neutral-600">{p.appliesTo}</TableCell>
@@ -728,6 +733,7 @@ function PoliciesTab({ orgId }: { orgId: string }) {
               ))}
             </TableBody>
           </Table>
+          <Pagination page={policyPage} pageSize={policyPageSize} total={policyTotal} onPageChange={setPolicyPage} />
         </Card>
       </div>
 

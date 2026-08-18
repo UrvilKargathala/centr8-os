@@ -167,3 +167,29 @@ body {
 .text-h3 {
   font-family: var(--font-heading);
 }
+
+/* Bar / chart entrance animations */
+@keyframes bar-grow-w {
+  from { transform: scaleX(0); }
+  to   { transform: scaleX(1); }
+}
+@keyframes bar-grow-h {
+  from { transform: scaleY(0); }
+  to   { transform: scaleY(1); }
+}
+
+/* Horizontal bars — add .bar-track to the progress track container */
+.bar-track > * {
+  animation: bar-grow-w 0.6s cubic-bezier(.4,0,.2,1) both;
+  transform-origin: left center;
+}
+.bar-stack > * {
+  animation: bar-grow-h 0.5s ease-out both;
+  transform-origin: center bottom;
+}
+
+/* KPI cards and stat numbers — subtle fade-up on mount */
+@keyframes fade-up {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
