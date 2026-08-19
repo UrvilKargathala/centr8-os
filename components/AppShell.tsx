@@ -298,7 +298,7 @@ function AppSidebar({
         <div className="fixed inset-0 z-40 bg-neutral-950/40 md:hidden" onClick={() => setMobileOpen(false)} />
       )}
       <aside
-        className={`fixed inset-y-0 left-0 z-50 flex flex-col glass transition-[width,transform] duration-200 md:static md:translate-x-0 ${width} ${
+        className={`fixed inset-y-0 left-0 z-50 flex flex-col glass glass-navy transition-[width,transform] duration-200 md:static md:translate-x-0 ${width} ${
           mobileOpen ? "translate-x-0" : "-translate-x-full"
         }`}
       >

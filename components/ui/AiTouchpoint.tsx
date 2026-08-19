@@ -71,7 +71,7 @@ export function AiSuggestionCard({
   children: ReactNode;
 }) {
   return (
-    <div className="mt-2 space-y-2 overflow-hidden rounded-md border border-ai-600/40">
+    <div className="mt-2 space-y-2 overflow-hidden rounded-md border border-ai-600/40 glass-purple">
       <AiBanner />
       <div className="space-y-2 px-4 pb-3">
         {children}

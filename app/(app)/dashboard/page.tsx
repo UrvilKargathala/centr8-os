@@ -266,7 +266,7 @@ const STAGE_COLOR: Record<string, BadgeColor> = {
 // distributes the icon row and text block across the fixed height instead
 // of a fluid space-y gap, so tightening/loosening content never blows the
 // box out.
-const KPI_CARD = "!h-[136px] !rounded-2xl !p-4 flex flex-col justify-between overflow-hidden";
+const KPI_CARD = "!h-[136px] !rounded-2xl !p-4 flex flex-col justify-between overflow-hidden glass-cyan";
 
 export default function DashboardPage() {
   const { selectedOrgId, selectedOrg, can, loading: orgLoading } = useOrg();
@@ -736,7 +736,7 @@ export default function DashboardPage() {
         </div>
 
         <div className="space-y-6 lg:col-span-2">
-          <Card className="!rounded-2xl !border-none !bg-neutral-950 !p-5 text-neutral-50">
+          <Card className="!rounded-2xl !border-none !bg-neutral-950 !p-5 text-neutral-50 glass-elevated">
             <div className="mb-8 flex items-start justify-between">
               <p className="text-body-medium font-medium">Next Meeting</p>
               <ChipIcon path={PILLAR_ICON.video} color="ai" />
@@ -771,7 +771,7 @@ export default function DashboardPage() {
               same one at /ai/ask and the header widget), not a decorative
               mockup. Top recommendations sit below the input as quick-start
               tiles, mirroring the reference's prompt-tile row. */}
-          <Card className="!rounded-2xl !p-0 flex h-[420px] flex-col overflow-hidden">
+          <Card className="!rounded-2xl !p-0 flex h-[420px] flex-col overflow-hidden glass-elevated">
             <div className="flex items-center justify-between border-b border-neutral-200 p-3">
               <span className="flex items-center gap-1.5 text-body-medium font-semibold text-ai-600">
                 <ChipIcon path={PILLAR_ICON.ai} color="ai" />

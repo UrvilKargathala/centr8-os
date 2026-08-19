@@ -26,7 +26,7 @@ export function KpiCard({
   }[tone];
   const dots = Math.min(24, Math.max(0, pattern));
   return (
-    <div className="relative flex h-full flex-col justify-between overflow-hidden rounded-md glass-card p-4">
+    <div className="relative flex h-full flex-col justify-between overflow-hidden rounded-md glass-card glass-cyan p-4">
       <div className="flex items-start justify-between gap-2">
         <p className="text-small text-neutral-600">{title}</p>
         <svg className="h-4 w-4 text-neutral-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
