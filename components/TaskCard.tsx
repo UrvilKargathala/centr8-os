@@ -85,7 +85,7 @@ export function TaskCard({
       onDragStart={onDragStart}
       onClick={onClick}
       onKeyDown={(e) => e.key === "Enter" && onClick()}
-      className={`flex flex-col gap-3 rounded-lg border border-neutral-300 bg-neutral-50 p-4 text-left shadow-sm transition-shadow hover:shadow-md ${cardAccentClass(taskPriorityColor(task.priority))} ${
+      className={`glass-card flex flex-col gap-3 p-4 text-left transition-shadow hover:shadow-md ${cardAccentClass(taskPriorityColor(task.priority))} ${
         draggable ? "cursor-grab active:cursor-grabbing" : "cursor-pointer"
       }`}
     >

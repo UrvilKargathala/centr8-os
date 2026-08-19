@@ -318,7 +318,7 @@ export function ChatInput({ onSend, disabled }: { onSend: (text: string) => void
           }
         }}
         placeholder="Ask about overdue tasks, budgets, team gaps…"
-        className="flex-1 rounded-md border border-neutral-300 bg-neutral-50 px-3 py-2 text-body focus:border-primary-600 focus:outline-none"
+        className="glass-input flex-1 rounded-md px-3 py-2 text-body focus:border-primary-600 focus:outline-none"
       />
       <button
         onClick={submit}

@@ -311,7 +311,7 @@ export function TaskDetailModal({ taskId, onClose, onChanged }: { taskId: string
 
           {error && <p className="rounded-md bg-danger-100 p-3 text-body text-danger-600">{error}</p>}
 
-          <div className="space-y-3 rounded-md border border-neutral-200 bg-neutral-100/60 p-4">
+          <div className="glass-card space-y-3 p-4">
             <MetaRow label="Status">
               <Select className="w-full" value={task.status} onChange={(e) => setTask({ ...task, status: e.target.value })} disabled={!canUpdateTask}>
                 {TASK_STATUSES.map((s) => (
@@ -461,7 +461,7 @@ export function TaskDetailModal({ taskId, onClose, onChanged }: { taskId: string
                 {attachments.map((a) => {
                   const chip = fileKindChip(a.fileName);
                   return (
-                    <li key={a.id} className="flex items-center gap-3 rounded-md border border-neutral-200 bg-neutral-50 p-2.5">
+                    <li key={a.id} className="glass-card flex items-center gap-3 p-2.5">
                       <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-md text-caption font-semibold ${chip.classes}`}>
                         {chip.label}
                       </span>
@@ -539,7 +539,7 @@ export function TaskDetailModal({ taskId, onClose, onChanged }: { taskId: string
                 {comments.map((c) => (
                   <li key={c.id} className="flex items-start gap-2.5">
                     <Avatar name={c.authorUserId ? c.authorUserId.slice(0, 2) : "?"} size={8} />
-                    <div className="min-w-0 flex-1 rounded-md border border-neutral-300 bg-neutral-50 p-3">
+                    <div className="glass-card min-w-0 flex-1 p-3">
                       <div className="flex items-baseline justify-between gap-2">
                         <span className="text-caption font-medium text-neutral-700">
                           {c.authorUserId ? c.authorUserId.slice(0, 8) : "Unknown"}

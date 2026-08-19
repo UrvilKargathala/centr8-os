@@ -219,7 +219,7 @@ export default function ProjectsPage() {
         <KpiCard title="At risk" value={kpis.atRisk} pattern={kpis.atRisk} tone="danger" />
       </div>
 
-      <div className="space-y-2 rounded-md border border-ai-600/40 bg-neutral-50 p-4">
+      <div className="glass-card rounded-md border-ai-600/40 space-y-2 p-4">
         <AiBanner label="AI: What's coming up" />
         {aiSummary ? (
           <p className="text-body text-neutral-800">{aiSummary}</p>
@@ -434,7 +434,7 @@ function ProjectListView({
             <th className="px-4 py-2">Health</th>
           </tr>
         </thead>
-        <tbody className="divide-y divide-neutral-200 bg-neutral-50">
+        <tbody className="divide-y divide-neutral-200">
           {paged.map((project) => {
             const progress = taskProgress[project.id];
             const pct = progress && progress.total > 0 ? Math.round((progress.done / progress.total) * 100) : 0;
@@ -496,7 +496,7 @@ function TimelineView({ projects }: { projects: Project[] }) {
 
   if (dated.length === 0) {
     return (
-      <div className="rounded-md border border-dashed border-neutral-300 bg-neutral-50 p-8 text-center">
+      <div className="glass-card rounded-md border-dashed p-8 text-center">
         <p className="text-body-medium font-medium text-neutral-950">No projects with dates yet</p>
         <p className="mt-1 text-small text-neutral-600">Set start and end dates on a project to see it on the timeline.</p>
       </div>
@@ -531,7 +531,7 @@ function TimelineView({ projects }: { projects: Project[] }) {
   } as Record<string, string>;
 
   return (
-    <div className="overflow-x-auto rounded-md border border-neutral-300 bg-neutral-50 p-4">
+    <div className="glass-card overflow-x-auto rounded-md p-4">
       <div className="relative">
         {/* Month tick strip */}
         <div className="relative mb-3 h-6 border-b border-neutral-200">

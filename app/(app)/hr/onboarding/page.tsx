@@ -332,7 +332,7 @@ function TemplateEditorModal({
 
         <div className="max-h-[35vh] space-y-2 overflow-y-auto pr-1">
           {steps.map((step, i) => (
-            <div key={step.step_id} className="space-y-2 rounded-md border border-neutral-200 bg-neutral-50 p-3">
+            <div key={step.step_id} className="space-y-2 glass-card p-3">
               <div className="flex items-center gap-2">
                 <div className="flex flex-col">
                   <button type="button" onClick={() => moveStep(i, -1)} disabled={i === 0} className="text-neutral-500 disabled:opacity-30">

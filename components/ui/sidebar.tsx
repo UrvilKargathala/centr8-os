@@ -168,7 +168,7 @@ function Sidebar({
  <div
  data-slot="sidebar"
  className={cn(
- "flex h-full w-(--sidebar-width) flex-col bg-neutral-50 text-neutral-950 ",
+ "glass flex h-full w-(--sidebar-width) flex-col text-neutral-950 ",
  className
  )}
  {...props}
@@ -186,7 +186,7 @@ function Sidebar({
  data-sidebar="sidebar"
  data-slot="sidebar"
  data-mobile="true"
- className="w-(--sidebar-width) bg-neutral-50 p-0 text-neutral-950 [&>button]:hidden "
+ className="w-(--sidebar-width) p-0 text-neutral-950 [&>button]:hidden "
  style={
  {
  "--sidebar-width": SIDEBAR_WIDTH_MOBILE,
@@ -241,7 +241,7 @@ function Sidebar({
  <div
  data-sidebar="sidebar"
  data-slot="sidebar-inner"
- className="flex size-full flex-col bg-neutral-50 group-data-[variant=floating]:rounded-lg group-data-[variant=floating]:shadow-sm group-data-[variant=floating]:ring-1 group-data-[variant=floating]:ring-neutral-300 =floating]:ring-neutral-300"
+ className="glass flex size-full flex-col group-data-[variant=floating]:rounded-lg group-data-[variant=floating]:shadow-sm group-data-[variant=floating]:ring-1 group-data-[variant=floating]:ring-neutral-300 =floating]:ring-neutral-300"
  >
  {children}
  </div>

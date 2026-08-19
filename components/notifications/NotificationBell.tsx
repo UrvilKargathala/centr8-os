@@ -166,7 +166,7 @@ export function NotificationBell({ orgId }: { orgId: string | null }) {
       </button>
 
       {open && (
-        <div className="absolute right-0 top-full z-50 mt-1 w-96 rounded-md border border-neutral-300 bg-neutral-50 shadow-lg">
+        <div className="glass absolute right-0 top-full z-50 mt-1 w-96 rounded-md shadow-lg">
           {/* Tab bar */}
           <div className="flex border-b border-neutral-200">
             <button

@@ -294,7 +294,7 @@ function ViewToggle({ view, onChange }: { view: ViewMode; onChange: (v: ViewMode
     { mode: "org-chart", label: "Org chart view", path: "M12 3v6m0 0H5v6m7-6h7v6M5 15v3h6m2-3v3h6" },
   ];
   return (
-    <div className="flex items-center gap-0.5 rounded-md border border-neutral-300 bg-neutral-50 p-0.5">
+    <div className="flex items-center gap-0.5 glass rounded-md p-0.5">
       {items.map((it) => (
         <button
           key={it.mode}
@@ -372,7 +372,7 @@ function RowMenu({ employeeId }: { employeeId: string }) {
         </svg>
       </button>
       {open && (
-        <div className="absolute right-0 top-full z-20 mt-1 w-40 overflow-hidden rounded-md border border-neutral-300 bg-neutral-50 shadow-lg">
+        <div className="glass absolute right-0 top-full z-20 mt-1 w-40 overflow-hidden rounded-md shadow-lg">
           <a href={`/hr/employees/${employeeId}`} className="block px-3 py-2 text-small text-neutral-800 hover:bg-neutral-100">
             View profile
           </a>

@@ -116,7 +116,7 @@ export function TaskCalendarView({ tasks, onTaskClick }: { tasks: Task[]; onTask
         )}
       </div>
 
-      <div className="grid grid-cols-7 gap-px overflow-hidden rounded-md border border-neutral-300 bg-neutral-300">
+      <div className="glass-table grid grid-cols-7 gap-px bg-neutral-300">
         {WEEKDAY_LABELS.map((w) => (
           <div key={w} className="bg-neutral-100 px-2 py-1.5 text-center text-caption font-medium uppercase tracking-wide text-neutral-500">
             {w}

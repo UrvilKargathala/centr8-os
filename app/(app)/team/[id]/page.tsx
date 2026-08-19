@@ -129,7 +129,7 @@ export default function PersonDetailPage() {
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         {/* -- LEFT COLUMN -- */}
         <div className="space-y-4">
-          <div className="rounded-md border border-neutral-300 bg-neutral-50 p-5">
+          <div className="glass-card p-5">
             <div className="flex items-center gap-4">
               <span className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-primary-100 text-h2 font-semibold text-primary-700">
                 {initials(person.fullName)}
@@ -148,7 +148,7 @@ export default function PersonDetailPage() {
             </div>
           </div>
 
-          <div className="rounded-md border border-neutral-300 bg-neutral-50 p-5">
+          <div className="glass-card p-5">
             <div className="mb-2 flex items-center justify-between">
               <h3 className="font-heading text-h3 font-semibold text-neutral-950">Recent Activity</h3>
               {!person.isActive && <Badge color="neutral">Inactive</Badge>}
@@ -186,7 +186,7 @@ export default function PersonDetailPage() {
 
         {/* -- RIGHT COLUMN -- */}
         <div className="space-y-4">
-          <div className="rounded-md border border-neutral-300 bg-neutral-50 p-5">
+          <div className="glass-card p-5">
             <div className="mb-3 flex items-center justify-between">
               <h3 className="font-heading text-h3 font-semibold text-neutral-950">Activity Map</h3>
               <span className="rounded-md border border-neutral-300 px-2 py-1 text-caption text-neutral-700">
@@ -214,7 +214,7 @@ export default function PersonDetailPage() {
             </p>
           </div>
 
-          <div className="rounded-md border border-neutral-300 bg-neutral-50 p-5">
+          <div className="glass-card p-5">
             <h3 className="font-heading text-h3 font-semibold text-neutral-950">Task Performance</h3>
             <div className="mt-4 flex h-40 items-end gap-2">
               {monthlyBars.bars.map((b) => {
@@ -238,7 +238,7 @@ export default function PersonDetailPage() {
             </p>
           </div>
 
-          <div className="rounded-md border border-neutral-300 bg-neutral-50 p-5">
+          <div className="glass-card p-5">
             <h3 className="mb-2 font-heading text-h3 font-semibold text-neutral-950">Roles & Skills</h3>
             <div className="space-y-3">
               <div>

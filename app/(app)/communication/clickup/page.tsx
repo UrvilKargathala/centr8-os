@@ -176,7 +176,7 @@ export default function ClickUpPage() {
       {connected === false && <CommunicationBanner service="ClickUp" connectHref="/admin/integrations" />}
 
       {connected && (
-        <div className="flex w-fit gap-1 rounded-md border border-neutral-300 p-0.5">
+        <div className="flex w-fit gap-1 glass p-0.5 rounded-md">
           {(["tasks", "docs"] as const).map((t) => (
             <button
               key={t}
@@ -193,7 +193,7 @@ export default function ClickUpPage() {
 
       {connected && tab === "tasks" && (
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-[340px_1fr]">
-          <aside className="space-y-2 rounded-md border border-neutral-300 bg-neutral-50 p-3">
+          <aside className="space-y-2 glass-card p-3">
             <p className="mb-1 text-caption font-semibold uppercase tracking-wider text-neutral-500">Tasks</p>
             {tasksLoading ? (
               <SectionSkeleton variant="list" />
@@ -225,7 +225,7 @@ export default function ClickUpPage() {
             )}
           </aside>
 
-          <div className="flex min-h-[500px] flex-col rounded-md border border-neutral-300 bg-neutral-50">
+          <div className="flex min-h-[500px] flex-col glass-card">
             {!activeTaskId ? (
               <p className="flex flex-1 items-center justify-center text-body text-neutral-500">Pick a task to see its comments.</p>
             ) : (
@@ -283,7 +283,7 @@ export default function ClickUpPage() {
                     {draftLoading ? "Thinking…" : "AI: Draft a reply"}
                   </button>
                   {draft && (
-                    <div className="space-y-2 overflow-hidden rounded-md border border-ai-600/40">
+                    <div className="space-y-2 overflow-hidden rounded-md glass-card border-ai-600/40">
                       <AiBanner />
                       <div className="space-y-2 px-4 pb-3">
                         <p className="whitespace-pre-wrap text-body text-neutral-800">{draft}</p>
@@ -312,7 +312,7 @@ export default function ClickUpPage() {
 
       {connected && tab === "docs" && (
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-[340px_1fr]">
-          <aside className="space-y-2 rounded-md border border-neutral-300 bg-neutral-50 p-3">
+          <aside className="space-y-2 glass-card p-3">
             <p className="mb-1 text-caption font-semibold uppercase tracking-wider text-neutral-500">Docs</p>
             {docsLoading ? (
               <SectionSkeleton variant="list" />
@@ -340,7 +340,7 @@ export default function ClickUpPage() {
             )}
           </aside>
 
-          <div className="flex min-h-[500px] flex-col rounded-md border border-neutral-300 bg-neutral-50">
+          <div className="flex min-h-[500px] flex-col glass-card">
             {!activeDocId ? (
               <p className="flex flex-1 items-center justify-center text-body text-neutral-500">Pick a doc to view its content.</p>
             ) : (

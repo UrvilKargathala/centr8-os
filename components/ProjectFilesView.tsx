@@ -138,7 +138,7 @@ export function ProjectFilesView({ tasks }: { tasks: Task[] }) {
       </div>
 
       {canUpload && tasks.length > 0 && (
-        <div className="flex flex-wrap items-center gap-2 rounded-md border border-dashed border-neutral-300 bg-neutral-50 p-3">
+        <div className="glass-card flex flex-wrap items-center gap-2 border-dashed p-3">
           <Select className="w-56" value={uploadTaskId} onChange={(e) => setUploadTaskId(e.target.value)}>
             {tasks.map((t) => (
               <option key={t.id} value={t.id}>
@@ -171,7 +171,7 @@ export function ProjectFilesView({ tasks }: { tasks: Task[] }) {
           </EmptyHeader>
         </Empty>
       ) : (
-        <div className="overflow-x-auto rounded-md border border-neutral-300">
+        <div className="glass-table overflow-x-auto">
           <table className="w-full min-w-[640px] text-body">
             <thead>
               <tr className="border-b border-neutral-200 bg-neutral-100 text-left text-caption font-medium uppercase tracking-wide text-neutral-500">
@@ -183,7 +183,7 @@ export function ProjectFilesView({ tasks }: { tasks: Task[] }) {
                 <th className="w-10 px-3 py-2" />
               </tr>
             </thead>
-            <tbody className="divide-y divide-neutral-200 bg-neutral-50">
+            <tbody className="divide-y divide-neutral-200">
               {filtered.map((a) => (
                 <tr key={a.id} className="hover:bg-neutral-100">
                   <td className="px-3 py-3">

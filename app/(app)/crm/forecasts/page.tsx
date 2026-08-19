@@ -147,7 +147,7 @@ export default function ForecastsPage() {
               ))}
             </Select>
           </Field>
-          <div className="flex w-fit gap-1 rounded-md border border-neutral-300 p-0.5">
+          <div className="flex w-fit gap-1 glass p-0.5">
             {(["monthly", "quarterly", "annual"] as const).map((v) => (
               <button
                 key={v}
@@ -227,7 +227,7 @@ export default function ForecastsPage() {
             {actionsAI.result.actions.map((a, i) => {
               const deal = dealByName(a.deal_name);
               return (
-                <div key={i} className="rounded-sm border border-neutral-200 p-2">
+                <div key={i} className="glass-card rounded-sm p-2">
                   <p className="text-body-medium font-medium text-neutral-950">{a.action}</p>
                   {deal ? (
                     <button className="text-small text-danger-600 underline" onClick={() => router.push(`/crm/deals/${deal.id}`)}>

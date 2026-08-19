@@ -223,7 +223,7 @@ export default function MailPage() {
       </div>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-[240px_1fr]">
-        <aside className="space-y-3 rounded-md border border-neutral-300 bg-neutral-50 p-3">
+        <aside className="space-y-3 glass p-3 rounded-md">
           <Input placeholder="Search…" value={q} onChange={(e) => setQ(e.target.value)} />
           <ul className="space-y-0.5">
             {TABS.map((t) => (
@@ -244,7 +244,7 @@ export default function MailPage() {
           </ul>
         </aside>
 
-        <div className="min-h-[500px] rounded-md border border-neutral-300 bg-neutral-50">
+        <div className="min-h-[500px] glass-card">
           {openThreadId && openMsg ? (
             <div className="flex h-full flex-col">
               <div className="flex items-center justify-between border-b border-neutral-200 px-4 py-3">
@@ -273,7 +273,7 @@ export default function MailPage() {
                   <p className="text-body text-neutral-600">{openMsg.snippet}</p>
                 ) : (
                   thread.map((m) => (
-                    <div key={m.id} className="flex gap-3 rounded-md border border-neutral-200 bg-neutral-50 p-3">
+                    <div key={m.id} className="flex gap-3 glass-card rounded-md p-3">
                       <Avatar name={m.from} />
                       <div className="min-w-0 flex-1">
                         <div className="flex items-baseline justify-between">
@@ -289,7 +289,7 @@ export default function MailPage() {
               </div>
 
               {summary && (
-                <div className="mx-4 mb-4 space-y-2 overflow-hidden rounded-md border border-ai-600/40">
+                <div className="mx-4 mb-4 space-y-2 overflow-hidden rounded-md glass-card border-ai-600/40">
                   <AiBanner label="AI summary" />
                   <p className="whitespace-pre-wrap px-4 pb-3 text-body text-neutral-800">{summary}</p>
                   <div className="flex justify-end gap-2 px-4 pb-3">
@@ -299,7 +299,7 @@ export default function MailPage() {
               )}
 
               {category && (
-                <div className="mx-4 mb-4 space-y-2 overflow-hidden rounded-md border border-ai-600/40">
+                <div className="mx-4 mb-4 space-y-2 overflow-hidden rounded-md glass-card border-ai-600/40">
                   <AiBanner label="AI categorization" />
                   <div className="px-4 pb-3">
                     <p className="text-body-medium font-semibold text-neutral-950">Suggested: {category.label}</p>

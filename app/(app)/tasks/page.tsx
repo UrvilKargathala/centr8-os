@@ -240,7 +240,7 @@ function TasksInner() {
 
       {/* Tab bar + secondary filters */}
       <div className="flex items-center justify-between gap-3">
-        <div className="flex shrink-0 gap-1 rounded-md border border-neutral-300 bg-neutral-50 p-0.5">
+        <div className="flex shrink-0 gap-1 glass rounded-md p-0.5">
           {TABS.map((t) => {
             const active = tab === t.id;
             const n =
@@ -358,7 +358,7 @@ function TasksInner() {
                 <th className="w-8 px-3 py-2" />
               </tr>
             </thead>
-            <tbody className="divide-y divide-neutral-200 bg-neutral-50">
+            <tbody className="divide-y divide-neutral-200">
               {paged.map((r) => {
                 const overdue = r.dueDate && r.dueDate < new Date().toISOString().slice(0, 10) && r.status !== "done" && r.status !== "cancelled";
                 const person = r.assigneeId ? peopleById[r.assigneeId] : null;

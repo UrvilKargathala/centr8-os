@@ -176,7 +176,7 @@ export default function ContactsPage() {
         <div className="overflow-x-auto glass-table">
           <Table>
             <TableHeader>
-              <TableRow className="bg-neutral-100 text-caption font-medium uppercase tracking-wide text-neutral-500">
+              <TableRow className="text-caption font-medium uppercase tracking-wide text-neutral-500">
                 <TableHead>Name</TableHead>
                 <TableHead>Email</TableHead>
                 <TableHead>Phone</TableHead>
@@ -188,7 +188,7 @@ export default function ContactsPage() {
                 <TableHead />
               </TableRow>
             </TableHeader>
-            <TableBody className="bg-neutral-50">
+            <TableBody>
               {paged.map((c) => (
                 <TableRow key={c.id} className="cursor-pointer" onClick={() => setSelected(c)}>
                   <TableCell>
@@ -518,7 +518,7 @@ function ContactDetailModal({
             <p className="text-small text-neutral-600">No activity logged yet.</p>
           ) : (
             activities.map((a) => (
-              <div key={a.id} className="rounded-sm border border-neutral-200 p-2">
+              <div key={a.id} className="glass-card rounded-sm p-2">
                 <div className="flex items-center justify-between">
                   <span className="text-caption font-semibold uppercase text-neutral-600">{a.type}</span>
                   <span className="text-caption text-neutral-500">{timeAgo(a.activityDate)}</span>

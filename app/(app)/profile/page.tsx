@@ -175,7 +175,7 @@ function SsoConfigSection({ orgId }: { orgId: string }) {
               </Field>
               <Field label="IdP x509 certificate">
                 <textarea
-                  className="w-full rounded-md border border-neutral-300 bg-neutral-50 px-3 py-2 text-body focus:outline focus:outline-2 focus:outline-primary-600"
+                  className="glass-input w-full rounded-md px-3 py-2 text-body focus:outline focus:outline-2 focus:outline-primary-600"
                   rows={4}
                   value={idpCertificate}
                   onChange={(e) => setIdpCertificate(e.target.value)}
@@ -289,7 +289,7 @@ function ApiKeysSection({ orgId }: { orgId: string }) {
       ) : keys.length === 0 ? (
         <p className="text-body text-neutral-600">No API keys yet.</p>
       ) : (
-        <ul className="divide-y divide-neutral-200 rounded-md border border-neutral-300">
+        <ul className="glass-table divide-y divide-neutral-200">
           {keys.map((k) => (
             <li key={k.id} className="flex items-center justify-between gap-2 px-4 py-3 text-body">
               <div>

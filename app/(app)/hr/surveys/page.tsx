@@ -178,7 +178,7 @@ function RespondModal({ surveyId, onClose, onSubmitted }: { surveyId: string; on
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-neutral-950/40 p-4" onClick={onClose}>
-      <div className="max-h-[85vh] w-full max-w-lg overflow-y-auto rounded-lg bg-neutral-50 p-6 shadow-lg" onClick={(e) => e.stopPropagation()}>
+      <div className="glass max-h-[85vh] w-full max-w-lg overflow-y-auto rounded-lg p-6 shadow-lg" onClick={(e) => e.stopPropagation()}>
         <form onSubmit={handleSubmit} className="space-y-3">
           <h3 className="text-h3 font-semibold text-neutral-950">{survey.title}</h3>
           {survey.isAnonymous && (
@@ -357,7 +357,7 @@ function SurveyEditor({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-neutral-950/40 p-4" onClick={onClose}>
-      <div className="max-h-[85vh] w-full max-w-2xl overflow-y-auto rounded-lg bg-neutral-50 p-6 shadow-lg" onClick={(e) => e.stopPropagation()}>
+      <div className="glass max-h-[85vh] w-full max-w-2xl overflow-y-auto rounded-lg p-6 shadow-lg" onClick={(e) => e.stopPropagation()}>
         <form onSubmit={handleSubmit} className="space-y-3">
           <h3 className="text-h3 font-semibold text-neutral-950">{survey ? "Edit survey" : "New survey"}</h3>
           {error && <p className="rounded-md bg-danger-100 p-2 text-body text-danger-600">{error}</p>}

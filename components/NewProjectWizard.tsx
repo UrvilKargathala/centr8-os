@@ -617,7 +617,7 @@ function Step2({ state, patch }: { state: WizardState; patch: (p: Partial<Wizard
         </Field>
       </div>
 
-      <div className="space-y-3 rounded-md border border-neutral-300 bg-neutral-50 p-4">
+      <div className="glass-card space-y-3 p-4">
         <div className="flex items-center justify-between">
           <h3 className="font-heading text-h3 font-semibold text-neutral-950">Budget breakdown</h3>
           <AiButton
@@ -675,7 +675,7 @@ function Step2({ state, patch }: { state: WizardState; patch: (p: Partial<Wizard
       </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-5">
-        <div className="rounded-md border border-neutral-300 bg-neutral-50 p-4 sm:col-span-3">
+        <div className="glass-card p-4 sm:col-span-3">
           <h4 className="mb-2 font-heading text-body-medium font-semibold text-neutral-950">Budget split</h4>
           {catTotal > 0 ? (
             <DonutChart
@@ -693,7 +693,7 @@ function Step2({ state, patch }: { state: WizardState; patch: (p: Partial<Wizard
           )}
         </div>
 
-        <div className="space-y-3 rounded-md border border-neutral-300 bg-neutral-50 p-4 sm:col-span-2">
+        <div className="glass-card space-y-3 p-4 sm:col-span-2">
           <h4 className="font-heading text-body-medium font-semibold text-neutral-950">Timeline</h4>
           {durationDays > 0 ? (
             <>
@@ -942,7 +942,7 @@ function Step3({
         )}
 
         {N === 0 ? (
-          <div className="flex flex-col items-center gap-2 rounded-md border border-dashed border-neutral-300 bg-neutral-50 p-8 text-center">
+          <div className="glass-card flex flex-col items-center gap-2 border-dashed p-8 text-center">
             <svg className="h-8 w-8 text-neutral-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
               <path
                 strokeLinecap="round"
@@ -968,7 +968,7 @@ function Step3({
               const hoursMissing = showErrors && m.userId && !m.hoursPerWeek;
               return (
                 <li key={i}>
-                  <div className="flex flex-wrap items-center gap-3 rounded-md border border-neutral-300 bg-neutral-50 p-3">
+                  <div className="glass-card flex flex-wrap items-center gap-3 p-3">
                     {/* Avatar */}
                     <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-neutral-100 text-caption font-semibold text-neutral-800">
                       {emp ? memberInitials(emp.fullName) : "?"}
@@ -991,7 +991,7 @@ function Step3({
                         </svg>
                       </button>
                       {pickerOpen === i && (
-                        <div className="absolute left-0 top-full z-30 mt-1 max-h-72 w-full overflow-hidden rounded-md border border-neutral-300 bg-neutral-50 shadow-lg">
+                        <div className="glass absolute left-0 top-full z-30 mt-1 max-h-72 w-full overflow-hidden rounded-md shadow-lg">
                           <div className="border-b border-neutral-200 p-2">
                             <Input
                               autoFocus
@@ -1137,7 +1137,7 @@ function Step3({
                           <p className="text-body text-neutral-600">Thinking…</p>
                         ) : (
                           (recCache[i] ?? []).map((r) => (
-                            <div key={r.name} className="flex items-start justify-between gap-3 rounded-md border border-neutral-200 bg-neutral-50 p-2">
+                            <div key={r.name} className="glass-card flex items-start justify-between gap-3 p-2">
                               <div className="min-w-0 flex-1">
                                 <p className="text-body-medium font-medium text-neutral-950">{r.name}</p>
                                 <p className="text-caption text-neutral-600">{r.reason}</p>

@@ -487,7 +487,7 @@ export default function CampaignDetailPage() {
             <AiSuggestionCard onAccept={() => improveAI.setResult(null)} onReject={() => improveAI.setResult(null)}>
               <div className="space-y-2">
                 {improveAI.result.improvements.map((imp, i) => (
-                  <div key={i} className="rounded-sm border border-neutral-200 p-2">
+                  <div key={i} className="glass-card rounded-sm p-2">
                     <p className="text-body-medium font-medium text-neutral-950">{imp.suggestion}</p>
                     <p className="text-caption text-neutral-500">{imp.reasoning}</p>
                     <p className="text-caption text-neutral-500">Expected impact: {imp.expected_impact}</p>

@@ -141,7 +141,7 @@ export default function RecommendationsPage() {
         </Card>
       </div>
 
-      <div className="flex w-fit gap-1 rounded-md border border-neutral-300 p-0.5">
+      <div className="flex w-fit gap-1 glass p-0.5">
         {CATEGORIES.map((c) => (
           <button
             key={c}

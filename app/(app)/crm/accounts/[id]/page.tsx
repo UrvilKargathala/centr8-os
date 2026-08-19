@@ -294,7 +294,7 @@ export default function AccountDetailPage() {
               <p className="text-small text-neutral-600">No activity logged yet.</p>
             ) : (
               activities.map((a) => (
-                <div key={a.id} className="rounded-sm border border-neutral-200 p-2">
+                <div key={a.id} className="glass-card rounded-sm p-2">
                   <div className="flex items-center justify-between">
                     <span className="text-caption font-semibold uppercase text-neutral-600">{a.type}</span>
                     <span className="text-caption text-neutral-500">{timeAgo(a.activityDate)}</span>

@@ -546,7 +546,7 @@ function OnboardingTab({
           <h3 className="text-body-medium font-semibold text-neutral-800">{CATEGORY_LABEL[category] ?? category}</h3>
           <ul className="space-y-1.5">
             {steps.map((step) => (
-              <li key={step.step_id} className="flex items-center gap-2.5 rounded-md border border-neutral-200 bg-neutral-50 px-3 py-2">
+              <li key={step.step_id} className="flex items-center gap-2.5 glass-card rounded-md px-3 py-2">
                 <input
                   type="checkbox"
                   checked={step.status === "completed"}
@@ -902,7 +902,7 @@ function EntryRows<T extends Record<string, unknown>>({
         </Button>
       </div>
       {entries.map((row, i) => (
-        <div key={i} className="flex flex-wrap items-end gap-2 rounded-md border border-neutral-200 bg-neutral-50 p-2">
+        <div key={i} className="flex flex-wrap items-end gap-2 glass-card rounded-md p-2">
           {fields.map((f) => (
             <Field key={f.key} label={f.label}>
               <Input
@@ -1302,7 +1302,7 @@ function AdjustBalanceModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-neutral-950/40 p-4" onClick={onClose}>
-      <div className="w-full max-w-sm rounded-lg bg-neutral-50 p-6 shadow-lg" onClick={(e) => e.stopPropagation()}>
+      <div className="glass w-full max-w-sm rounded-lg p-6 shadow-lg" onClick={(e) => e.stopPropagation()}>
         <form onSubmit={handleSubmit} className="space-y-3">
           <h3 className="text-h3 font-semibold text-neutral-950">Adjust balance</h3>
           {error && <p className="rounded-md bg-danger-100 p-2 text-body text-danger-600">{error}</p>}

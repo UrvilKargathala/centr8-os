@@ -95,7 +95,7 @@ export default function UnifiedInboxPage() {
             </p>
           </div>
         ) : (
-          <ul className="divide-y divide-neutral-200 rounded-md border border-neutral-300 bg-neutral-50">
+          <ul className="glass-table divide-y divide-neutral-200">
             {feed.map((item) => (
               <li key={item.id}>
                 <Link href={item.href} className="flex items-center gap-3 px-4 py-3 hover:bg-neutral-100">
@@ -134,7 +134,7 @@ export default function UnifiedInboxPage() {
                     toast.show("Mock mode — not sent");
                     setCompose(false);
                   }}
-                  className="w-full rounded-md border border-neutral-300 bg-neutral-50 p-3 text-left hover:bg-neutral-100"
+                  className="glass-card w-full p-3 text-left hover:bg-neutral-100"
                 >
                   <p className="text-body-medium font-medium text-neutral-950">{opt.label}</p>
                   <p className="text-caption text-neutral-500">{opt.note}</p>
@@ -164,7 +164,7 @@ function SummaryCard({
   return (
     <Link
       href={href}
-      className="flex flex-col justify-between rounded-md border border-neutral-300 border-l-4 border-l-warning-600 bg-neutral-50 p-4 hover:bg-neutral-100"
+      className="glass-card flex flex-col justify-between border-l-4 border-l-warning-600 p-4 hover:bg-neutral-100"
     >
       <div className="flex items-center gap-2 text-warning-600">
         <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>

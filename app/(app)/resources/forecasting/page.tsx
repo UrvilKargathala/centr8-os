@@ -278,7 +278,7 @@ function SummaryTab({ orgId }: { orgId: string }) {
       {/* Row: Top Projects + AI Insights side by side */}
       <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-2">
         {/* Top Projects */}
-        <div className="rounded-lg border border-neutral-200 p-4">
+        <div className="glass-card rounded-lg p-4">
           <div className="mb-3 flex items-center justify-between">
             <h3 className="font-heading text-body-large font-semibold text-neutral-800">Top Projects</h3>
           </div>
@@ -309,7 +309,7 @@ function SummaryTab({ orgId }: { orgId: string }) {
         </div>
 
         {/* AI Intelligence & Recommendations */}
-        <div className="rounded-lg border border-ai-200 bg-ai-50/30 p-4">
+        <div className="glass-card rounded-lg border-ai-200 p-4">
           <div className="mb-3 flex items-center gap-2">
             <svg className="h-5 w-5 text-ai-600" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904 9 18.75l-.813-2.846a4.5 4.5 0 0 0-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 0 0 3.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 0 0 3.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 0 0-3.09 3.09ZM18.259 8.715 18 9.75l-.259-1.035a3.375 3.375 0 0 0-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 0 0 2.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 0 0 2.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 0 0-2.456 2.456ZM16.894 20.567 16.5 21.75l-.394-1.183a2.25 2.25 0 0 0-1.423-1.423L13.5 18.75l1.183-.394a2.25 2.25 0 0 0 1.423-1.423l.394-1.183.394 1.183a2.25 2.25 0 0 0 1.423 1.423l1.183.394-1.183.394a2.25 2.25 0 0 0-1.423 1.423Z" /></svg>
             <h3 className="font-heading text-body-large font-semibold text-neutral-800">AI Intelligence & Recommendations</h3>
@@ -319,22 +319,22 @@ function SummaryTab({ orgId }: { orgId: string }) {
             <div className="space-y-3">
               <p className="text-body-medium text-neutral-700">{insights.executive_summary}</p>
               <div className="grid grid-cols-3 gap-2">
-                <div className="rounded-lg border border-ai-200 bg-white p-2.5 text-center">
+                <div className="rounded-lg border border-ai-200 glass-card p-2.5 text-center">
                   <p className="text-[10px] font-medium uppercase tracking-wider text-neutral-500">Optimal Cap</p>
                   <p className="font-heading text-h3 font-bold text-primary-600">85%</p>
                 </div>
-                <div className="rounded-lg border border-ai-200 bg-white p-2.5 text-center">
+                <div className="rounded-lg border border-ai-200 glass-card p-2.5 text-center">
                   <p className="text-[10px] font-medium uppercase tracking-wider text-neutral-500">Variance</p>
                   <p className="font-heading text-h3 font-bold text-neutral-800">{insights.metrics.forecasted_vs_actual.variancePercent}%</p>
                 </div>
-                <div className="rounded-lg border border-ai-200 bg-white p-2.5 text-center">
+                <div className="rounded-lg border border-ai-200 glass-card p-2.5 text-center">
                   <p className="text-[10px] font-medium uppercase tracking-wider text-neutral-500">Warnings</p>
                   <p className="font-heading text-h3 font-bold text-danger-600">{insights.metrics.warning_count}</p>
                 </div>
               </div>
               <div className="space-y-1.5">
                 {insights.recommendations.map((r, i) => (
-                  <div key={i} className="flex items-center justify-between rounded border border-neutral-100 bg-white px-3 py-2">
+                  <div key={i} className="flex items-center justify-between rounded glass-card px-3 py-2">
                     <p className="text-body-small text-neutral-700">{r.title}</p>
                     <Badge color={r.priority === "high" ? "danger" : r.priority === "medium" ? "warning" : "success"}>
                       {r.priority.charAt(0).toUpperCase() + r.priority.slice(1)}
@@ -418,7 +418,7 @@ function SummaryTab({ orgId }: { orgId: string }) {
               <span className="flex items-center gap-1.5"><span className="h-3 w-3 rounded bg-neutral-300" /> Unallocated</span>
             </div>
           </div>
-          <div className="rounded-lg border border-neutral-200 p-4">
+          <div className="glass-card rounded-lg p-4">
             <div className="flex items-end gap-2" style={{ height: 220 }}>
               {months.map((m) => {
                 const items = deptUtil.filter((d) => d.month === m);
@@ -451,7 +451,7 @@ function SummaryTab({ orgId }: { orgId: string }) {
 
       {/* Forecasted vs Actual */}
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-        <div className="rounded-lg border border-neutral-200 p-4">
+        <div className="glass-card rounded-lg p-4">
           <h3 className="mb-1 font-heading text-body-large font-semibold text-neutral-800">Forecasted vs Actual</h3>
           <p className="mb-4 text-body-small text-neutral-500">How planned hours compare to logged hours this period</p>
           <div className="space-y-3">
@@ -490,7 +490,7 @@ function SummaryTab({ orgId }: { orgId: string }) {
         </div>
 
         {/* Utilization by Department Summary */}
-        <div className="rounded-lg border border-neutral-200 p-4">
+        <div className="glass-card rounded-lg p-4">
           <h3 className="mb-1 font-heading text-body-large font-semibold text-neutral-800">Utilization by Department</h3>
           <p className="mb-4 text-body-small text-neutral-500">Departmental breakdown of working hours</p>
           {(() => {
@@ -701,7 +701,7 @@ function AssignmentModal({
         {assignments.map((a, idx) => {
           const person = people.find((p) => p.id === a.personId);
           return (
-            <div key={a.personId} className="rounded-lg border border-neutral-200 p-3">
+            <div key={a.personId} className="glass-card rounded-lg p-3">
               <div className="mb-2 flex items-center justify-between">
                 <span className="font-medium text-neutral-800">{person?.fullName ?? "Unknown"}</span>
                 <label className="flex items-center gap-1.5 text-body-small text-neutral-600">

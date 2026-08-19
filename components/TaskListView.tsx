@@ -37,7 +37,7 @@ export function TaskListView({ tasks, onTaskClick }: { tasks: Task[]; onTaskClic
         const isCollapsed = collapsed[status];
 
         return (
-          <div key={status} className="overflow-hidden rounded-md border border-neutral-300">
+          <div key={status} className="glass-table overflow-hidden">
             <button
               type="button"
               onClick={() => setCollapsed((c) => ({ ...c, [status]: !c[status] }))}
@@ -71,7 +71,7 @@ export function TaskListView({ tasks, onTaskClick }: { tasks: Task[]; onTaskClic
                       <th className="px-4 py-2 font-medium">Assignee</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-neutral-200 bg-neutral-50">
+                  <tbody className="divide-y divide-neutral-200">
                     {rows.map((t) => (
                       <tr key={t.id} onClick={() => onTaskClick(t.id)} className="cursor-pointer hover:bg-neutral-100">
                         <td className="px-4 py-3 font-medium text-neutral-950">{t.title}</td>

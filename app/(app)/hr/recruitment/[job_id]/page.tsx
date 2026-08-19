@@ -102,7 +102,7 @@ export default function JobDetailPage() {
                   draggable={canManageCandidates}
                   onDragStart={(e) => e.dataTransfer.setData("text/plain", c.id)}
                   onClick={() => setSelectedCandidate(c)}
-                  className="cursor-pointer rounded-sm border border-neutral-300 bg-neutral-50 p-2 text-body shadow-sm hover:shadow-md"
+                  className="cursor-pointer glass-card p-2 text-body hover:shadow-md"
                 >
                   <p className="font-medium text-neutral-950">{c.fullName}</p>
                   <p className="text-caption text-neutral-500">{c.rating ? `${c.rating}/5` : "Not rated"}</p>

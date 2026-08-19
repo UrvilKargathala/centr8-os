@@ -137,7 +137,7 @@ export default function VideoPage() {
       {connected && (
         <>
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <div className="flex gap-1 rounded-md border border-neutral-300 bg-neutral-50 p-0.5">
+            <div className="glass flex gap-1 p-0.5">
               {(["upcoming", "past"] as const).map((t) => (
                 <button
                   key={t}
@@ -151,7 +151,7 @@ export default function VideoPage() {
                 </button>
               ))}
             </div>
-            <div className="flex gap-1 rounded-md border border-neutral-300 bg-neutral-50 p-0.5">
+            <div className="glass flex gap-1 p-0.5">
               {(["list", "week"] as const).map((v) => (
                 <button
                   key={v}
@@ -186,7 +186,7 @@ export default function VideoPage() {
                 ) : (
                   <ul className="grid grid-cols-1 gap-3 lg:grid-cols-2">
                     {list.map((m) => (
-                      <li key={m.id} className="rounded-md border border-neutral-300 bg-neutral-50 p-4">
+                      <li key={m.id} className="glass-card p-4">
                         <div className="flex items-start justify-between gap-3">
                           <div className="min-w-0">
                             <p className="font-heading text-body-medium font-semibold text-neutral-950">{m.title}</p>
@@ -452,7 +452,7 @@ function WeekStrip({ meetings, onOpen }: { meetings: GoogleMeeting[]; onOpen: (m
       {days.map((d) => {
         const isToday = d.iso === todayIso;
         return (
-          <div key={d.iso} className={`min-h-32 rounded-md border bg-neutral-50 p-2 ${isToday ? "border-primary-600" : "border-neutral-300"}`}>
+          <div key={d.iso} className={`glass-card min-h-32 p-2 ${isToday ? "!border-primary-600" : ""}`}>
             <div className="mb-2 flex items-baseline justify-between">
               <span className={`text-caption font-medium uppercase tracking-wide ${isToday ? "text-primary-700" : "text-neutral-500"}`}>
                 {d.label}

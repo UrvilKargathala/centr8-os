@@ -80,7 +80,7 @@ export function ActivityTimeline({
       <h3 className="text-h3 font-semibold text-neutral-950">Activity</h3>
 
       {canEdit && (
-        <form onSubmit={handleAdd} className="flex flex-wrap items-start gap-2 rounded-md border border-neutral-300 bg-neutral-100 p-3">
+        <form onSubmit={handleAdd} className="glass-card flex flex-wrap items-start gap-2 p-3">
           <Select className="w-32" value={type} onChange={(e) => setType(e.target.value as (typeof ACTIVITY_TYPES)[number])}>
             {ACTIVITY_TYPES.map((t) => (
               <option key={t} value={t}>
@@ -108,7 +108,7 @@ export function ActivityTimeline({
       ) : (
         <ul className="space-y-2">
           {activities.map((a) => (
-            <li key={a.id} className="flex items-start gap-3 rounded-md border border-neutral-200 p-3">
+            <li key={a.id} className="glass-card flex items-start gap-3 p-3">
               <span className="mt-0.5 shrink-0 rounded-sm bg-neutral-200 px-2 py-0.5 text-caption font-medium uppercase tracking-wide text-neutral-600">
                 {TYPE_LABEL[a.type]}
               </span>

@@ -341,7 +341,7 @@ export default function TimeTrackingPage() {
               ))}
             </tbody>
             <tfoot>
-              <tr className="border-t-2 border-neutral-300 bg-neutral-50">
+              <tr className="border-t-2 border-neutral-300">
                 <td colSpan={6} className="px-4 py-2.5 text-body-medium font-semibold text-neutral-950">Week Total</td>
                 <td className="whitespace-nowrap px-4 py-2.5 text-right font-heading text-body-medium font-semibold text-neutral-950">{fmtHours(summary?.totalHours ?? "0")}h</td>
                 <td />
@@ -441,7 +441,7 @@ export default function TimeTrackingPage() {
               })}
             </tbody>
             <tfoot>
-              <tr className="border-t-2 border-neutral-300 bg-neutral-50">
+              <tr className="border-t-2 border-neutral-300">
                 <td className="px-4 py-2.5 text-body-medium font-semibold text-neutral-950">Daily Total</td>
                 {weekDays.map((d) => (
                   <td

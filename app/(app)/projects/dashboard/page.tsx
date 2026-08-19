@@ -231,7 +231,7 @@ export default function DashboardPage() {
         <KpiCard title="Avg. progress" value={`${avgProgress}%`} pattern={Math.round(avgProgress / 5)} tone="warning" />
       </div>
 
-      <section className="overflow-hidden rounded-md border border-ai-600/40 bg-neutral-50">
+      <section className="glass-card overflow-hidden rounded-md border-ai-600/40">
         <AiBanner label="AI PlanIQ" />
         <div className="grid grid-cols-1 gap-4 p-4 lg:grid-cols-[1.4fr_1fr]">
           <div className="space-y-3">
@@ -247,7 +247,7 @@ export default function DashboardPage() {
                   if (e.key === "Enter") askPlaniq(planiqQ);
                 }}
                 placeholder="Ask me anything about the workspace…"
-                className="flex-1 rounded-md border border-neutral-300 bg-neutral-50 px-3 py-2 text-body focus:border-primary-600 focus:outline-none"
+                className="glass-input flex-1 rounded-md px-3 py-2 text-body focus:border-primary-600 focus:outline-none"
               />
               <button
                 type="button"
@@ -275,7 +275,7 @@ export default function DashboardPage() {
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
             <Link
               href="/tasks"
-              className="flex flex-col items-center justify-center gap-1 rounded-md border border-neutral-300 bg-neutral-50 p-3 text-center hover:bg-neutral-100"
+              className="flex flex-col items-center justify-center gap-1 glass-card rounded-md p-3 text-center hover:bg-neutral-100"
             >
               <svg className="h-5 w-5 text-neutral-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
@@ -284,7 +284,7 @@ export default function DashboardPage() {
             </Link>
             <Link
               href="/executive"
-              className="flex flex-col items-center justify-center gap-1 rounded-md border border-neutral-300 bg-neutral-50 p-3 text-center hover:bg-neutral-100"
+              className="flex flex-col items-center justify-center gap-1 glass-card rounded-md p-3 text-center hover:bg-neutral-100"
             >
               <svg className="h-5 w-5 text-neutral-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14" />
@@ -293,7 +293,7 @@ export default function DashboardPage() {
             </Link>
             <Link
               href="/hr/reviews"
-              className="flex flex-col items-center justify-center gap-1 rounded-md border border-neutral-300 bg-neutral-50 p-3 text-center hover:bg-neutral-100"
+              className="flex flex-col items-center justify-center gap-1 glass-card rounded-md p-3 text-center hover:bg-neutral-100"
             >
               <svg className="h-5 w-5 text-neutral-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M17 20h5v-2a4 4 0 00-3-3.87M9 20H4v-2a4 4 0 013-3.87m6-8.13a4 4 0 110 8 4 4 0 010-8zm6 8a4 4 0 100-8" />
@@ -313,13 +313,13 @@ export default function DashboardPage() {
             </span>
           </div>
           {recommendations.length === 0 ? (
-            <p className="rounded-md border border-neutral-300 bg-neutral-50 p-4 text-body text-neutral-600">
+            <p className="glass-card rounded-md p-4 text-body text-neutral-600">
               Nothing to act on right now — everything is assigned, sprints are moving, and dates are set.
             </p>
           ) : (
             <ul className="space-y-2">
               {recommendations.slice(0, 3).map((r) => (
-                <li key={r.id} className="rounded-md border border-ai-600/40 bg-neutral-50 p-3">
+                <li key={r.id} className="glass-card rounded-md border-ai-600/40 p-3">
                   <p className="text-body-medium font-medium text-neutral-950">{r.label}</p>
                   <p className="mt-0.5 text-small text-neutral-600">{r.sub}</p>
                   <div className="mt-2 flex gap-2">
@@ -351,7 +351,7 @@ export default function DashboardPage() {
             </ul>
           )}
           {activeSprint && (
-            <div className="rounded-md border border-neutral-300 bg-neutral-50 p-3">
+            <div className="glass-card rounded-md p-3">
               <p className="text-caption font-medium uppercase tracking-wide text-neutral-500">Active sprint</p>
               <Link href={`/projects/${activeSprint.projectId}`} className="mt-0.5 block text-body-medium font-medium text-neutral-950 hover:underline">
                 {activeSprint.name}
@@ -366,7 +366,7 @@ export default function DashboardPage() {
 
         <section className="space-y-3">
           <h2 className="text-h3 font-semibold text-neutral-800">This month at a glance</h2>
-          <div className="rounded-md border border-neutral-300 bg-neutral-50 p-3">
+          <div className="glass-card rounded-md p-3">
             <TaskCalendarView tasks={calendarTasks} onTaskClick={() => {}} />
           </div>
         </section>
@@ -505,7 +505,7 @@ export default function DashboardPage() {
         {activity.length === 0 ? (
           <p className="text-body text-neutral-600">No activity yet.</p>
         ) : (
-          <ul className="divide-y divide-neutral-200 rounded-md border border-neutral-300 bg-neutral-50">
+          <ul className="glass-table divide-y divide-neutral-200">
             {activity.map((a) => (
               <li key={a.id} className="flex items-center justify-between px-4 py-3 text-body">
                 <span className="text-neutral-950">

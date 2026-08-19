@@ -214,7 +214,7 @@ export default function LeadsPage() {
         >
           Clear all
         </Button>
-        <div className="ml-auto flex gap-1 rounded-md border border-neutral-300 p-0.5">
+        <div className="ml-auto flex gap-1 glass p-0.5">
           <button
             onClick={() => setView("table")}
             className={`rounded-sm px-3 py-1 text-small font-medium ${view === "table" ? "bg-danger-600 text-neutral-50" : "text-neutral-600"}`}
@@ -241,7 +241,7 @@ export default function LeadsPage() {
         <div className="overflow-x-auto glass-table">
           <Table>
             <TableHeader>
-              <TableRow className="bg-neutral-100 text-caption font-medium uppercase tracking-wide text-neutral-500">
+              <TableRow className="text-caption font-medium uppercase tracking-wide text-neutral-500">
                 <TableHead>Name</TableHead>
                 <TableHead>Email</TableHead>
                 <TableHead>Source</TableHead>
@@ -252,7 +252,7 @@ export default function LeadsPage() {
                 <TableHead />
               </TableRow>
             </TableHeader>
-            <TableBody className="bg-neutral-50">
+            <TableBody>
               {paged.map((lead) => (
                 <TableRow key={lead.id} className="cursor-pointer" onClick={() => setSelected(lead)}>
                   <TableCell>
@@ -303,7 +303,7 @@ export default function LeadsPage() {
           {KANBAN_STATUSES.map((s) => (
             <div
               key={s}
-              className="min-h-[10rem] rounded-md border border-neutral-300 bg-neutral-100 p-2"
+              className="glass min-h-[10rem] p-2"
               onDragOver={(e) => e.preventDefault()}
               onDrop={(e) => {
                 e.preventDefault();
@@ -319,7 +319,7 @@ export default function LeadsPage() {
                     draggable={canUpdate}
                     onDragStart={(e) => e.dataTransfer.setData("text/plain", lead.id)}
                     onClick={() => setSelected(lead)}
-                    className="cursor-pointer rounded-sm border border-neutral-300 bg-neutral-50 p-2 text-body shadow-sm hover:shadow-md"
+                    className="glass-card cursor-pointer p-2 text-body hover:shadow-md"
                   >
                     <p className="font-medium text-neutral-950">{lead.fullName}</p>
                     {lead.companyName && <p className="text-caption text-neutral-500">{lead.companyName}</p>}
@@ -687,7 +687,7 @@ function LeadDetailModal({
             <p className="text-small text-neutral-600">No activity logged yet.</p>
           ) : (
             activities.map((a) => (
-              <div key={a.id} className="rounded-sm border border-neutral-200 p-2">
+              <div key={a.id} className="glass-card rounded-sm p-2">
                 <div className="flex items-center justify-between">
                   <span className="text-caption font-semibold uppercase text-neutral-600">{a.type}</span>
                   <span className="text-caption text-neutral-500">{timeAgo(a.activityDate)}</span>
@@ -820,7 +820,7 @@ export function LogActivityForm({
   }
 
   return (
-    <div className="mt-3 space-y-2 rounded-md border border-neutral-200 p-3">
+    <div className="glass-card mt-3 space-y-2 p-3">
       <div className="grid grid-cols-2 gap-2">
         <Field label="Type">
           <Select className="w-full" value={type} onChange={(e) => setType(e.target.value)}>

@@ -476,7 +476,7 @@ export default function ProfileSettingsPage() {
 
             <SubHead title="Active sessions" />
             {sessionInfo ? (
-              <div className="rounded-md border border-neutral-300 bg-neutral-50 p-3">
+              <div className="glass-card rounded-md p-3">
                 <div className="space-y-2 text-body">
                   <div className="flex items-center justify-between">
                     <span className="font-medium text-neutral-950">Current session</span>
@@ -502,7 +502,7 @@ export default function ProfileSettingsPage() {
                 No activity yet.
               </p>
             ) : (
-              <ul className="divide-y divide-neutral-200 rounded-md border border-neutral-300 bg-neutral-50">
+              <ul className="glass-card rounded-md divide-y divide-neutral-200">
                 {securityLog.map((row) => (
                   <li key={row.id} className="flex items-center justify-between px-3 py-2 text-body">
                     <span className="text-neutral-800">
@@ -596,7 +596,7 @@ export default function ProfileSettingsPage() {
                     <th className="px-4 py-2 text-center">In-app</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-neutral-200 bg-neutral-50">
+                <tbody className="divide-y divide-neutral-200">
                   {NOTIF_EVENTS.map((ev) => (
                     <tr key={ev.key}>
                       <td className="px-4 py-3 text-neutral-800">{ev.label}</td>
@@ -713,7 +713,7 @@ function SectionCard({
   children: React.ReactNode;
 }) {
   return (
-    <section id={id} className="scroll-mt-4 space-y-4 rounded-md border border-neutral-300 bg-neutral-50 p-5">
+    <section id={id} className="scroll-mt-4 space-y-4 glass-card rounded-md p-5">
       <div>
         <h2 className="font-heading text-h2 font-semibold text-neutral-950">{title}</h2>
         <p className="mt-1 text-body text-neutral-600">{subtitle}</p>

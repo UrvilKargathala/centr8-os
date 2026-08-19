@@ -187,7 +187,7 @@ export default function ExecutivePage() {
 
       {/* AI Strategic Briefing */}
       {briefing && (
-        <div className="rounded-lg border border-ai-200 bg-ai-50 p-4 space-y-3">
+        <div className="glass-card rounded-lg border-ai-200 p-4 space-y-3">
           <div className="flex items-center gap-2">
             <span className="rounded bg-ai-600 px-2 py-0.5 text-caption font-semibold uppercase tracking-wide text-white">AI Strategic Briefing</span>
           </div>
@@ -243,7 +243,7 @@ export default function ExecutivePage() {
                 const color: BadgeColor = snap.signals.overdueTasks > 0 ? "danger" : snap.signals.blockedTasks > 0 ? "warning" : "success";
                 const dotCls = color === "danger" ? "bg-danger-500" : color === "warning" ? "bg-warning-500" : "bg-success-500";
                 return (
-                  <div key={snap.projectId} className="rounded-lg border border-neutral-200 p-3 space-y-2">
+                  <div key={snap.projectId} className="glass-card rounded-lg p-3 space-y-2">
                     <div className="flex items-center gap-2">
                       <span className={`h-2.5 w-2.5 rounded-full ${dotCls}`} />
                       <span className="text-body-small font-medium text-neutral-900 truncate">{snap.projectName}</span>
@@ -267,7 +267,7 @@ export default function ExecutivePage() {
         <section className="space-y-3 lg:col-span-2">
           <h2 className="text-h3 font-semibold text-neutral-800">Revenue & Pipeline</h2>
           <div className="space-y-3">
-            <div className="rounded-lg border border-neutral-200 p-4 space-y-3">
+            <div className="glass-card rounded-lg p-4 space-y-3">
               <p className="text-caption font-medium uppercase tracking-wide text-neutral-500">Deal Pipeline</p>
               {data.deals ? (
                 <>
@@ -303,7 +303,7 @@ export default function ExecutivePage() {
               )}
             </div>
 
-            <div className="rounded-lg border border-neutral-200 p-4 space-y-2">
+            <div className="glass-card rounded-lg p-4 space-y-2">
               <p className="text-caption font-medium uppercase tracking-wide text-neutral-500">Accounts</p>
               {data.accounts ? (
                 <div className="flex gap-6">
@@ -369,7 +369,7 @@ export default function ExecutivePage() {
           {data.recent_activity.length === 0 ? (
             <p className="text-body-small text-neutral-500">No recent activity.</p>
           ) : (
-            <div className="space-y-0 rounded-lg border border-neutral-200 divide-y divide-neutral-100">
+            <div className="glass-table space-y-0 divide-y divide-neutral-100">
               {data.recent_activity.slice(0, 10).map((a, i) => {
                 const pillarCls = PILLAR_ICON[a.pillar] ?? PILLAR_ICON.pm;
                 return (

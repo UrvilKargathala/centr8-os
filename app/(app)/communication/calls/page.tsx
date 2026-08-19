@@ -85,7 +85,7 @@ export default function CallsPage() {
       </div>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_360px]">
-        <div className="overflow-x-auto rounded-md border border-neutral-300 bg-neutral-50">
+        <div className="overflow-x-auto glass-table">
           <table className="w-full min-w-[640px] text-body">
             <thead>
               <tr className="border-b border-neutral-200 bg-neutral-100 text-left text-caption font-medium uppercase tracking-wide text-neutral-500">
@@ -151,7 +151,7 @@ export default function CallsPage() {
           </table>
         </div>
 
-        <aside className="min-h-[300px] rounded-md border border-neutral-300 bg-neutral-50 p-4">
+        <aside className="min-h-[300px] glass-card p-4">
           {!open ? (
             <p className="text-body text-neutral-500">Select a call to see details.</p>
           ) : (
@@ -181,7 +181,7 @@ export default function CallsPage() {
                 {loading ? "Thinking…" : "AI: Summarize call"}
               </button>
               {ai && (
-                <div className="space-y-2 overflow-hidden rounded-md border border-ai-600/40">
+                <div className="space-y-2 overflow-hidden rounded-md glass-card border-ai-600/40">
                   <AiBanner />
                   <div className="space-y-2 px-4 pb-3">
                     <p className="text-body text-neutral-800">{ai.summary}</p>

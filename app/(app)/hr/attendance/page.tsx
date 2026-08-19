@@ -39,7 +39,7 @@ export default function AttendancePage() {
         </div>
         <div className="flex items-center gap-3">
           {canViewAll && (
-            <div className="flex items-center gap-0.5 rounded-md border border-neutral-300 bg-neutral-50 p-0.5">
+            <div className="glass flex items-center gap-0.5 rounded-md p-0.5">
               {VIEWS.map((v) => (
                 <button
                   key={v}
@@ -92,7 +92,7 @@ function ManualEntryPicker({ orgId, onClose, onSaved }: { orgId: string; onClose
   if (!employeeId) {
     return (
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-neutral-950/40 p-4" onClick={onClose}>
-        <div className="w-full max-w-sm rounded-lg bg-neutral-50 p-6 shadow-lg" onClick={(e) => e.stopPropagation()}>
+        <div className="glass w-full max-w-sm rounded-lg p-6 shadow-lg" onClick={(e) => e.stopPropagation()}>
           <h3 className="mb-3 text-h3 font-semibold text-neutral-950">Manual entry — pick employee</h3>
           <Field label="Employee">
             <Select className="w-full" value={employeeId} onChange={(e) => setEmployeeId(e.target.value)} autoFocus>
@@ -435,7 +435,7 @@ function RowActions({
         </svg>
       </button>
       {open && (
-        <div className="absolute right-0 top-full z-20 mt-1 w-44 overflow-hidden rounded-md border border-neutral-300 bg-neutral-50 shadow-lg">
+        <div className="glass absolute right-0 top-full z-20 mt-1 w-44 overflow-hidden rounded-md shadow-lg">
           <a href={`/hr/employees/${employeeId}`} className="block px-3 py-2 text-small text-neutral-800 hover:bg-neutral-100">
             View details
           </a>

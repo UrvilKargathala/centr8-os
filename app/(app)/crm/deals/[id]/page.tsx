@@ -370,7 +370,7 @@ export default function DealDetailPage() {
               <p className="text-small text-neutral-600">No activity logged yet.</p>
             ) : (
               activities.map((a) => (
-                <div key={a.id} className="rounded-sm border border-neutral-200 p-2">
+                <div key={a.id} className="glass-card rounded-sm p-2">
                   <div className="flex items-center justify-between">
                     <span className="text-caption font-semibold uppercase text-neutral-600">{a.type}</span>
                     <span className="text-caption text-neutral-500">{timeAgo(a.activityDate)}</span>
@@ -577,7 +577,7 @@ function NextStepMiniForm({
   if (!canUpdate) return null;
 
   return (
-    <div className="mt-4 rounded-md border border-neutral-200 p-3">
+    <div className="glass-card mt-4 p-3">
       <p className="text-body-medium font-semibold text-neutral-950">Next step</p>
       <div className="mt-2 flex flex-wrap items-end gap-2">
         <Field label="Next step">

@@ -121,8 +121,8 @@ export function SprintBoard({
               setDragOverStatus(null);
               if (taskId) onStatusChange(taskId, status);
             }}
-            className={`w-64 shrink-0 rounded-md border p-3 transition-colors ${
-              dragOverStatus === status ? "border-primary-600 bg-primary-100" : "border-neutral-300 bg-neutral-100"
+            className={`w-64 shrink-0 rounded-md p-3 transition-colors ${
+              dragOverStatus === status ? "border border-primary-600 bg-primary-100" : "glass-card"
             }`}
           >
             <div className={`mb-3 flex items-center gap-2 rounded-full px-2 py-1.5 ${HEADER_BG[tone]}`}>

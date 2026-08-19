@@ -174,7 +174,7 @@ export default function MessengerPage() {
 
       {connected && (
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-[280px_1fr]">
-          <aside className="space-y-4 rounded-md border border-neutral-300 bg-neutral-50 p-3">
+          <aside className="glass space-y-4 p-3">
             <div>
               <p className="mb-2 text-caption font-semibold uppercase tracking-wider text-neutral-500">Channels</p>
               {channelsLoading ? (
@@ -234,7 +234,7 @@ export default function MessengerPage() {
             </div>
           </aside>
 
-          <div className="flex min-h-[500px] flex-col rounded-md border border-neutral-300 bg-neutral-50">
+          <div className="glass-card flex min-h-[500px] flex-col">
             {!activeId ? (
               <p className="flex flex-1 items-center justify-center text-body text-neutral-500">Pick a channel or DM.</p>
             ) : (
@@ -304,7 +304,7 @@ export default function MessengerPage() {
                     {draftLoading ? "Thinking…" : "AI: Draft a reply"}
                   </button>
                   {draft && (
-                    <div className="space-y-2 overflow-hidden rounded-md border border-ai-600/40">
+                    <div className="space-y-2 overflow-hidden rounded-md glass-card border-ai-600/40">
                       <AiBanner />
                       <div className="space-y-2 px-4 pb-3">
                         <p className="whitespace-pre-wrap text-body text-neutral-800">{draft}</p>

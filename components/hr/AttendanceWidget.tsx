@@ -108,7 +108,7 @@ export function AttendanceWidget() {
       </button>
 
       {open && state !== "D" && (
-        <div className="absolute right-0 top-full z-50 mt-1 w-72 rounded-md border border-neutral-300 bg-neutral-50 p-4 shadow-lg">
+        <div className="glass absolute right-0 top-full z-50 mt-1 w-72 rounded-md p-4 shadow-lg">
           {state === "A" && <CheckInForm orgId={selectedOrgId} onDone={() => { setOpen(false); load(); }} />}
           {state === "B" && <CheckOutForm orgId={selectedOrgId} record={record!} onDone={() => { setOpen(false); load(); }} />}
           {state === "C" && <TodaySummary record={record!} />}

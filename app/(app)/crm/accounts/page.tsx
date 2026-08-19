@@ -185,7 +185,7 @@ export default function AccountsPage() {
                 <TableHead />
               </TableRow>
             </TableHeader>
-            <TableBody className="bg-neutral-50">
+            <TableBody>
               {paged.map((a) => (
                 <TableRow key={a.id} className="cursor-pointer" onClick={() => router.push(`/crm/accounts/${a.id}`)}>
                   <TableCell>

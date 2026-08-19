@@ -22,7 +22,7 @@ function SkeletonText({ lines = 3, className }: { lines?: number; className?: st
 
 function SkeletonCard({ className }: { className?: string }) {
   return (
-    <div className={cn("rounded-md border border-neutral-200 bg-neutral-50 p-5", className)}>
+    <div className={cn("glass-card rounded-md p-5", className)}>
       <Skeleton className="mb-3 h-5 w-1/3" />
       <SkeletonText lines={2} />
     </div>
@@ -31,7 +31,7 @@ function SkeletonCard({ className }: { className?: string }) {
 
 function SkeletonKPI({ className }: { className?: string }) {
   return (
-    <div className={cn("rounded-xl border border-neutral-200 bg-neutral-50 p-4", className)}>
+    <div className={cn("glass-card rounded-xl p-4", className)}>
       <Skeleton className="mb-2 h-4 w-20" />
       <Skeleton className="mb-1 h-7 w-16" />
       <Skeleton className="h-3 w-24" />
@@ -51,7 +51,7 @@ function SkeletonTableRow({ cols = 5 }: { cols?: number }) {
 
 function SkeletonTable({ rows = 5, cols = 5, className }: { rows?: number; cols?: number; className?: string }) {
   return (
-    <div className={cn("rounded-md border border-neutral-200 bg-neutral-50 overflow-hidden", className)}>
+    <div className={cn("glass-table overflow-hidden", className)}>
       <div className="flex items-center gap-4 border-b border-neutral-200 bg-neutral-100/50 px-4 py-3">
         {Array.from({ length: cols }, (_, i) => (
           <Skeleton key={i} className={cn("h-3", i === 0 ? "w-24" : "w-16")} />
@@ -223,7 +223,7 @@ function SectionSkeleton({ variant }: { variant: "table" | "list" | "cards" | "t
       return <SkeletonTable rows={4} cols={5} />;
     case "list":
       return (
-        <div className="rounded-md border border-neutral-200 bg-neutral-50 overflow-hidden">
+        <div className="glass-table overflow-hidden">
           {Array.from({ length: 4 }, (_, i) => <SkeletonListItem key={i} />)}
         </div>
       );

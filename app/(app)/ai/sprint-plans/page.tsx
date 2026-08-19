@@ -169,7 +169,7 @@ export default function SprintPlansPage() {
                       key={p.id}
                       onClick={() => setSelectedId(p.id)}
                       className={`w-full rounded-md border p-3 text-left text-body ${
-                        selectedId === p.id ? "border-primary-600 bg-primary-100" : "border-neutral-300 bg-neutral-50 hover:bg-neutral-100"
+                        selectedId === p.id ? "border-primary-600 bg-primary-100" : "glass-card hover:bg-neutral-100"
                       }`}
                     >
                       <p className="font-medium text-neutral-950">{projectName(p.projectId)}</p>
@@ -204,7 +204,7 @@ export default function SprintPlansPage() {
                   </div>
                 </Card>
 
-                <div className="overflow-hidden rounded-md border border-ai-600/40">
+                <div className="overflow-hidden glass-card rounded-md border-ai-600/40">
                   <AiBanner label="AI-generated — review before accepting" />
                   <p className="whitespace-pre-wrap px-4 py-3 text-body text-neutral-800">{selected.reasoning ?? "No reasoning provided."}</p>
                 </div>

@@ -128,7 +128,7 @@ export default function NotificationsPage() {
         </Button>
       </div>
 
-      <div className="flex w-fit gap-1 rounded-md border border-neutral-300 p-0.5">
+      <div className="flex w-fit gap-1 glass p-0.5">
         {FILTERS.map((f) => (
           <button
             key={f}
@@ -167,7 +167,7 @@ export default function NotificationsPage() {
           {grouped.map(([label, group]) => (
             <div key={label} className="space-y-2">
               <p className="text-caption font-semibold uppercase tracking-wider text-neutral-500">{label}</p>
-              <div className="divide-y divide-neutral-200 rounded-md border border-neutral-300 bg-neutral-50">
+              <div className="glass-table divide-y divide-neutral-200">
                 {group.map((n) => {
                   const meta = notificationMeta(n.type);
                   const href = linkFor(n);

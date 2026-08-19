@@ -145,7 +145,7 @@ export default function HrDashboardPage() {
         {onboardingCount === 0 ? (
           <p className="text-body text-neutral-600">No one currently onboarding.</p>
         ) : (
-          <ul className="divide-y divide-neutral-200 rounded-md border border-neutral-300 bg-neutral-50">
+          <ul className="glass-table divide-y divide-neutral-200">
             {employees
               .filter((e) => e.employmentStatus === "onboarding")
               .map((e) => (

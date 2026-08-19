@@ -80,7 +80,7 @@ export default function AskAiPage() {
 
   return (
     <div className="flex h-[calc(100vh-8rem)] flex-col gap-4 lg:flex-row">
-      <div className="hidden w-[280px] shrink-0 flex-col rounded-md border border-neutral-300 bg-neutral-50 lg:flex">
+      <div className="glass hidden w-[280px] shrink-0 flex-col rounded-md lg:flex">
         <div className="border-b border-neutral-300 p-3">
           <Button className="w-full" onClick={newConversation}>
             + New Conversation
@@ -109,7 +109,7 @@ export default function AskAiPage() {
         </div>
       </div>
 
-      <div className="flex flex-1 flex-col rounded-md border border-neutral-300 bg-neutral-50">
+      <div className="glass flex flex-1 flex-col rounded-md">
         {active ? (
           <div className="border-b border-neutral-300 p-3">
             {titleEditing ? (

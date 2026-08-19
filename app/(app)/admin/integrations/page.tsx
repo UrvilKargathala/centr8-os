@@ -173,7 +173,7 @@ function ConnectModal({
           </h2>
         </div>
 
-        <div className="space-y-3 rounded-md border border-neutral-300 bg-neutral-100 p-4 text-left">
+        <div className="space-y-3 glass-card rounded-md p-4 text-left">
           <p className="text-small font-medium text-neutral-950">
             Centr8 OS is requesting access to your {provider.name} account. Continue connecting if you agree.
           </p>

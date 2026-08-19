@@ -267,7 +267,7 @@ function OverviewTab({
 
       {/* Progress + Budget two-column */}
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-        <section className="rounded-md border border-neutral-300 bg-neutral-50 p-5">
+        <section className="glass-card rounded-md p-5">
           <div className="flex items-baseline justify-between">
             <h2 className="font-heading text-h3 font-semibold text-neutral-950">Progress</h2>
             <span className="text-caption text-neutral-500">{done}/{total} tasks done</span>
@@ -291,7 +291,7 @@ function OverviewTab({
           )}
         </section>
 
-        <section className="rounded-md border border-neutral-300 bg-neutral-50 p-5">
+        <section className="glass-card rounded-md p-5">
           <div className="flex items-baseline justify-between">
             <h2 className="font-heading text-h3 font-semibold text-neutral-950">Budget</h2>
             {overBudget && <Badge color="danger">Over budget</Badge>}
@@ -319,7 +319,7 @@ function OverviewTab({
 
       {/* Team + Milestones two-column */}
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-        <section className="rounded-md border border-neutral-300 bg-neutral-50 p-5">
+        <section className="glass-card rounded-md p-5">
           <div className="flex items-baseline justify-between">
             <h2 className="font-heading text-h3 font-semibold text-neutral-950">Team ({members.length})</h2>
             <span className="text-caption text-neutral-500">Manage on the Team tab</span>
@@ -345,7 +345,7 @@ function OverviewTab({
           )}
         </section>
 
-        <section className="rounded-md border border-neutral-300 bg-neutral-50 p-5">
+        <section className="glass-card rounded-md p-5">
           <div className="flex items-baseline justify-between">
             <h2 className="font-heading text-h3 font-semibold text-neutral-950">Upcoming milestones</h2>
             <span className="text-caption text-neutral-500">{milestones.length} total</span>
@@ -383,7 +383,7 @@ function OverviewTab({
       </div>
 
       {/* Recent activity */}
-      <section className="rounded-md border border-neutral-300 bg-neutral-50 p-5">
+      <section className="glass-card rounded-md p-5">
         <div className="flex items-baseline justify-between">
           <h2 className="font-heading text-h3 font-semibold text-neutral-950">Recent activity</h2>
           <span className="text-caption text-neutral-500">See all on the Activity tab</span>
@@ -559,7 +559,7 @@ function TasksTab({
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <div className="flex gap-1 rounded-md border border-neutral-300 bg-neutral-50 p-0.5">
+        <div className="flex gap-1 glass rounded-md p-0.5">
           {TASK_VIEWS.map((v) => (
             <button
               key={v}
@@ -801,7 +801,7 @@ function SettingsTab({ project, orgId, onSaved }: { project: Project; orgId: str
 
       <form onSubmit={handleSave} className="space-y-6">
         {/* General */}
-        <section className="rounded-md border border-neutral-300 bg-neutral-50 p-5">
+        <section className="glass-card rounded-md p-5">
           <div className="mb-4 border-b border-neutral-200 pb-3">
             <h2 className="font-heading text-h3 font-semibold text-neutral-950">General</h2>
             <p className="mt-0.5 text-caption text-neutral-500">Name, status, and timeline</p>
@@ -828,7 +828,7 @@ function SettingsTab({ project, orgId, onSaved }: { project: Project; orgId: str
         </section>
 
         {/* Budget */}
-        <section className="rounded-md border border-neutral-300 bg-neutral-50 p-5">
+        <section className="glass-card rounded-md p-5">
           <div className="mb-4 flex flex-wrap items-baseline justify-between gap-2 border-b border-neutral-200 pb-3">
             <div>
               <h2 className="font-heading text-h3 font-semibold text-neutral-950">Budget</h2>
@@ -1109,7 +1109,7 @@ function TeamTab({ projectId, orgId, canEdit }: { projectId: string; orgId: stri
       </div>
 
       {members.length === 0 ? (
-        <div className="rounded-md border border-dashed border-neutral-300 bg-neutral-50 p-8 text-center">
+        <div className="glass-card rounded-md border-dashed p-8 text-center">
           <p className="font-medium text-neutral-950">No team members yet</p>
           <p className="mt-1 text-small text-neutral-600">Add people from your Team directory to work on this project.</p>
           {canEdit && availableToAdd.length > 0 && (
@@ -1119,7 +1119,7 @@ function TeamTab({ projectId, orgId, canEdit }: { projectId: string; orgId: stri
           )}
         </div>
       ) : (
-        <ul className="divide-y divide-neutral-200 rounded-md border border-neutral-300 bg-neutral-50">
+        <ul className="glass-table divide-y divide-neutral-200">
           {members.map((m) => (
             <li key={m.personId} className="flex items-center gap-3 px-4 py-3">
               <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary-100 text-caption font-semibold text-primary-700">
@@ -1265,14 +1265,14 @@ function ActivityTab({ projectId }: { projectId: string }) {
   if (loading) return <SectionSkeleton variant="list" />;
   if (rows.length === 0) {
     return (
-      <div className="rounded-md border border-dashed border-neutral-300 bg-neutral-50 p-8 text-center">
+      <div className="glass-card rounded-md border-dashed p-8 text-center">
         <p className="font-medium text-neutral-950">No activity yet</p>
         <p className="mt-1 text-small text-neutral-600">Every change on this project — status flips, assignments, comments — shows here as it happens.</p>
       </div>
     );
   }
   return (
-    <ul className="divide-y divide-neutral-200 rounded-md border border-neutral-300 bg-neutral-50">
+    <ul className="glass-table divide-y divide-neutral-200">
       {rows.map((a) => (
         <li key={a.id} className="flex items-center justify-between px-4 py-3 text-body">
           <span className="text-neutral-950">

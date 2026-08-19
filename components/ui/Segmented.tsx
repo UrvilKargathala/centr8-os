@@ -16,7 +16,7 @@ export function Segmented<T extends string>({
   return (
     <div
       role="radiogroup"
-      className={`inline-flex overflow-hidden rounded-md border border-neutral-300 bg-neutral-100 p-0.5 ${className}`}
+      className={`inline-flex overflow-hidden glass rounded-md p-0.5 ${className}`}
     >
       {options.map((o) => {
         const active = o.value === value;

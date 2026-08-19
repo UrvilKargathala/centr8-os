@@ -60,7 +60,7 @@ export function UtilizationHeatmap({
   const weeks = data[0]?.weeks ?? [];
 
   return (
-    <div className="overflow-x-auto rounded-lg border border-neutral-200">
+    <div className="glass-table overflow-x-auto">
       <table className="w-full text-left text-[13px]">
         <thead>
           <tr className="border-b border-neutral-200 bg-neutral-50">

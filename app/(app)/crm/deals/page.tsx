@@ -221,7 +221,7 @@ export default function DealsPage() {
         </Card>
       </div>
 
-      <div className="flex w-fit gap-1 rounded-md border border-neutral-300 p-0.5">
+      <div className="flex w-fit gap-1 glass p-0.5">
         {(["kanban", "table", "forecast"] as const).map((v) => (
           <button
             key={v}
@@ -247,7 +247,7 @@ export default function DealsPage() {
             return (
               <div
                 key={s}
-                className="min-h-[12rem] rounded-md border border-neutral-300 bg-neutral-100 p-2"
+                className="glass min-h-[12rem] p-2"
                 onDragOver={(e) => e.preventDefault()}
                 onDrop={(e) => {
                   e.preventDefault();
@@ -269,7 +269,7 @@ export default function DealsPage() {
                         onDragStart={(e) => e.dataTransfer.setData("text/plain", deal.id)}
                         onClick={() => router.push(`/crm/deals/${deal.id}`)}
                         title={`${deal.name} · ${accountName(deal.accountId)}\n${fmtMoney(deal.value, deal.currency)} · ${deal.probability ?? 0}% probability\nExpected close: ${deal.expectedCloseDate ?? "No date"}\nOwner: ${employeeName(deal.ownerId)}${isStale(deal.stageChangedAt) ? "\nStale — no stage change in a while" : ""}`}
-                        className="cursor-pointer rounded-sm border border-neutral-300 bg-neutral-50 p-2 text-body shadow-sm hover:shadow-md"
+                        className="glass-card cursor-pointer p-2 text-body hover:shadow-md"
                       >
                         <p className="font-medium text-neutral-950">{deal.name}</p>
                         <p className="text-caption text-neutral-500">{accountName(deal.accountId)}</p>
@@ -306,7 +306,7 @@ export default function DealsPage() {
         <div className="overflow-x-auto glass-table">
           <Table>
             <TableHeader>
-              <TableRow className="bg-neutral-100 text-caption font-medium uppercase tracking-wide text-neutral-500">
+              <TableRow className="text-caption font-medium uppercase tracking-wide text-neutral-500">
                 <TableHead onClick={() => toggleSort("name")} className="cursor-pointer">
                   Deal
                 </TableHead>
@@ -324,7 +324,7 @@ export default function DealsPage() {
                 <TableHead />
               </TableRow>
             </TableHeader>
-            <TableBody className="bg-neutral-50">
+            <TableBody>
               {paged.map((deal) => (
                 <TableRow key={deal.id} className="cursor-pointer" onClick={() => router.push(`/crm/deals/${deal.id}`)}>
                   <TableCell>
