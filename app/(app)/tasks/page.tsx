@@ -338,7 +338,7 @@ function TasksInner() {
             <button type="button" onClick={() => setSelected(new Set())} className="ml-auto text-small text-neutral-600 hover:underline">Clear</button>
           </div>
         )}
-        <div className="overflow-x-auto rounded-md border border-neutral-300">
+        <div className="overflow-x-auto glass-table">
           <table className="w-full min-w-[960px] text-body">
             <thead>
               <tr className="border-b border-neutral-200 bg-neutral-100 text-left text-caption font-medium uppercase tracking-wide text-neutral-500">

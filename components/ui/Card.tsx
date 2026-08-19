@@ -8,7 +8,7 @@ import { cardAccentClass, type BadgeColor } from "@/components/ui/Badge";
 // took across the app: static (Card), a whole card that navigates
 // (CardLink), a whole card that runs a click handler (CardButton, e.g.
 // "open this sprint's board").
-const BASE = "rounded-md border border-neutral-300 bg-neutral-50 shadow-sm";
+const BASE = "rounded-md glass-card shadow-sm";
 const PADDING = { sm: "p-4", md: "p-6" } as const;
 const INTERACTIVE = "text-left transition-shadow hover:shadow-md";
 

@@ -298,7 +298,7 @@ function AppSidebar({
         <div className="fixed inset-0 z-40 bg-neutral-950/40 md:hidden" onClick={() => setMobileOpen(false)} />
       )}
       <aside
-        className={`fixed inset-y-0 left-0 z-50 flex flex-col border-r border-neutral-300 bg-neutral-50 transition-[width,transform] duration-200 md:static md:translate-x-0 ${width} ${
+        className={`fixed inset-y-0 left-0 z-50 flex flex-col glass transition-[width,transform] duration-200 md:static md:translate-x-0 ${width} ${
           mobileOpen ? "translate-x-0" : "-translate-x-full"
         }`}
       >
@@ -427,7 +427,7 @@ function AppSidebar({
             </button>
 
             {userMenuOpen && (
-              <div className={`absolute z-50 w-48 rounded-md border border-neutral-300 bg-neutral-50 py-1 shadow-lg ${
+              <div className={`absolute z-50 w-48 rounded-md glass py-1 shadow-lg ${
                 collapsed ? "bottom-0 left-full ml-2" : "bottom-full left-0 mb-1"
               }`}>
                 <Link
@@ -455,7 +455,7 @@ function AppSidebar({
           onMouseEnter={() => {
             /* keep it open while hovered */
           }}
-          className="fixed z-50 w-56 rounded-md border border-neutral-300 bg-neutral-50 p-2 shadow-lg"
+          className="fixed z-50 w-56 rounded-md glass p-2 shadow-lg"
           style={{ top: hoverPos.top, left: hoverPos.left }}
         >
           <p className="px-2 pb-1 text-caption font-semibold uppercase tracking-wider text-neutral-500">
@@ -558,7 +558,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       />
 
       <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-        <header className="relative z-30 flex h-14 items-center gap-2 border-b border-neutral-300 bg-neutral-50 px-3 sm:px-6">
+        <header className="relative z-30 flex h-14 items-center gap-2 glass px-3 sm:px-6">
           <button
             type="button"
             onClick={() => setMobileOpen(true)}
@@ -654,7 +654,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 </button>
 
                 {orgMenuOpen && (
-                  <div className="absolute right-0 top-full z-50 mt-1 w-72 rounded-md border border-neutral-300 bg-neutral-50 shadow-lg">
+                  <div className="absolute right-0 top-full z-50 mt-1 w-72 rounded-md glass shadow-lg">
                     <p className="border-b border-neutral-200 px-3 py-2 text-caption font-semibold uppercase tracking-wider text-neutral-500">
                       Organizations
                     </p>
@@ -717,7 +717,7 @@ function AskAiDialog({ onClose, orgId }: { onClose: () => void; orgId: string | 
   return (
     <div className="fixed inset-0 z-50 flex justify-end bg-neutral-950/40" onClick={onClose}>
       <div
-        className="flex h-full w-[440px] max-w-full flex-col bg-neutral-50 shadow-lg"
+        className="flex h-full w-[440px] max-w-full flex-col glass shadow-lg"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between border-b border-neutral-300 p-4">

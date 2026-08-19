@@ -363,7 +363,7 @@ function SummaryTab({ orgId }: { orgId: string }) {
               <p className="text-body-small text-neutral-500">Average utilization per team member this period</p>
             </div>
           </div>
-          <div className="overflow-x-auto rounded-lg border border-neutral-200">
+          <div className="overflow-x-auto glass-table">
             <table className="w-full text-left text-body-small">
               <thead>
                 <tr className="border-b border-neutral-200 bg-neutral-50">
@@ -567,7 +567,7 @@ function PlanningTab({ orgId }: { orgId: string }) {
         />
       </div>
 
-      <div className="overflow-x-auto rounded-lg border border-neutral-200">
+      <div className="overflow-x-auto glass-table">
         <table className="w-full text-left text-body-small">
           <thead>
             <tr className="border-b border-neutral-200 bg-neutral-50">
@@ -857,7 +857,7 @@ function AllocationTab({ orgId }: { orgId: string }) {
       {filtered.length === 0 ? (
         <p className="py-8 text-center text-neutral-500">No allocations found. Use Resource Planning to assign resources.</p>
       ) : (
-        <div className="overflow-x-auto rounded-lg border border-neutral-200">
+        <div className="overflow-x-auto glass-table">
           <table className="w-full text-left text-[13px]">
             <thead>
               <tr className="border-b border-neutral-200 bg-neutral-50">

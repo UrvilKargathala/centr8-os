@@ -5,7 +5,7 @@ import { forwardRef, InputHTMLAttributes, SelectHTMLAttributes, TextareaHTMLAttr
 // was hand-typed at every form field across login/settings/task-detail/AI
 // draft — Prompt 0.6 flagged it as the other missing shared primitive.
 const FIELD_CLASSES =
-  "w-full rounded-md border border-neutral-300 bg-neutral-50 px-3 py-2 text-body focus:border-primary-600 focus:outline-none";
+  "w-full rounded-md glass-input px-3 py-2 text-body focus:border-primary-600 focus:outline-none";
 
 export const Input = forwardRef<HTMLInputElement, InputHTMLAttributes<HTMLInputElement>>(
   function Input({ className = "", ...props }, ref) {

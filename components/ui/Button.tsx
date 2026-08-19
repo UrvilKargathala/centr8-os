@@ -19,13 +19,11 @@ const buttonVariants = cva(
   {
     variants: {
       variant: {
-        primary: "bg-primary-600 text-neutral-50 hover:bg-primary-700 disabled:bg-primary-100 disabled:text-neutral-400",
+        primary: "gradient-purple-blue text-white hover:opacity-90 disabled:opacity-50 disabled:text-neutral-400",
         secondary:
-          "bg-neutral-50 border border-neutral-300 text-neutral-950 hover:bg-neutral-100 disabled:text-neutral-400",
+          "glass text-neutral-950 hover:bg-white/70 disabled:text-neutral-400",
         danger: "bg-danger-600 text-neutral-50 hover:bg-danger-600/90 disabled:bg-danger-100 disabled:text-neutral-400",
-        // Used by the shadcn Sidebar/Sheet primitives (toggle + close
-        // buttons) — no border/fill, just a hover state.
-        ghost: "text-neutral-600 hover:bg-neutral-200 disabled:text-neutral-400",
+        ghost: "text-neutral-600 hover:bg-white/40 hover:backdrop-blur-sm disabled:text-neutral-400",
       },
       size: {
         default: "",

@@ -423,7 +423,7 @@ function ProjectListView({
 }) {
   const { page, setPage, pageSize, total, paged } = usePagination(projects, 10);
   return (
-    <div className="overflow-x-auto rounded-md border border-neutral-300">
+    <div className="overflow-x-auto glass-table">
       <table className="w-full min-w-[640px] text-body">
         <thead>
           <tr className="border-b border-neutral-200 bg-neutral-100 text-left text-caption font-medium uppercase tracking-wide text-neutral-500">

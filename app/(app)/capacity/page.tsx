@@ -117,7 +117,7 @@ export default function CapacityPlanningPage() {
 function TeamAllocationTable({ byPerson }: { byPerson: { id: string; fullName: string; jobTitle: string | null; availableHoursPerWeek: number; allocated: number; taskCount: number; util: number }[] }) {
   const { page, setPage, pageSize, total, paged } = usePagination(byPerson, 10);
   return (
-    <div className="overflow-x-auto">
+    <div className="overflow-x-auto glass-table">
       <Table>
         <TableHeader>
           <TableRow>
@@ -157,7 +157,7 @@ function TeamAllocationTable({ byPerson }: { byPerson: { id: string; fullName: s
 function UnassignedTasksTable({ tasks }: { tasks: Task[] }) {
   const { page, setPage, pageSize, total, paged } = usePagination(tasks, 10);
   return (
-    <div className="overflow-x-auto">
+    <div className="overflow-x-auto glass-table">
       <Table>
         <TableHeader>
           <TableRow>

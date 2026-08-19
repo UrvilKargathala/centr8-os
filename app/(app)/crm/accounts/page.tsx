@@ -171,7 +171,7 @@ export default function AccountsPage() {
           </EmptyHeader>
         </Empty>
       ) : (
-        <div className="overflow-x-auto rounded-md border border-neutral-300">
+        <div className="overflow-x-auto glass-table">
           <Table>
             <TableHeader>
               <TableRow className="bg-neutral-100 text-caption font-medium uppercase tracking-wide text-neutral-500">

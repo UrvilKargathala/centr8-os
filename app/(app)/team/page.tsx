@@ -207,7 +207,7 @@ export default function TeamPage() {
           )}
         </Empty>
       ) : (
-        <div className="overflow-x-auto rounded-md border border-neutral-300">
+        <div className="overflow-x-auto glass-table">
           <table className="w-full min-w-[880px] text-body">
             <thead>
               <tr className="border-b border-neutral-200 bg-neutral-100 text-left text-caption font-medium uppercase tracking-wide text-neutral-500">

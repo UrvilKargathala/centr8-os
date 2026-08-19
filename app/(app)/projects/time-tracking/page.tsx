@@ -302,7 +302,7 @@ export default function TimeTrackingPage() {
         </Empty>
       ) : tab === "team" ? (
         /* ── Team Timesheet: flat table ── */
-        <div className="overflow-x-auto rounded-md border border-neutral-300">
+        <div className="overflow-x-auto glass-table">
           <table className="w-full text-left text-body">
             <thead>
               <tr className="border-b border-neutral-300 bg-neutral-100">
@@ -351,7 +351,7 @@ export default function TimeTrackingPage() {
         </div>
       ) : (
         /* ── My Timesheet: project × day grid ── */
-        <div className="overflow-x-auto rounded-md border border-neutral-300">
+        <div className="overflow-x-auto glass-table">
           <table className="w-full text-left text-body">
             <thead>
               <tr className="border-b border-neutral-300 bg-neutral-100">

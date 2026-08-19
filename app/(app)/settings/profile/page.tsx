@@ -587,7 +587,7 @@ export default function ProfileSettingsPage() {
 
           {/* ── SECTION 4 — Notifications ───────────────────────── */}
           <SectionCard id="notifications" title="Notifications" subtitle="Choose what you want to be notified about, and how">
-            <div className="overflow-x-auto rounded-md border border-neutral-300">
+            <div className="overflow-x-auto glass-table">
               <table className="w-full min-w-[420px] text-body">
                 <thead>
                   <tr className="border-b border-neutral-200 bg-neutral-100 text-left text-caption font-medium uppercase tracking-wide text-neutral-500">

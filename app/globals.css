@@ -17,10 +17,24 @@
   --neutral-100: #f4f5f7;
   --neutral-50: #fafbfc;
 
-  /* §2 Brand / Primary */
-  --primary-700: #1e4fd6;
-  --primary-600: #2e62f0;
-  --primary-100: #e3eafd;
+  /* §2 Brand / Primary — Centr8 brand palette */
+  --primary-700: #1A0A96;
+  --primary-600: #D15CFC;
+  --primary-100: #f3e5fd;
+
+  /* Brand solids */
+  --brand-pink: #FD37C2;
+  --brand-gold: #FFD96C;
+  --brand-navy: #1A0A96;
+  --brand-cyan: #34E3FF;
+  --brand-purple: #D15CFC;
+  --brand-dark: #1F1F1F;
+  --brand-light: #F9F9F9;
+
+  /* Brand gradients */
+  --gradient-pink-gold: linear-gradient(135deg, #FD37C2, #FFD96C);
+  --gradient-blue-cyan: linear-gradient(135deg, #1A0A96, #34E3FF);
+  --gradient-purple-blue: linear-gradient(135deg, #D15CFC, #1A0A96);
 
   /* §2 Semantic */
   --success-600: #1c8a5a;
@@ -33,8 +47,8 @@
   --info-100: #dceef7;
 
   /* §2 AI-generated content accent */
-  --ai-600: #7a4fd6;
-  --ai-100: #eee7fb;
+  --ai-600: #D15CFC;
+  --ai-100: #f3e5fd;
 
   /* §4 Elevation — tinted with neutral-950, not pure black */
   --shadow-color-sm: 0 1px 2px rgba(20, 22, 26, 0.06);
@@ -71,6 +85,14 @@
 
   --color-ai-600: var(--ai-600);
   --color-ai-100: var(--ai-100);
+
+  --color-brand-pink: var(--brand-pink);
+  --color-brand-gold: var(--brand-gold);
+  --color-brand-navy: var(--brand-navy);
+  --color-brand-cyan: var(--brand-cyan);
+  --color-brand-purple: var(--brand-purple);
+  --color-brand-dark: var(--brand-dark);
+  --color-brand-light: var(--brand-light);
 
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -126,9 +148,9 @@ html.dark {
   --neutral-100: #1e2025;
   --neutral-50: #16181c;
 
-  --primary-700: #6b8ef5;
-  --primary-600: #5a7df2;
-  --primary-100: #1e2a4a;
+  --primary-700: #3a20b8;
+  --primary-600: #D15CFC;
+  --primary-100: #2a1540;
 
   --success-600: #34c07a;
   --success-100: #152e22;
@@ -139,8 +161,8 @@ html.dark {
   --info-600: #4a9ed4;
   --info-100: #152535;
 
-  --ai-600: #9b7ae0;
-  --ai-100: #221a36;
+  --ai-600: #D15CFC;
+  --ai-100: #2a1540;
 
   --shadow-color-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
   --shadow-color-md: 0 4px 12px rgba(0, 0, 0, 0.4);
@@ -156,6 +178,78 @@ body {
   background: var(--color-background);
   color: var(--color-foreground);
   font-family: var(--font-sans);
+}
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background:
+    radial-gradient(ellipse 60% 50% at 10% 20%, rgba(209, 92, 252, 0.06), transparent),
+    radial-gradient(ellipse 50% 40% at 80% 70%, rgba(26, 10, 150, 0.05), transparent),
+    radial-gradient(ellipse 40% 30% at 50% 0%, rgba(52, 227, 255, 0.04), transparent);
+  pointer-events: none;
+}
+html.dark body::before {
+  background:
+    radial-gradient(ellipse 60% 50% at 10% 20%, rgba(209, 92, 252, 0.08), transparent),
+    radial-gradient(ellipse 50% 40% at 80% 70%, rgba(26, 10, 150, 0.1), transparent),
+    radial-gradient(ellipse 40% 30% at 50% 0%, rgba(52, 227, 255, 0.06), transparent);
+}
+
+/* Glass effect utilities */
+.glass {
+  background: rgba(255, 255, 255, 0.6);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+}
+html.dark .glass {
+  background: rgba(30, 32, 37, 0.6);
+  border-color: rgba(255, 255, 255, 0.08);
+}
+.glass-card {
+  background: rgba(255, 255, 255, 0.55);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  box-shadow: 0 4px 16px rgba(26, 10, 150, 0.04);
+}
+html.dark .glass-card {
+  background: rgba(30, 32, 37, 0.55);
+  border-color: rgba(255, 255, 255, 0.06);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+}
+.glass-table {
+  background: rgba(255, 255, 255, 0.45);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 10px;
+  overflow: hidden;
+}
+html.dark .glass-table {
+  background: rgba(30, 32, 37, 0.45);
+  border-color: rgba(255, 255, 255, 0.06);
+}
+.glass-input {
+  background: rgba(255, 255, 255, 0.5) !important;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.35) !important;
+}
+html.dark .glass-input {
+  background: rgba(30, 32, 37, 0.5) !important;
+  border-color: rgba(255, 255, 255, 0.08) !important;
+}
+.gradient-pink-gold {
+  background: var(--gradient-pink-gold);
+}
+.gradient-blue-cyan {
+  background: var(--gradient-blue-cyan);
+}
+.gradient-purple-blue {
+  background: var(--gradient-purple-blue);
 }
 
 /* Applied at the utility-class level, not per-component, so every current
