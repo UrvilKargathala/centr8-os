@@ -15,7 +15,7 @@ import { cn } from "@/lib/utils";
 // danger-700 hover shade is defined anywhere in the doc, so hover uses
 // opacity on danger-600 rather than guessing a darker hex.
 const buttonVariants = cva(
-  "inline-flex items-center justify-center rounded-sm px-4 py-2 text-body-medium font-medium transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600 disabled:cursor-not-allowed",
+  "inline-flex items-center justify-center rounded-[20px] px-4 py-2 text-body-medium font-medium transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600 disabled:cursor-not-allowed",
   {
     variants: {
       variant: {

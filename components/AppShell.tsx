@@ -546,7 +546,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   return (
     <ToastProvider>
-    <div className="flex h-screen bg-neutral-100">
+    <div className="flex h-screen">
       <AppSidebar
         isAdmin={isAdmin}
         collapsed={collapsed}
