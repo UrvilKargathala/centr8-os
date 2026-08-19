@@ -77,7 +77,7 @@ export function UtilizationHeatmap({
         <tbody>
           {data.map((p) => (
             <tr key={p.personId} className="border-b border-neutral-100 hover:bg-neutral-50/50">
-              <td className="sticky left-0 z-10 bg-white px-3 py-2 font-medium text-neutral-800 whitespace-nowrap">
+              <td className="sticky left-0 z-10 bg-neutral-50 px-3 py-2 font-medium text-neutral-800 whitespace-nowrap">
                 {p.personName}
               </td>
               {!compact && <td className="px-3 py-2 text-neutral-600 whitespace-nowrap">{p.role ?? "—"}</td>}

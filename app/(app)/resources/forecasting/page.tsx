@@ -890,7 +890,7 @@ function AllocationTab({ orgId }: { orgId: string }) {
                       }, 0);
                       return (
                         <tr key={`${proj.projectId}-${res.personId}`} className="border-b border-neutral-100 hover:bg-neutral-50/50">
-                          <td className="sticky left-0 z-10 bg-white px-3 py-1.5 pl-7 truncate">
+                          <td className="sticky left-0 z-10 bg-neutral-50 px-3 py-1.5 pl-7 truncate">
                             <span className="font-medium text-neutral-800">{res.personName}</span>
                             {res.role && <span className="ml-1 text-[11px] text-neutral-400">{res.role}</span>}
                           </td>

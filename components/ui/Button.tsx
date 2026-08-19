@@ -21,9 +21,9 @@ const buttonVariants = cva(
       variant: {
         primary: "gradient-purple-blue text-white hover:opacity-90 disabled:opacity-50 disabled:text-neutral-400",
         secondary:
-          "glass text-neutral-950 hover:bg-white/70 disabled:text-neutral-400",
+          "glass text-neutral-950 hover:bg-white/70 dark:hover:bg-white/10 disabled:text-neutral-400",
         danger: "bg-danger-600 text-neutral-50 hover:bg-danger-600/90 disabled:bg-danger-100 disabled:text-neutral-400",
-        ghost: "text-neutral-600 hover:bg-white/40 hover:backdrop-blur-sm disabled:text-neutral-400",
+        ghost: "text-neutral-600 hover:bg-white/40 dark:hover:bg-white/10 hover:backdrop-blur-sm disabled:text-neutral-400",
       },
       size: {
         default: "",
