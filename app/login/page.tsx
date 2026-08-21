@@ -52,7 +52,7 @@ function LoginForm() {
   }
 
   return (
-    <div className="flex min-h-screen bg-white">
+    <div className="flex min-h-screen bg-white dark:bg-neutral-950">
       {/* Decorative side — purely illustrative (skeleton placeholder bars,
           no invented stats/numbers), hidden below md same as the reference's
           split layout collapsing to a single column on mobile. */}
@@ -80,7 +80,7 @@ function LoginForm() {
       </div>
 
       {/* Form side */}
-      <div className="flex w-full items-center justify-center bg-white px-6 py-12 md:w-1/2">
+      <div className="flex w-full items-center justify-center bg-white dark:bg-neutral-950 px-6 py-12 md:w-1/2">
         <div className="w-full max-w-sm">
           <form onSubmit={handleSubmit}>
             <FieldGroup>

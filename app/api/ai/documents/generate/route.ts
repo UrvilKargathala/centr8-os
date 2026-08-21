@@ -57,6 +57,9 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ data: result }, { status: 201 });
   } catch (err) {
+    if (err instanceof Error && !(err instanceof ApiError)) {
+      return NextResponse.json({ error: err.message }, { status: 502 });
+    }
     return handleApiError(err);
   }
 }

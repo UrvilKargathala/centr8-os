@@ -14,7 +14,7 @@ import { AttendanceHistoryList } from "@/components/hr/AttendanceHistoryList";
 import { ManualEntryModal } from "@/components/hr/ManualEntryModal";
 import { Pagination, usePagination } from "@/components/ui/Pagination";
 
-type Employee = { id: string; fullName: string; departmentId: string | null; employmentType: string; location: string | null };
+type Employee = { id: string; fullName: string; departmentId: string | null; departmentName: string | null; employmentType: string; location: string | null };
 type Stats = { attendance_rate_percent: number; avg_hours_per_day: number; late_arrivals_this_week: number; on_time_rate: number };
 
 const VIEWS = ["My Attendance", "Team Today"] as const;
@@ -237,7 +237,7 @@ function TeamTodayView({ orgId, canEditAny }: { orgId: string; canEditAny: boole
     return { checkedIn, checkedOut, onLeave, absent, lateToday, total: rows.length };
   }, [rows, settings]);
 
-  const departmentOptions = Array.from(new Set(employees.map((e) => e.departmentId).filter(Boolean))) as string[];
+  const departmentOptions = Array.from(new Map(employees.filter((e) => e.departmentId && e.departmentName).map((e) => [e.departmentId!, e.departmentName!])).entries());
   const locationOptions = Array.from(new Set(employees.map((e) => e.location).filter(Boolean))) as string[];
 
   if (loading) return <SectionSkeleton variant="table" />;
@@ -313,9 +313,9 @@ function TeamTodayView({ orgId, canEditAny }: { orgId: string; canEditAny: boole
         <Field label="Department">
           <Select className="w-40" value={deptFilter} onChange={(e) => setDeptFilter(e.target.value)}>
             <option value="">All</option>
-            {departmentOptions.map((d) => (
-              <option key={d} value={d}>
-                {d.slice(0, 8)}
+            {departmentOptions.map(([id, name]) => (
+              <option key={id} value={id}>
+                {name}
               </option>
             ))}
           </Select>
@@ -385,7 +385,7 @@ function TeamTodayView({ orgId, canEditAny }: { orgId: string; canEditAny: boole
                       {employee.fullName}
                     </a>
                   </TableCell>
-                  <TableCell className="text-neutral-600">{employee.departmentId?.slice(0, 8) ?? "—"}</TableCell>
+                  <TableCell className="text-neutral-600">{employee.departmentName ?? "—"}</TableCell>
                   <TableCell className="text-neutral-600">
                     {settings && record && isLate(record, settings) && (
                       <span title="Late arrival" className="mr-1 text-warning-600">

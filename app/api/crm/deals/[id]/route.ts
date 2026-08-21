@@ -4,7 +4,6 @@ import { withOrgContext } from "@/db/withOrgContext";
 import { accounts, activities, contacts, dealStageHistory, deals } from "@/db/schema";
 import { ApiError, handleApiError, requireUserId } from "@/lib/api/helpers";
 import { requirePermission } from "@/lib/api/permissions";
-import { changeDealStage, resolveOwnEmployeeId } from "@/lib/api/crm";
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -41,16 +40,16 @@ export async function PATCH(req: NextRequest, { params }: Params) {
     const userId = await requireUserId(req);
     const body = await req.json();
 
+    // Strip stage from PATCH — terminal stages (won/lost) must go through
+    // closeDeal() which enforces deal:close permission and requires lostReason.
+    // Non-terminal stage changes must go through changeDealStage() via the
+    // dedicated /stage route to ensure stage history is recorded.
+    delete body.stage;
+
     const row = await withOrgContext(userId, async (db) => {
       const [existing] = await db.select().from(deals).where(eq(deals.id, id));
       if (!existing) return undefined;
       await requirePermission(db, userId, existing.orgId, "deal", "update");
-
-      const stageChanged = body.stage !== undefined && body.stage !== existing.stage;
-      if (stageChanged) {
-        const employeeId = await resolveOwnEmployeeId(db, userId, existing.orgId);
-        await changeDealStage(db, existing.orgId, id, body.stage, employeeId, body.probability);
-      }
 
       const [updated] = await db
         .update(deals)
@@ -62,7 +61,7 @@ export async function PATCH(req: NextRequest, { params }: Params) {
           currency: body.currency ?? undefined,
           recurringRevenue: body.recurring_revenue === undefined ? undefined : body.recurring_revenue,
           recurringFrequency: body.recurring_frequency === undefined ? undefined : body.recurring_frequency,
-          probability: stageChanged ? undefined : body.probability === undefined ? undefined : body.probability,
+          probability: body.probability === undefined ? undefined : body.probability,
           expectedCloseDate: body.expected_close_date === undefined ? undefined : body.expected_close_date,
           source: body.source === undefined ? undefined : body.source,
           campaignId: body.campaign_id === undefined ? undefined : body.campaign_id,

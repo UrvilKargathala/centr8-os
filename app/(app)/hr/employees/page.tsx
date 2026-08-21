@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useOrg } from "@/lib/context/OrgContext";
 import { PageSkeleton } from "@/components/ui/skeleton";
 import { EmploymentStatusBadge } from "@/components/ui/Badge";
@@ -23,6 +23,7 @@ export type Employee = {
   employmentType: string;
   startDate: string | null;
   departmentId: string | null;
+  departmentName: string | null;
   teamId: string | null;
   managerId: string | null;
   location: string | null;
@@ -71,13 +72,13 @@ export default function EmployeeDirectoryPage() {
 
   useEffect(loadAll, [selectedOrgId]);
 
-  // No departments-lookup API exists yet in this codebase (no /api/departments
-  // route anywhere) — filter options are derived from distinct department_id
-  // values actually present rather than showing department names.
-  const departmentOptions = useMemo(
-    () => Array.from(new Set(employees.map((e) => e.departmentId).filter(Boolean))) as string[],
-    [employees],
-  );
+  const departmentOptions = useMemo(() => {
+    const seen = new Map<string, string>();
+    for (const e of employees) {
+      if (e.departmentId && e.departmentName) seen.set(e.departmentId, e.departmentName);
+    }
+    return Array.from(seen.entries());
+  }, [employees]);
   const locationOptions = useMemo(
     () => Array.from(new Set(employees.map((e) => e.location).filter(Boolean))) as string[],
     [employees],
@@ -176,9 +177,9 @@ export default function EmployeeDirectoryPage() {
         <Field label="Department">
           <Select className="w-40" value={deptFilter} onChange={(e) => setDeptFilter(e.target.value)}>
             <option value="">All</option>
-            {departmentOptions.map((d) => (
-              <option key={d} value={d}>
-                {d.slice(0, 8)}
+            {departmentOptions.map(([id, name]) => (
+              <option key={id} value={id}>
+                {name}
               </option>
             ))}
           </Select>
@@ -359,8 +360,17 @@ function EmployeeTable({ employees }: { employees: Employee[] }) {
 
 function RowMenu({ employeeId }: { employeeId: string }) {
   const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!open) return;
+    function handleClick(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    }
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, [open]);
   return (
-    <div className="relative">
+    <div className="relative" ref={ref}>
       <button
         type="button"
         aria-label="More actions"

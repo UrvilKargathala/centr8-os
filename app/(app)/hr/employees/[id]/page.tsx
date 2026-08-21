@@ -92,7 +92,7 @@ type PayslipRecord = {
   currency: string;
   status: string;
 };
-type AuditRow = { id: string; action: string; targetType: string; targetId: string | null; createdAt: string; metadata: Record<string, unknown> };
+
 
 const TABS = ["Overview", "Onboarding", "Attendance", "Leave", "Compensation", "Projects", "Activity", "AI Insights"] as const;
 type Tab = (typeof TABS)[number];
@@ -122,7 +122,7 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
 
   if (loading) return <PageSkeleton variant="detail" />;
   if (error) return <p className="rounded-md bg-danger-100 p-3 text-body text-danger-600">{error}</p>;
-  if (!employee || !selectedOrgId) return null;
+  if (!employee || !selectedOrgId) return <p className="rounded-md bg-neutral-100 p-6 text-body text-neutral-600">Employee not found.</p>;
 
   const showOnboardingTab = employee.employmentStatus === "onboarding" || tab === "Onboarding";
   const showCompensationTab = can("compensation", "view_sensitive");
@@ -944,31 +944,36 @@ function ProjectsTab() {
 }
 
 function ActivityTab({ employeeId, orgId }: { employeeId: string; orgId: string }) {
-  const [rows, setRows] = useState<AuditRow[]>([]);
+  const [leave, setLeave] = useState<{ id: string; startDate: string; endDate: string; status: string; totalDays: number }[]>([]);
+  const [attendance, setAttendance] = useState<{ id: string; workDate: string; checkInTime: string | null; checkOutTime: string | null; status: string }[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     setLoading(true);
-    fetch(`/api/audit-log?org_id=${orgId}&limit=100`)
-      .then((r) => r.json())
-      .then((b) => setRows((b.data ?? []).filter((r: AuditRow) => r.targetId === employeeId)))
-      .finally(() => setLoading(false));
+    Promise.all([
+      fetch(`/api/leave/employee/${employeeId}?org_id=${orgId}`).then((r) => r.ok ? r.json() : { data: [] }),
+      fetch(`/api/attendance/employee/${employeeId}?org_id=${orgId}&limit=10`).then((r) => r.ok ? r.json() : { data: [] }),
+    ]).then(([lb, ab]) => {
+      setLeave(lb.data ?? []);
+      setAttendance(ab.data ?? []);
+    }).finally(() => setLoading(false));
   }, [employeeId, orgId]);
 
   if (loading) return <SectionSkeleton variant="text" />;
 
+  const events = [
+    ...leave.map((l) => ({ id: l.id, date: l.startDate, label: `Leave ${l.status} — ${l.startDate}${l.startDate !== l.endDate ? ` to ${l.endDate}` : ""} (${l.totalDays}d)` })),
+    ...attendance.slice(0, 10).map((a) => ({ id: a.id, date: a.workDate, label: `${a.status === "present" ? "Checked in" : a.status} — ${a.workDate}${a.checkInTime ? ` at ${a.checkInTime}` : ""}` })),
+  ].sort((a, b) => b.date.localeCompare(a.date));
+
   return (
     <Card>
-      {rows.length === 0 ? (
-        <p className="text-body text-neutral-600">
-          No recorded activity for this employee yet — HR mutation routes don&apos;t write to the audit log yet.
-        </p>
+      {events.length === 0 ? (
+        <p className="text-body text-neutral-600">No recent activity recorded for this employee.</p>
       ) : (
         <ul className="divide-y divide-neutral-200">
-          {rows.map((r) => (
-            <li key={r.id} className="py-2.5 text-body text-neutral-800">
-              {r.action} · {new Date(r.createdAt).toLocaleString()}
-            </li>
+          {events.map((e) => (
+            <li key={e.id} className="py-2.5 text-body text-neutral-800">{e.label}</li>
           ))}
         </ul>
       )}

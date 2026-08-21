@@ -14,6 +14,7 @@ import { Pagination, usePagination } from "@/components/ui/Pagination";
 import { Empty, EmptyHeader, EmptyTitle, EmptyDescription } from "@/components/ui/Empty";
 import { useToast } from "@/components/ui/Toast";
 import { PageSkeleton } from "@/components/ui/skeleton";
+import { CrmKpiCard, KpiIcons } from "@/components/crm/CrmKpiCard";
 
 const STAGES = ["prospecting", "discovery", "proposal", "negotiation", "contract_sent"] as const;
 export const STAGE_LABEL: Record<string, string> = {
@@ -198,27 +199,12 @@ export default function DealsPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-5">
-        <Card padding="sm" color="danger">
-          <p className="text-caption text-neutral-600">Open Pipeline</p>
-          <p className="text-h3 font-semibold text-neutral-950">{fmtMoney(kpis.openPipeline, "INR")}</p>
-        </Card>
-        <Card padding="sm">
-          <p className="text-caption text-neutral-600">Weighted Pipeline</p>
-          <p className="text-h3 font-semibold text-neutral-950">{fmtMoney(kpis.weighted, "INR")}</p>
-        </Card>
-        <Card padding="sm">
-          <p className="text-caption text-neutral-600">Closing This Month</p>
-          <p className="text-h3 font-semibold text-neutral-950">{kpis.closingThisMonth}</p>
-        </Card>
-        <Card padding="sm">
-          <p className="text-caption text-neutral-600">Win Rate</p>
-          <p className="text-h3 font-semibold text-neutral-950">{Math.round(kpis.winRate)}%</p>
-        </Card>
-        <Card padding="sm">
-          <p className="text-caption text-neutral-600">Avg Deal Cycle</p>
-          <p className="text-h3 font-semibold text-neutral-950">{Math.round(kpis.avgCycle)} days</p>
-        </Card>
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
+        <CrmKpiCard label="Open Pipeline" value={fmtMoney(kpis.openPipeline, "INR")} color="primary" icon={KpiIcons.dollarSign} />
+        <CrmKpiCard label="Weighted Pipeline" value={fmtMoney(kpis.weighted, "INR")} color="info" icon={KpiIcons.layers} />
+        <CrmKpiCard label="Closing This Month" value={kpis.closingThisMonth} color="warning" icon={KpiIcons.calendar} />
+        <CrmKpiCard label="Win Rate" value={`${Math.round(kpis.winRate)}%`} color="success" icon={KpiIcons.trendUp} />
+        <CrmKpiCard label="Avg Deal Cycle" value={`${Math.round(kpis.avgCycle)} days`} color="neutral" icon={KpiIcons.clock} />
       </div>
 
       <div className="flex w-fit gap-1 glass p-0.5">

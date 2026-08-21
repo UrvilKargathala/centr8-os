@@ -7,6 +7,7 @@ import { LeadStatusBadge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Avatar, Pill } from "@/components/ui/Avatar";
 import { PageSkeleton } from "@/components/ui/skeleton";
+import { CrmKpiCard, KpiIcons } from "@/components/crm/CrmKpiCard";
 
 function timeAgo(iso: string) {
   const diff = Date.now() - new Date(iso).getTime();
@@ -124,27 +125,12 @@ export default function CrmDashboardPage() {
         <p className="text-body text-neutral-600">Leads, accounts, and contacts at a glance.</p>
       </div>
 
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-5">
-        <Card padding="sm" color="danger">
-          <p className="text-caption text-neutral-600">Total Leads</p>
-          <p className="text-h3 font-semibold text-neutral-950">{stats?.total_leads ?? 0}</p>
-        </Card>
-        <Card padding="sm">
-          <p className="text-caption text-neutral-600">Conversion Rate</p>
-          <p className="text-h3 font-semibold text-neutral-950">{Math.round((stats?.conversion_rate ?? 0) * 100)}%</p>
-        </Card>
-        <Card padding="sm">
-          <p className="text-caption text-neutral-600">Total Accounts</p>
-          <p className="text-h3 font-semibold text-neutral-950">{stats?.total_accounts ?? 0}</p>
-        </Card>
-        <Card padding="sm">
-          <p className="text-caption text-neutral-600">Total Contacts</p>
-          <p className="text-h3 font-semibold text-neutral-950">{stats?.total_contacts ?? 0}</p>
-        </Card>
-        <Card padding="sm">
-          <p className="text-caption text-neutral-600">Activities This Week</p>
-          <p className="text-h3 font-semibold text-neutral-950">{stats?.activities_this_week ?? 0}</p>
-        </Card>
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
+        <CrmKpiCard label="Total Leads" value={stats?.total_leads ?? 0} color="primary" icon={KpiIcons.target} />
+        <CrmKpiCard label="Conversion Rate" value={`${Math.round((stats?.conversion_rate ?? 0) * 100)}%`} color="success" icon={KpiIcons.percent} />
+        <CrmKpiCard label="Total Accounts" value={stats?.total_accounts ?? 0} color="info" icon={KpiIcons.building} />
+        <CrmKpiCard label="Total Contacts" value={stats?.total_contacts ?? 0} color="warning" icon={KpiIcons.users} />
+        <CrmKpiCard label="Activities This Week" value={stats?.activities_this_week ?? 0} color="neutral" icon={KpiIcons.activity} />
       </div>
 
       <Card>

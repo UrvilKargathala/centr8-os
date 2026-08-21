@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { and, eq } from "drizzle-orm";
 import { withOrgContext } from "@/db/withOrgContext";
-import { employees } from "@/db/schema";
+import { departments, employees } from "@/db/schema";
 import { ApiError, handleApiError, requireUserId } from "@/lib/api/helpers";
 import { hasPermission, requirePermission } from "@/lib/api/permissions";
 import { trimEmployeeFields } from "@/lib/api/employees";
@@ -20,13 +20,14 @@ export async function GET(req: NextRequest) {
       await requirePermission(db, userId, orgId, "employee", "read");
       const canViewFull = await hasPermission(db, userId, orgId, "employee", "view_full");
       const rows = await db
-        .select()
+        .select({ employee: employees, departmentName: departments.name })
         .from(employees)
+        .leftJoin(departments, eq(employees.departmentId, departments.id))
         .where(mine ? and(eq(employees.orgId, orgId), eq(employees.userId, userId)) : eq(employees.orgId, orgId));
       return { rows, canViewFull };
     });
 
-    return NextResponse.json({ data: rows.map((r) => trimEmployeeFields(r, canViewFull)) });
+    return NextResponse.json({ data: rows.map((r) => ({ ...trimEmployeeFields(r.employee, canViewFull), departmentName: r.departmentName })) });
   } catch (err) {
     return handleApiError(err);
   }

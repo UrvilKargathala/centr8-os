@@ -25,7 +25,7 @@ type PayslipRecord = {
   currency: string;
   status: string;
 };
-type Employee = { id: string; fullName: string; departmentId: string | null };
+type Employee = { id: string; fullName: string; departmentId: string | null; departmentName: string | null };
 
 function ComplianceLimitationBanner() {
   return (
@@ -142,7 +142,7 @@ export default function PayrollPage() {
 
   const selectedDraftCount = [...selected].filter((id) => records.find((r) => r.id === id)?.status === "draft").length;
   const selectedFinalizedCount = [...selected].filter((id) => records.find((r) => r.id === id)?.status === "finalized").length;
-  const departmentOptions = Array.from(new Set(employees.map((e) => e.departmentId).filter(Boolean))) as string[];
+  const departmentOptions = Array.from(new Map(employees.filter((e) => e.departmentId && e.departmentName).map((e) => [e.departmentId!, e.departmentName!])).entries());
 
   if (orgLoading) return <PageSkeleton variant="table" />;
   if (!selectedOrgId) return <p className="text-body text-neutral-600">No organization selected.</p>;
@@ -223,9 +223,9 @@ export default function PayrollPage() {
               <Field label="Department">
                 <Select className="w-40" value={deptFilter} onChange={(e) => setDeptFilter(e.target.value)}>
                   <option value="">All</option>
-                  {departmentOptions.map((d) => (
-                    <option key={d} value={d}>
-                      {d.slice(0, 8)}
+                  {departmentOptions.map(([id, name]) => (
+                    <option key={id} value={id}>
+                      {name}
                     </option>
                   ))}
                 </Select>

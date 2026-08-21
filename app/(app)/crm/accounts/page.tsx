@@ -14,6 +14,7 @@ import { Pagination, usePagination } from "@/components/ui/Pagination";
 import { Empty, EmptyHeader, EmptyTitle, EmptyDescription } from "@/components/ui/Empty";
 import { ACCOUNT_TYPES, ACCOUNT_STATUSES } from "@/lib/constants";
 import { PageSkeleton } from "@/components/ui/skeleton";
+import { CrmKpiCard, KpiIcons } from "@/components/crm/CrmKpiCard";
 
 type Account = {
   id: string;
@@ -100,19 +101,10 @@ export default function AccountsPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <Card padding="sm" color="danger">
-          <p className="text-caption text-neutral-600">Total Accounts</p>
-          <p className="text-h3 font-semibold text-neutral-950">{kpis.total}</p>
-        </Card>
-        <Card padding="sm">
-          <p className="text-caption text-neutral-600">Customers</p>
-          <p className="text-h3 font-semibold text-neutral-950">{kpis.customers}</p>
-        </Card>
-        <Card padding="sm">
-          <p className="text-caption text-neutral-600">Prospects</p>
-          <p className="text-h3 font-semibold text-neutral-950">{kpis.prospects}</p>
-        </Card>
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+        <CrmKpiCard label="Total Accounts" value={kpis.total} color="primary" icon={KpiIcons.building} />
+        <CrmKpiCard label="Customers" value={kpis.customers} color="success" icon={KpiIcons.briefcase} />
+        <CrmKpiCard label="Prospects" value={kpis.prospects} color="info" icon={KpiIcons.compass} />
       </div>
 
       <div className="flex flex-wrap items-end gap-3">

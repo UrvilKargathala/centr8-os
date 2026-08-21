@@ -120,6 +120,13 @@ export default function MailPage() {
     fetchMessages();
   }, [fetchMessages]);
 
+  // Auto-poll inbox every 30s
+  useEffect(() => {
+    if (!selectedOrgId || !connected) return;
+    const id = setInterval(() => fetchMessages(), 30000);
+    return () => clearInterval(id);
+  }, [selectedOrgId, connected, fetchMessages]);
+
   async function openThread(threadId: string) {
     if (!selectedOrgId) return;
     setOpenThreadId(threadId);

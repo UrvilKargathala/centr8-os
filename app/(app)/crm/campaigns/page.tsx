@@ -11,6 +11,7 @@ import { Badge, type BadgeColor } from "@/components/ui/Badge";
 import { Empty, EmptyHeader, EmptyTitle, EmptyDescription } from "@/components/ui/Empty";
 import { fmtMoney } from "../deals/page";
 import { PageSkeleton } from "@/components/ui/skeleton";
+import { CrmKpiCard, KpiIcons } from "@/components/crm/CrmKpiCard";
 
 const CAMPAIGN_TYPES = ["email", "social", "event", "webinar", "referral", "paid_ads", "content", "cold_outreach", "other"] as const;
 const CAMPAIGN_STATUSES = ["planned", "draft", "active", "paused", "completed", "cancelled"] as const;
@@ -126,29 +127,16 @@ export default function CampaignsPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-        <Card padding="sm" color="danger">
-          <p className="text-caption text-neutral-600">Active Campaigns</p>
-          <p className="text-h3 font-semibold text-neutral-950">{stats?.active_campaigns ?? 0}</p>
-        </Card>
-        <Card padding="sm">
-          <p className="text-caption text-neutral-600">Total Budget Allocated</p>
-          <p className="text-h3 font-semibold text-neutral-950">{fmtMoney(stats?.total_budget_allocated ?? 0, "INR")}</p>
-        </Card>
-        <Card padding="sm">
-          <p className="text-caption text-neutral-600">Total Leads Generated</p>
-          <p className="text-h3 font-semibold text-neutral-950">{stats?.total_leads_generated ?? 0}</p>
-        </Card>
-        <Card padding="sm">
-          <p className="text-caption text-neutral-600">Best ROI Campaign</p>
-          {stats?.best_performing ? (
-            <p className="text-body-medium font-semibold text-neutral-950">
-              {stats.best_performing.name} ({Math.round(stats.best_performing.roi)}%)
-            </p>
-          ) : (
-            <p className="text-body-medium text-neutral-600">No data yet</p>
-          )}
-        </Card>
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <CrmKpiCard label="Active Campaigns" value={stats?.active_campaigns ?? 0} color="primary" icon={KpiIcons.megaphone} />
+        <CrmKpiCard label="Total Budget Allocated" value={fmtMoney(stats?.total_budget_allocated ?? 0, "INR")} color="info" icon={KpiIcons.dollarSign} />
+        <CrmKpiCard label="Total Leads Generated" value={stats?.total_leads_generated ?? 0} color="success" icon={KpiIcons.target} />
+        <CrmKpiCard
+          label="Best ROI Campaign"
+          value={stats?.best_performing ? `${stats.best_performing.name} (${Math.round(stats.best_performing.roi)}%)` : "No data yet"}
+          color="warning"
+          icon={KpiIcons.award}
+        />
       </div>
 
       {filtered.length === 0 ? (

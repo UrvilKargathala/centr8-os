@@ -17,11 +17,11 @@ export async function GET(req: NextRequest) {
 
     const rows = await withOrgContext(userId, async (db) => {
       await requirePermission(db, userId, orgId, "attendance", "view_all");
-      const today = new Date().toISOString().slice(0, 10);
+      const date = req.nextUrl.searchParams.get("date") ?? new Date().toISOString().slice(0, 10);
       return db
         .select()
         .from(attendanceRecords)
-        .where(and(eq(attendanceRecords.orgId, orgId), eq(attendanceRecords.workDate, today)));
+        .where(and(eq(attendanceRecords.orgId, orgId), eq(attendanceRecords.workDate, date)));
     });
 
     return NextResponse.json({ data: rows });

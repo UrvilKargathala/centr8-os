@@ -913,6 +913,17 @@ Follow-ups:
         ],
       };
     },
+    portal_summary: (ctx: MockContext) => {
+      const data = ctx.data as Record<string, unknown> | undefined;
+      const pct = Number(data?.pct_tasks_done ?? 0);
+      const milestone = (data?.current_milestone as string) || "the current milestone";
+      const status = (data?.project_status as string) || "active";
+      return {
+        currentMilestoneName: milestone,
+        pctTasksDone: pct,
+        aiSummary: `The project is ${status} with ${pct}% of tasks completed in ${milestone}. ${pct >= 75 ? "Good progress — on track for milestone completion." : pct >= 40 ? "Moderate progress — monitor closely to stay on schedule." : "Early stages — ensure blockers are addressed promptly to maintain momentum."}`,
+      };
+    },
   },
   Planner: {
     create_project_draft: (ctx: MockContext) => {

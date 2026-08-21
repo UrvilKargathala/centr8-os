@@ -111,12 +111,16 @@ export default function DocumentsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-start justify-between gap-4">
+      <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
           <h1 className="text-h2 font-semibold text-neutral-950">Documents</h1>
-          <p className="text-body text-neutral-600">AI-generated PRDs, SOPs, reports, and more.</p>
+          <p className="mt-1 text-body text-neutral-600">AI-generated PRDs, SOPs, reports, and more.</p>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
+        {canCreate && <Button onClick={() => setShowGenerate(true)}>+ Generate Document</Button>}
+      </div>
+
+      <div className="flex flex-wrap items-end gap-3">
+        <Field label="Type">
           <Select className="w-40" value={docTypeFilter} onChange={(e) => setDocTypeFilter(e.target.value)}>
             <option value="">All types</option>
             {DOC_TYPES.map((d) => (
@@ -125,14 +129,15 @@ export default function DocumentsPage() {
               </option>
             ))}
           </Select>
+        </Field>
+        <Field label="Status">
           <Select className="w-36" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
             <option value="">All statuses</option>
             <option value="draft">Draft</option>
             <option value="reviewed">Reviewed</option>
             <option value="finalized">Finalized</option>
           </Select>
-          {canCreate && <Button onClick={() => setShowGenerate(true)}>+ Generate Document</Button>}
-        </div>
+        </Field>
       </div>
 
       {docs.length === 0 ? (

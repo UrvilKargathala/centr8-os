@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useOrg } from "@/lib/context/OrgContext";
 import { SectionSkeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/Button";
@@ -69,22 +69,46 @@ export default function MessengerPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [connected, selectedOrgId]);
 
-  function loadMessages(channelId: string) {
+  // Auto-poll channels every 30s
+  useEffect(() => {
+    if (!connected || !selectedOrgId) return;
+    const id = setInterval(loadChannels, 30000);
+    return () => clearInterval(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [connected, selectedOrgId]);
+
+  const activeIdRef = useRef(activeId);
+  activeIdRef.current = activeId;
+
+  const refreshMessages = useCallback((channelId: string, silent = false) => {
     if (!selectedOrgId) return;
-    setActiveId(channelId);
-    setMessagesLoading(true);
-    setMessagesError(null);
-    setSummary(null);
-    setDraft(null);
+    if (!silent) {
+      setActiveId(channelId);
+      setMessagesLoading(true);
+      setMessagesError(null);
+      setSummary(null);
+      setDraft(null);
+    }
     fetch(`/api/integrations/clickup/channels/${channelId}/messages?org_id=${selectedOrgId}`)
       .then((r) => r.json())
       .then((body) => {
         if (!body.data) throw new Error(body.error ?? "Failed to load messages");
-        setMessages(body.data);
+        if (activeIdRef.current === channelId) setMessages(body.data);
       })
-      .catch((err) => setMessagesError(err instanceof Error ? err.message : "Failed to load messages"))
-      .finally(() => setMessagesLoading(false));
+      .catch((err) => { if (!silent) setMessagesError(err instanceof Error ? err.message : "Failed to load messages"); })
+      .finally(() => { if (!silent) setMessagesLoading(false); });
+  }, [selectedOrgId]);
+
+  function loadMessages(channelId: string) {
+    refreshMessages(channelId, false);
   }
+
+  // Auto-poll active channel messages every 10s
+  useEffect(() => {
+    if (!activeId || !selectedOrgId) return;
+    const id = setInterval(() => refreshMessages(activeId, true), 10000);
+    return () => clearInterval(id);
+  }, [activeId, selectedOrgId, refreshMessages]);
 
   function send() {
     if (!selectedOrgId || !activeId || !reply.trim()) return;

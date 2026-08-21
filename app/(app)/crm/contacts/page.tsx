@@ -15,6 +15,7 @@ import { Empty, EmptyHeader, EmptyTitle, EmptyDescription } from "@/components/u
 import { AiButton, AiSuggestionCard, useAiCall } from "@/components/ui/AiTouchpoint";
 import { LogActivityForm } from "../leads/page";
 import { PageSkeleton, SectionSkeleton } from "@/components/ui/skeleton";
+import { CrmKpiCard, KpiIcons } from "@/components/crm/CrmKpiCard";
 
 type Contact = {
   id: string;
@@ -112,19 +113,10 @@ export default function ContactsPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <Card padding="sm" color="danger">
-          <p className="text-caption text-neutral-600">Total Contacts</p>
-          <p className="text-h3 font-semibold text-neutral-950">{kpis.total}</p>
-        </Card>
-        <Card padding="sm">
-          <p className="text-caption text-neutral-600">Decision Makers</p>
-          <p className="text-h3 font-semibold text-neutral-950">{kpis.decisionMakers}</p>
-        </Card>
-        <Card padding="sm">
-          <p className="text-caption text-neutral-600">Unlinked</p>
-          <p className="text-h3 font-semibold text-neutral-950">{kpis.unlinked}</p>
-        </Card>
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+        <CrmKpiCard label="Total Contacts" value={kpis.total} color="primary" icon={KpiIcons.users} />
+        <CrmKpiCard label="Decision Makers" value={kpis.decisionMakers} color="success" icon={KpiIcons.star} />
+        <CrmKpiCard label="Unlinked" value={kpis.unlinked} color="warning" icon={KpiIcons.link} />
       </div>
 
       <div className="flex flex-wrap items-end gap-3">

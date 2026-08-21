@@ -145,9 +145,9 @@ const NAV_SECTIONS: NavSection[] = [
     adminOnly: true,
     items: [
       { href: "/admin/members", label: "Members & Roles", icon: ICON.users },
-      { href: "/admin/sso-security", label: "SSO & Security", icon: ICON.shield, comingSoon: true },
-      { href: "/admin/automations", label: "Automations", icon: ICON.robot, comingSoon: true },
-      { href: "/admin/api-keys", label: "API Keys", icon: ICON.key, comingSoon: true },
+      // { href: "/admin/sso-security", label: "SSO & Security", icon: ICON.shield, comingSoon: true },
+      // { href: "/admin/automations", label: "Automations", icon: ICON.robot, comingSoon: true },
+      // { href: "/admin/api-keys", label: "API Keys", icon: ICON.key, comingSoon: true },
       { href: "/admin/audit-log", label: "Audit Log", icon: ICON.clipboard },
       { href: "/admin/integrations", label: "Integrations", icon: ICON.plug },
     ],
@@ -316,7 +316,7 @@ function AppSidebar({
           </button>
         </div>
 
-        <nav className="flex-1 space-y-4 overflow-y-auto p-3 font-heading">
+        <nav className="flex-1 space-y-4 overflow-y-auto scrollbar-hide p-3 font-heading">
           <Link
             href="/dashboard"
             title="Dashboard"
@@ -394,7 +394,7 @@ function AppSidebar({
 
         <div className="shrink-0 space-y-0.5 border-t border-neutral-300 p-3 font-heading">
           <Link
-            href="/profile"
+            href="/help"
             className={`flex items-center gap-2.5 rounded-sm px-3 py-2 text-[13px] font-medium text-neutral-600 hover:bg-neutral-200 ${
               collapsed ? "justify-center" : ""
             }`}
@@ -488,7 +488,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const { callCount: aiCallCount } = useAiUsage();
   const [orgMenuOpen, setOrgMenuOpen] = useState(false);
   const orgMenuRef = useRef<HTMLDivElement>(null);
+  const mainRef = useRef<HTMLElement>(null);
   const [theme, setTheme] = useState<"light" | "dark">("light");
+
+  useEffect(() => {
+    mainRef.current?.scrollTo(0, 0);
+  }, [pathname]);
 
   useEffect(() => {
     const v = localStorage.getItem("centr8:sidebar-collapsed");
@@ -702,7 +707,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </div>
         </header>
 
-        <main className="min-w-0 flex-1 overflow-y-auto overflow-x-hidden p-4 sm:p-6 lg:p-8">{children}</main>
+        <main ref={mainRef} className="min-w-0 flex-1 overflow-y-auto overflow-x-hidden p-4 sm:p-6 lg:p-8">{children}</main>
       </div>
 
       {askOpen && <AskAiDialog onClose={() => setAskOpen(false)} orgId={selectedOrgId} />}

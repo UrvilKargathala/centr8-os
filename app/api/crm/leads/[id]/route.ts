@@ -52,7 +52,7 @@ export async function PATCH(req: NextRequest, { params }: Params) {
           jobTitle: body.job_title === undefined ? undefined : body.job_title,
           source: body.source ?? undefined,
           sourceDetail: body.source_detail === undefined ? undefined : body.source_detail,
-          status: body.status ?? undefined,
+          status: body.status === "converted" ? undefined : (body.status ?? undefined),
           score: body.score === undefined ? undefined : body.score,
           scoreReasoning: body.score_reasoning === undefined ? undefined : body.score_reasoning,
           lostReason: body.lost_reason === undefined ? undefined : body.lost_reason,

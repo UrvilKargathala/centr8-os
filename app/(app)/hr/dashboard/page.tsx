@@ -31,7 +31,7 @@ function last7Days(): string[] {
 // HR concept. Every stat here maps 1:1 to a table this app actually has.
 export default function HrDashboardPage() {
   const { selectedOrgId, can, loading: orgLoading } = useOrg();
-  const canViewAttendance = can("attendance", "record");
+  const canViewAttendance = can("attendance", "view_own");
 
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [todayRecords, setTodayRecords] = useState<AttendanceRecord[]>([]);
@@ -54,7 +54,7 @@ export default function HrDashboardPage() {
       canViewAttendance
         ? Promise.all(
             days.map((date) =>
-              fetch(`/api/attendance?org_id=${selectedOrgId}&date=${date}`)
+              fetch(`/api/attendance/team-today?org_id=${selectedOrgId}&date=${date}`)
                 .then((r) => r.json())
                 .then((b) => [date, b.data ?? []] as const),
             ),

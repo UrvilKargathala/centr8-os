@@ -4,6 +4,7 @@ import { db } from "@/db";
 import { milestones, organizations, projects, tasks } from "@/db/schema";
 import { PortalAccessError, requirePortalGrant } from "@/lib/api/portalAccess";
 import { computePlainStatusSummary } from "@/lib/portal/summary";
+import { generateAI } from "@/lib/ai/generate";
 
 type Params = { params: Promise<{ org_slug: string }> };
 
@@ -56,7 +57,22 @@ export async function GET(req: NextRequest, { params }: Params) {
           dueDate: m.dueDate,
           approvedAt: m.approvedAt,
         })),
-        summary: computePlainStatusSummary(milestoneRows, taskRows),
+        summary: await (async () => {
+          const plain = computePlainStatusSummary(milestoneRows, taskRows);
+          try {
+            const ai = (await generateAI("Analyst", "portal_summary", {
+              project_name: project.name,
+              project_status: project.status,
+              current_milestone: plain.currentMilestoneName,
+              pct_tasks_done: plain.pctTasksDone,
+              total_milestones: milestoneRows.length,
+              approved_milestones: milestoneRows.filter((m) => m.approvedAt).length,
+            })) as { currentMilestoneName: string | null; pctTasksDone: number; aiSummary?: string };
+            return { ...plain, aiSummary: ai.aiSummary ?? null };
+          } catch {
+            return { ...plain, aiSummary: null };
+          }
+        })(),
       },
     });
   } catch (err) {

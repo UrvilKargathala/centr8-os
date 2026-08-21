@@ -12,6 +12,7 @@ import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@
 import { AiButton, AiSuggestionCard, useAiCall } from "@/components/ui/AiTouchpoint";
 import { fmtMoney, isStale } from "../deals/page";
 import { PageSkeleton } from "@/components/ui/skeleton";
+import { CrmKpiCard, KpiIcons } from "@/components/crm/CrmKpiCard";
 
 type PeriodType = "monthly" | "quarterly" | "annual";
 type Deal = {
@@ -161,38 +162,23 @@ export default function ForecastsPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-5">
-        <Card padding="sm" color="danger">
-          <p className="text-caption text-neutral-600">Target ({forecast.period})</p>
-          {forecast.target_value === 0 ? (
-            <>
-              <p className="text-body-medium text-neutral-600">No target set</p>
-              {canSetTarget && (
-                <Button variant="secondary" className="mt-1" onClick={() => setShowTarget(true)}>
-                  + Set Target
-                </Button>
-              )}
-            </>
-          ) : (
-            <p className="text-h3 font-semibold text-neutral-950">{fmtMoney(forecast.target_value, "INR")}</p>
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
+        <CrmKpiCard
+          label={`Target (${forecast.period})`}
+          value={forecast.target_value === 0 ? "No target set" : fmtMoney(forecast.target_value, "INR")}
+          color="primary"
+          icon={KpiIcons.flag}
+        >
+          {forecast.target_value === 0 && canSetTarget && (
+            <Button variant="secondary" className="mt-1" onClick={() => setShowTarget(true)}>
+              + Set Target
+            </Button>
           )}
-        </Card>
-        <Card padding="sm">
-          <p className="text-caption text-neutral-600">Won</p>
-          <p className="text-h3 font-semibold text-neutral-950">{fmtMoney(forecast.won_value, "INR")}</p>
-        </Card>
-        <Card padding="sm">
-          <p className="text-caption text-neutral-600">Weighted Pipeline</p>
-          <p className="text-h3 font-semibold text-neutral-950">{fmtMoney(forecast.weighted_value, "INR")}</p>
-        </Card>
-        <Card padding="sm">
-          <p className="text-caption text-neutral-600">Total Pipeline</p>
-          <p className="text-h3 font-semibold text-neutral-950">{fmtMoney(forecast.pipeline_value, "INR")}</p>
-        </Card>
-        <Card padding="sm">
-          <p className="text-caption text-neutral-600">Gap to Target</p>
-          <p className={`text-h3 font-semibold ${forecast.gap <= 0 ? "text-success-600" : "text-danger-600"}`}>{fmtMoney(forecast.gap, "INR")}</p>
-        </Card>
+        </CrmKpiCard>
+        <CrmKpiCard label="Won" value={fmtMoney(forecast.won_value, "INR")} color="success" icon={KpiIcons.checkCircle} />
+        <CrmKpiCard label="Weighted Pipeline" value={fmtMoney(forecast.weighted_value, "INR")} color="info" icon={KpiIcons.layers} />
+        <CrmKpiCard label="Total Pipeline" value={fmtMoney(forecast.pipeline_value, "INR")} color="warning" icon={KpiIcons.barChart} />
+        <CrmKpiCard label="Gap to Target" value={fmtMoney(forecast.gap, "INR")} color={forecast.gap <= 0 ? "success" : "danger"} icon={KpiIcons.trendUp} />
       </div>
 
       <div className="flex flex-wrap gap-2">

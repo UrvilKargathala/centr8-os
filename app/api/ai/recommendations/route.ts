@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { and, eq, gte, inArray } from "drizzle-orm";
 import { withOrgContext } from "@/db/withOrgContext";
-import { deals, leaveRequests, notifications, people, projects, sprintPlanProposals, tasks } from "@/db/schema";
+import { deals, employees, leaveRequests, notifications, people, projects, sprintPlanProposals, tasks } from "@/db/schema";
 import { ApiError, handleApiError, requireUserId } from "@/lib/api/helpers";
 import { generateAI } from "@/lib/ai/generate";
 import { createNotification } from "@/lib/notifications/create";
@@ -85,6 +85,42 @@ export async function GET(req: NextRequest) {
             type: "ai_recommendation",
             title: `${count} action${count > 1 ? "s" : ""} need${count === 1 ? "s" : ""} attention`,
           }).catch(() => {});
+        }
+      }
+
+      // task_overdue: notify assignees of overdue tasks (dedup per task per day)
+      if (overdueTasks.length > 0) {
+        const startOfDay = new Date();
+        startOfDay.setHours(0, 0, 0, 0);
+        for (const t of overdueTasks.slice(0, 10)) {
+          if (!t.assigneeId) continue;
+          const [person] = await db.select({ userId: people.userId }).from(people).where(eq(people.id, t.assigneeId));
+          if (!person?.userId) continue;
+          const [dup] = await db
+            .select({ id: notifications.id })
+            .from(notifications)
+            .where(and(eq(notifications.userId, person.userId), eq(notifications.type, "task_overdue"), eq(notifications.linkId, t.id), gte(notifications.createdAt, startOfDay)));
+          if (!dup) {
+            createNotification(db, { orgId, userId: person.userId, type: "task_overdue", title: "Task overdue", body: t.title, linkType: "task", linkId: t.id }).catch(() => {});
+          }
+        }
+      }
+
+      // deal_stage_changed: notify deal owners of stale deals (dedup per deal per day)
+      if (atRiskDealNames.length > 0) {
+        const startOfDay = new Date();
+        startOfDay.setHours(0, 0, 0, 0);
+        for (const d of orgDeals.filter((dd) => (now - new Date(dd.stageChangedAt).getTime()) / 86400000 > STALE_DAYS).slice(0, 10)) {
+          if (!d.ownerId) continue;
+          const [owner] = await db.select({ userId: employees.userId }).from(employees).where(eq(employees.id, d.ownerId));
+          if (!owner?.userId) continue;
+          const [dup] = await db
+            .select({ id: notifications.id })
+            .from(notifications)
+            .where(and(eq(notifications.userId, owner.userId), eq(notifications.type, "deal_stage_changed"), eq(notifications.linkId, d.id), gte(notifications.createdAt, startOfDay)));
+          if (!dup) {
+            createNotification(db, { orgId, userId: owner.userId, type: "deal_stage_changed", title: "Deal stale — no stage change in 14+ days", body: d.name, linkType: "deal", linkId: d.id }).catch(() => {});
+          }
         }
       }
 

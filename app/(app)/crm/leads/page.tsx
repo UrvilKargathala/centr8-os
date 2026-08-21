@@ -15,6 +15,7 @@ import { Empty, EmptyHeader, EmptyTitle, EmptyDescription } from "@/components/u
 import { AiButton, AiSuggestionCard, useAiCall } from "@/components/ui/AiTouchpoint";
 import { LEAD_STATUSES, ACTIVITY_TYPES } from "@/lib/constants";
 import { PageSkeleton, SectionSkeleton } from "@/components/ui/skeleton";
+import { CrmKpiCard, KpiIcons } from "@/components/crm/CrmKpiCard";
 
 const KANBAN_STATUSES = ["new", "contacted", "qualified", "unqualified"] as const;
 const STATUS_LABEL: Record<string, string> = {
@@ -143,25 +144,11 @@ export default function LeadsPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-        <Card padding="sm" color="danger">
-          <p className="text-caption text-neutral-600">Total Leads</p>
-          <p className="text-h3 font-semibold text-neutral-950">{kpis.total}</p>
-        </Card>
-        <Card padding="sm">
-          <p className="text-caption text-neutral-600">New This Month</p>
-          <p className="text-h3 font-semibold text-neutral-950">{kpis.newThisMonth}</p>
-        </Card>
-        <Card padding="sm">
-          <button className="w-full text-left" onClick={() => setStatus("qualified")}>
-            <p className="text-caption text-neutral-600">Qualified</p>
-            <p className="text-h3 font-semibold text-neutral-950">{kpis.qualified}</p>
-          </button>
-        </Card>
-        <Card padding="sm">
-          <p className="text-caption text-neutral-600">Conversion Rate</p>
-          <p className="text-h3 font-semibold text-neutral-950">{kpis.conversionRate}%</p>
-        </Card>
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <CrmKpiCard label="Total Leads" value={kpis.total} color="primary" icon={KpiIcons.target} />
+        <CrmKpiCard label="New This Month" value={kpis.newThisMonth} color="info" icon={KpiIcons.userPlus} />
+        <CrmKpiCard label="Qualified" value={kpis.qualified} color="success" icon={KpiIcons.checkCircle} onClick={() => setStatus("qualified")} />
+        <CrmKpiCard label="Conversion Rate" value={`${kpis.conversionRate}%`} color="warning" icon={KpiIcons.percent} />
       </div>
 
       <div className="flex flex-wrap items-end gap-3">

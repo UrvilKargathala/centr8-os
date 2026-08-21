@@ -31,7 +31,7 @@ export type LeaveRequest = {
   status: string;
   requestedAt: string;
 };
-type Employee = { id: string; fullName: string; departmentId: string | null };
+type Employee = { id: string; fullName: string; departmentId: string | null; departmentName: string | null };
 
 const STATUS_COLOR: Record<string, "warning" | "success" | "danger" | "neutral"> = {
   pending: "warning",
@@ -73,7 +73,7 @@ export default function LeaveManagementPage() {
         <Button onClick={() => setShowRequest(true)}>+ Request Leave</Button>
       </div>
 
-      <div className="flex gap-1 overflow-x-auto border-b border-neutral-300">
+      <div className="flex gap-1 overflow-x-auto border-b border-neutral-300 scrollbar-hide">
         {visibleTabs.map((t) => (
           <button
             key={t}
@@ -92,7 +92,7 @@ export default function LeaveManagementPage() {
 
       {tab === "My Leave" && <MyLeaveTab orgId={selectedOrgId} refreshKey={refreshKey} onRequestLeave={() => setShowRequest(true)} />}
       {tab === "Approvals" && canApprove && <ApprovalsTab orgId={selectedOrgId} onPendingCount={setPendingCount} refreshKey={refreshKey} />}
-      {tab === "Team Calendar" && (canViewAll || canApprove) && <TeamCalendarTab orgId={selectedOrgId} />}
+      {tab === "Team Calendar" && (canViewAll || canApprove) && <TeamCalendarTab orgId={selectedOrgId} scope={canViewAll ? "all" : "team"} />}
       {tab === "Policies" && canConfigure && <PoliciesTab orgId={selectedOrgId} />}
 
       {showRequest && (
@@ -223,7 +223,7 @@ function MyLeaveTab({ orgId, refreshKey, onRequestLeave }: { orgId: string; refr
                       </TableCell>
                       <TableCell className="max-w-[12rem] truncate text-neutral-600">{r.reason ?? "—"}</TableCell>
                       <TableCell>
-                        {r.status === "pending" && (
+                        {(r.status === "pending" || r.status === "approved") && (
                           <Button variant="secondary" onClick={() => setCancelTarget(r)}>
                             Cancel
                           </Button>
@@ -488,7 +488,7 @@ function RejectRequestModal({ request, onClose, onRejected }: { request: LeaveRe
   );
 }
 
-function TeamCalendarTab({ orgId }: { orgId: string }) {
+function TeamCalendarTab({ orgId, scope }: { orgId: string; scope: "all" | "team" }) {
   const [month, setMonth] = useState(() => new Date());
   const [requests, setRequests] = useState<LeaveRequest[]>([]);
   const [employees, setEmployees] = useState<Employee[]>([]);
@@ -505,7 +505,7 @@ function TeamCalendarTab({ orgId }: { orgId: string }) {
     const end = new Date(year, mon + 1, 0).toISOString().slice(0, 10);
     setLoading(true);
     Promise.all([
-      fetch(`/api/leave/team-calendar?org_id=${orgId}&start_date=${start}&end_date=${end}`).then((r) => r.json()),
+      fetch(`/api/leave/team-calendar?org_id=${orgId}&start_date=${start}&end_date=${end}&scope=${scope}`).then((r) => r.json()),
       fetch(`/api/employees?org_id=${orgId}`).then((r) => r.json()),
       fetch(`/api/leave/types?org_id=${orgId}`).then((r) => r.json()),
     ]).then(([reqBody, empBody, typesBody]) => {
@@ -514,7 +514,7 @@ function TeamCalendarTab({ orgId }: { orgId: string }) {
       setTypes(typesBody.data ?? []);
       setLoading(false);
     });
-  }, [orgId, month]);
+  }, [orgId, month, scope]);
 
   const filtered = requests.filter((r) => {
     const emp = employees.find((e) => e.id === r.employeeId);
@@ -524,7 +524,7 @@ function TeamCalendarTab({ orgId }: { orgId: string }) {
     return true;
   });
 
-  const departmentOptions = Array.from(new Set(employees.map((e) => e.departmentId).filter(Boolean))) as string[];
+  const departmentOptions = Array.from(new Map(employees.filter((e) => e.departmentId && e.departmentName).map((e) => [e.departmentId!, e.departmentName!])).entries());
 
   const year = month.getFullYear();
   const mon = month.getMonth();
@@ -548,9 +548,9 @@ function TeamCalendarTab({ orgId }: { orgId: string }) {
         <Field label="Department">
           <Select className="w-40" value={deptFilter} onChange={(e) => setDeptFilter(e.target.value)}>
             <option value="">All</option>
-            {departmentOptions.map((d) => (
-              <option key={d} value={d}>
-                {d.slice(0, 8)}
+            {departmentOptions.map(([id, name]) => (
+              <option key={id} value={id}>
+                {name}
               </option>
             ))}
           </Select>
@@ -607,7 +607,7 @@ function TeamCalendarTab({ orgId }: { orgId: string }) {
                         key={r.id}
                         title={`${emp?.fullName ?? "Unknown"} · ${type?.name ?? "Leave"} · ${r.status}`}
                         className="truncate rounded-sm px-1 text-caption text-neutral-50"
-                        style={{ backgroundColor: type?.color ?? "#5B5F68", opacity: r.status === "pending" ? 0.55 : 1 }}
+                        style={{ backgroundColor: type?.color ?? "var(--color-neutral-500)", opacity: r.status === "pending" ? 0.55 : 1 }}
                       >
                         {emp?.fullName?.split(" ")[0] ?? "?"}
                       </div>
