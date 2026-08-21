@@ -108,7 +108,6 @@ const NAV_SECTIONS: NavSection[] = [
       { href: "/communication", label: "Unified Inbox", icon: ICON.dashboard },
       { href: "/communication/messenger", label: "Messenger", icon: ICON.chat },
       { href: "/communication/mail", label: "Mail", icon: ICON.mail },
-      { href: "/communication/calls", label: "Calls", icon: ICON.phone },
       { href: "/communication/video", label: "Video", icon: ICON.video },
       { href: "/communication/clickup", label: "ClickUp", icon: ICON.clipboard },
     ],
