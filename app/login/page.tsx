@@ -52,7 +52,7 @@ function LoginForm() {
   }
 
   return (
-    <div className="flex min-h-screen bg-white dark:bg-neutral-950">
+    <div className="flex min-h-screen bg-white">
       {/* Decorative side — purely illustrative (skeleton placeholder bars,
           no invented stats/numbers), hidden below md same as the reference's
           split layout collapsing to a single column on mobile. */}
@@ -80,7 +80,7 @@ function LoginForm() {
       </div>
 
       {/* Form side */}
-      <div className="flex w-full items-center justify-center bg-white dark:bg-neutral-950 px-6 py-12 md:w-1/2">
+      <div className="flex w-full items-center justify-center bg-white px-6 py-12 md:w-1/2">
         <div className="w-full max-w-sm">
           <form onSubmit={handleSubmit}>
             <FieldGroup>
@@ -100,7 +100,7 @@ function LoginForm() {
                   id="email"
                   type="email"
                   required
-                  className="w-full"
+                  className="w-full !border-neutral-300 !bg-neutral-50"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                 />
@@ -113,7 +113,7 @@ function LoginForm() {
                     id="password"
                     type={showPw ? "text" : "password"}
                     required
-                    className="w-full pr-10"
+                    className="w-full pr-10 !border-neutral-300 !bg-neutral-50"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                   />
