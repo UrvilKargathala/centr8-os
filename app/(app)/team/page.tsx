@@ -48,7 +48,7 @@ export default function TeamPage() {
   const [q, setQ] = useState("");
   const [roleFilter, setRoleFilter] = useState("");
   const [deptFilter, setDeptFilter] = useState("");
-  const [statusFilter, setStatusFilter] = useState<"all" | "active" | "inactive">("active");
+
   const [editing, setEditing] = useState<Person | null | "new">(null);
   const [taskEstimates, setTaskEstimates] = useState<Record<string, number>>({});
 
@@ -86,8 +86,7 @@ export default function TeamPage() {
 
   const filtered = useMemo(() => {
     return people.filter((p) => {
-      if (statusFilter === "active" && !p.isActive) return false;
-      if (statusFilter === "inactive" && p.isActive) return false;
+      if (!p.isActive) return false;
       if (roleFilter && !p.roles.includes(roleFilter)) return false;
       if (deptFilter && p.department !== deptFilter) return false;
       if (!q.trim()) return true;
@@ -98,7 +97,7 @@ export default function TeamPage() {
         (p.jobTitle ?? "").toLowerCase().includes(needle)
       );
     });
-  }, [people, q, roleFilter, deptFilter, statusFilter]);
+  }, [people, q, roleFilter, deptFilter]);
 
   const { page, setPage, pageSize, total, paged } = usePagination(filtered, 10);
 
@@ -150,36 +149,31 @@ export default function TeamPage() {
           placeholder="Search name, email, title…"
           value={q}
           onChange={(e) => setQ(e.target.value)}
-          className="w-56"
+          className="!w-56 shrink-0"
         />
-        <Select value={roleFilter} onChange={(e) => setRoleFilter(e.target.value)} className="w-36">
+        <Select value={roleFilter} onChange={(e) => setRoleFilter(e.target.value)} className="!w-40 shrink-0">
           <option value="">All roles</option>
           {ROLE_OPTIONS.map((r) => (
             <option key={r} value={r}>{r}</option>
           ))}
         </Select>
-        <Select value={deptFilter} onChange={(e) => setDeptFilter(e.target.value)} className="w-40">
+        <Select value={deptFilter} onChange={(e) => setDeptFilter(e.target.value)} className="!w-44 shrink-0">
           <option value="">All departments</option>
           {departments.map((d) => (
             <option key={d} value={d}>{d}</option>
           ))}
         </Select>
-        <Select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value as "all" | "active" | "inactive")} className="w-32">
-          <option value="active">Active</option>
-          <option value="inactive">Inactive</option>
-          <option value="all">All status</option>
-        </Select>
-        {(q || roleFilter || deptFilter || statusFilter !== "active") && (
+        {(q || roleFilter || deptFilter) && (
           <button
             type="button"
-            onClick={() => { setQ(""); setRoleFilter(""); setDeptFilter(""); setStatusFilter("active"); }}
+            onClick={() => { setQ(""); setRoleFilter(""); setDeptFilter(""); }}
             className="shrink-0 text-small text-neutral-500 hover:text-neutral-800 dark:hover:text-neutral-200"
           >
             Clear filters
           </button>
         )}
         <div className="ml-auto">
-          {can("team", "create") && <Button onClick={() => setEditing("new")}>+ Add person</Button>}
+          {can("team", "create") && <Button className="whitespace-nowrap" onClick={() => setEditing("new")}>+ Add person</Button>}
         </div>
       </div>
 

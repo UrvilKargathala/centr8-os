@@ -176,6 +176,14 @@ function BudgetTable({
                       <Badge color="danger">Over</Badge>
                     )}
                   </span>
+                  {p.budgetAllocated != null && p.budgetAllocated > 0 && (
+                    <div className="mt-1 h-1 w-24 overflow-hidden rounded-full bg-neutral-200">
+                      <div
+                        className={`h-full rounded-full ${(p.budgetSpent ?? 0) > p.budgetAllocated ? "bg-danger-600" : "bg-primary-600"}`}
+                        style={{ width: `${Math.min(100, Math.round(((p.budgetSpent ?? 0) / p.budgetAllocated) * 100))}%` }}
+                      />
+                    </div>
+                  )}
                 </TableCell>
                 {canEdit && (
                   <TableCell>

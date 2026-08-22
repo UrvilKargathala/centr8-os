@@ -143,7 +143,15 @@ function TeamAllocationTable({ byPerson }: { byPerson: { id: string; fullName: s
               <TableCell className="text-right">{p.allocated}h</TableCell>
               <TableCell className="text-right">{p.taskCount}</TableCell>
               <TableCell className="text-right">
-                <Badge color={p.util > 100 ? "danger" : p.util > 80 ? "warning" : "success"}>{p.util}%</Badge>
+                <div className="flex items-center justify-end gap-2">
+                  <div className="h-1.5 w-16 overflow-hidden rounded-full bg-neutral-200">
+                    <div
+                      className={`h-full rounded-full ${p.util > 100 ? "bg-danger-600" : p.util > 80 ? "bg-warning-600" : "bg-success-600"}`}
+                      style={{ width: `${Math.min(100, p.util)}%` }}
+                    />
+                  </div>
+                  <Badge color={p.util > 100 ? "danger" : p.util > 80 ? "warning" : "success"}>{p.util}%</Badge>
+                </div>
               </TableCell>
             </TableRow>
           ))}
