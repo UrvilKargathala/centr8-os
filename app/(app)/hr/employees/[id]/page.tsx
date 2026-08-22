@@ -954,16 +954,16 @@ function ActivityTab({ employeeId, orgId }: { employeeId: string; orgId: string 
       fetch(`/api/leave/employee/${employeeId}?org_id=${orgId}`).then((r) => r.ok ? r.json() : { data: [] }),
       fetch(`/api/attendance/employee/${employeeId}?org_id=${orgId}&limit=10`).then((r) => r.ok ? r.json() : { data: [] }),
     ]).then(([lb, ab]) => {
-      setLeave(lb.data ?? []);
-      setAttendance(ab.data ?? []);
+      setLeave(Array.isArray(lb.data) ? lb.data : []);
+      setAttendance(Array.isArray(ab.data) ? ab.data : []);
     }).finally(() => setLoading(false));
   }, [employeeId, orgId]);
 
   if (loading) return <SectionSkeleton variant="text" />;
 
   const events = [
-    ...leave.map((l) => ({ id: l.id, date: l.startDate, label: `Leave ${l.status} — ${l.startDate}${l.startDate !== l.endDate ? ` to ${l.endDate}` : ""} (${l.totalDays}d)` })),
-    ...attendance.slice(0, 10).map((a) => ({ id: a.id, date: a.workDate, label: `${a.status === "present" ? "Checked in" : a.status} — ${a.workDate}${a.checkInTime ? ` at ${a.checkInTime}` : ""}` })),
+    ...(Array.isArray(leave) ? leave : []).map((l) => ({ id: l.id, date: l.startDate, label: `Leave ${l.status} — ${l.startDate}${l.startDate !== l.endDate ? ` to ${l.endDate}` : ""} (${l.totalDays}d)` })),
+    ...(Array.isArray(attendance) ? attendance : []).slice(0, 10).map((a) => ({ id: a.id, date: a.workDate, label: `${a.status === "present" ? "Checked in" : a.status} — ${a.workDate}${a.checkInTime ? ` at ${a.checkInTime}` : ""}` })),
   ].sort((a, b) => b.date.localeCompare(a.date));
 
   return (
