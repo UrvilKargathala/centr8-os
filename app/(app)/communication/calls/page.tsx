@@ -53,11 +53,9 @@ export default function CallsPage() {
     setLoading(false);
   }
   function saveNotes() {
-    console.log("Save call notes (mock):", { callId: openId, notes });
     toast.show("Notes saved (mock)");
   }
   function createTask(title: string) {
-    console.log("Create task from action item (TODO):", title);
     toast.show("Task creation stub — logged to console");
   }
 

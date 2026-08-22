@@ -128,36 +128,40 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
   const showCompensationTab = can("compensation", "view_sensitive");
   const visibleTabs = TABS.filter((t) => (t === "Compensation" ? showCompensationTab : true));
 
+  const initials = employee.fullName
+    .split(/\s+/)
+    .map((p) => p[0])
+    .filter(Boolean)
+    .slice(0, 2)
+    .join("")
+    .toUpperCase();
+
   return (
     <div className="space-y-6">
       <Card className="flex flex-wrap items-center justify-between gap-4">
         <div className="flex items-center gap-4">
-          <span className="flex h-14 w-14 items-center justify-center rounded-full bg-success-100 text-h2 font-semibold text-success-600">
-            {employee.fullName
-              .split(/\s+/)
-              .map((p) => p[0])
-              .filter(Boolean)
-              .slice(0, 2)
-              .join("")
-              .toUpperCase()}
+          <span className="flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-[var(--primary-600)] to-[var(--primary-400,#a78bfa)] text-h2 font-bold text-white shadow-md">
+            {initials}
           </span>
           <div>
             <h1 className="text-display font-semibold text-neutral-950">{employee.fullName}</h1>
-            <p className="mt-0.5 text-body text-neutral-600">
-              {employee.jobTitle ?? "No title set"} {employee.employeeCode && `· ${employee.employeeCode}`}
+            <p className="mt-0.5 text-body text-neutral-500">
+              {employee.jobTitle ?? "No title set"}
+              {employee.employeeCode && <span className="ml-1.5 text-neutral-400">· {employee.employeeCode}</span>}
+              {employee.location && <span className="ml-1.5 text-neutral-400">· {employee.location}</span>}
             </p>
           </div>
         </div>
         <EmploymentStatusBadge status={employee.employmentStatus} />
       </Card>
 
-      <div className="flex gap-1 overflow-x-auto border-b border-neutral-300">
+      <div className="flex gap-1 overflow-x-auto border-b border-neutral-200">
         {visibleTabs.map((t) => (
           <button
             key={t}
             onClick={() => setTab(t)}
-            className={`shrink-0 px-4 py-2 text-body-medium font-medium transition-colors ${
-              tab === t ? "border-b-2 border-success-600 text-success-600" : "text-neutral-600 hover:text-neutral-950"
+            className={`shrink-0 px-4 py-2.5 text-body-medium font-medium transition-colors ${
+              tab === t ? "border-b-2 border-[var(--primary-600)] text-[var(--primary-600)]" : "text-neutral-500 hover:text-neutral-950"
             }`}
           >
             {t}
@@ -255,136 +259,118 @@ function OverviewTab({
     if (res.ok) onUpdated();
   }
 
+  const DetailRow = ({ label, children }: { label: string; children: React.ReactNode }) => (
+    <div className="flex flex-col gap-0.5 py-2.5 border-b border-neutral-100 last:border-0">
+      <dt className="text-caption font-medium uppercase tracking-wide text-neutral-400">{label}</dt>
+      <dd className="text-body text-neutral-950">{children}</dd>
+    </div>
+  );
+
   return (
-    <Card className="space-y-4">
+    <div className="space-y-5">
       {error && <p className="rounded-md bg-danger-100 p-3 text-body text-danger-600">{error}</p>}
 
       {editing ? (
-        <form onSubmit={handleSave} className="space-y-4">
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <Field label="Full name">
-              <Input className="w-full" value={fullName} onChange={(e) => setFullName(e.target.value)} />
-            </Field>
-            <Field label="Job title">
-              <Input className="w-full" value={jobTitle} onChange={(e) => setJobTitle(e.target.value)} />
-            </Field>
-          </div>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <Field label="Email">
-              <Input type="email" className="w-full" value={email} onChange={(e) => setEmail(e.target.value)} />
-            </Field>
-            <Field label="Phone">
-              <Input className="w-full" value={phone} onChange={(e) => setPhone(e.target.value)} />
-            </Field>
-          </div>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <Field label="Location">
-              <Input className="w-full" value={location} onChange={(e) => setLocation(e.target.value)} />
-            </Field>
-            <Field label="Employment status">
-              <Select className="w-full" value={employmentStatus} onChange={(e) => setEmploymentStatus(e.target.value)}>
-                {EMPLOYMENT_STATUSES.map((s) => (
-                  <option key={s} value={s}>
-                    {s.replace(/_/g, " ")}
-                  </option>
-                ))}
-              </Select>
-            </Field>
-          </div>
-          <div className="flex justify-end gap-3 border-t border-neutral-200 pt-4">
-            <Button type="button" variant="secondary" onClick={() => setEditing(false)}>
-              Cancel
-            </Button>
-            <Button type="submit" disabled={saving}>
-              {saving ? "Saving…" : "Save"}
-            </Button>
-          </div>
-        </form>
+        <Card>
+          <form onSubmit={handleSave} className="space-y-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <Field label="Full name">
+                <Input className="w-full" value={fullName} onChange={(e) => setFullName(e.target.value)} />
+              </Field>
+              <Field label="Job title">
+                <Input className="w-full" value={jobTitle} onChange={(e) => setJobTitle(e.target.value)} />
+              </Field>
+            </div>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <Field label="Email">
+                <Input type="email" className="w-full" value={email} onChange={(e) => setEmail(e.target.value)} />
+              </Field>
+              <Field label="Phone">
+                <Input className="w-full" value={phone} onChange={(e) => setPhone(e.target.value)} />
+              </Field>
+            </div>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <Field label="Location">
+                <Input className="w-full" value={location} onChange={(e) => setLocation(e.target.value)} />
+              </Field>
+              <Field label="Employment status">
+                <Select className="w-full" value={employmentStatus} onChange={(e) => setEmploymentStatus(e.target.value)}>
+                  {EMPLOYMENT_STATUSES.map((s) => (
+                    <option key={s} value={s}>
+                      {s.replace(/_/g, " ")}
+                    </option>
+                  ))}
+                </Select>
+              </Field>
+            </div>
+            <div className="flex justify-end gap-3 border-t border-neutral-200 pt-4">
+              <Button type="button" variant="secondary" onClick={() => setEditing(false)}>
+                Cancel
+              </Button>
+              <Button type="submit" disabled={saving}>
+                {saving ? "Saving…" : "Save"}
+              </Button>
+            </div>
+          </form>
+        </Card>
       ) : (
         <>
-          <dl className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <div>
-              <dt className="text-small text-neutral-600">Employment status</dt>
-              <dd className="mt-1"><EmploymentStatusBadge status={employee.employmentStatus} /></dd>
-            </div>
-            <div>
-              <dt className="text-small text-neutral-600">Employment type</dt>
-              <dd className="mt-1 text-body text-neutral-950">{employee.employmentType.replace(/_/g, " ")}</dd>
-            </div>
-            <div>
-              <dt className="text-small text-neutral-600">Start date</dt>
-              <dd className="mt-1 text-body text-neutral-950">{employee.startDate ?? "—"}</dd>
-            </div>
-            {employee.endDate && (
-              <div>
-                <dt className="text-small text-neutral-600">End date</dt>
-                <dd className="mt-1 text-body text-neutral-950">{employee.endDate}</dd>
-              </div>
-            )}
-            <div>
-              <dt className="text-small text-neutral-600">Location</dt>
-              <dd className="mt-1 text-body text-neutral-950">{employee.location ?? "—"}</dd>
-            </div>
-            <div>
-              <dt className="text-small text-neutral-600">Available hours/week</dt>
-              <dd className="mt-1 text-body text-neutral-950">{employee.availableHoursPerWeek}</dd>
-            </div>
-            <div>
-              <dt className="text-small text-neutral-600">Linked account</dt>
-              <dd className="mt-1">{employee.userId ? <Badge color="success">Linked</Badge> : <Badge color="neutral">Not linked</Badge>}</dd>
-            </div>
-            <div>
-              <dt className="text-small text-neutral-600">Email</dt>
-              <dd className="mt-1 text-body text-neutral-950">{employee.email ?? "—"}</dd>
-            </div>
-            <div>
-              <dt className="text-small text-neutral-600">Phone</dt>
-              <dd className="mt-1 text-body text-neutral-950">{employee.phone ?? "—"}</dd>
-            </div>
-            <div className="sm:col-span-2">
-              <dt className="text-small text-neutral-600">Roles / Skills</dt>
-              <dd className="mt-1 flex flex-wrap gap-1.5">
+          <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
+            <Card>
+              <h3 className="mb-3 text-body-medium font-semibold text-neutral-950">Employment</h3>
+              <dl>
+                <DetailRow label="Status"><EmploymentStatusBadge status={employee.employmentStatus} /></DetailRow>
+                <DetailRow label="Type">{employee.employmentType.replace(/_/g, " ")}</DetailRow>
+                <DetailRow label="Start date">{employee.startDate ?? "—"}</DetailRow>
+                {employee.endDate && <DetailRow label="End date">{employee.endDate}</DetailRow>}
+                <DetailRow label="Hours / week">{employee.availableHoursPerWeek}</DetailRow>
+                <DetailRow label="Linked account">{employee.userId ? <Badge color="success">Linked</Badge> : <Badge color="neutral">Not linked</Badge>}</DetailRow>
+              </dl>
+            </Card>
+
+            <Card>
+              <h3 className="mb-3 text-body-medium font-semibold text-neutral-950">Contact</h3>
+              <dl>
+                <DetailRow label="Email">{employee.email ?? "—"}</DetailRow>
+                <DetailRow label="Phone">{employee.phone ?? "—"}</DetailRow>
+                <DetailRow label="Location">{employee.location ?? "—"}</DetailRow>
+              </dl>
+              <h3 className="mb-3 mt-5 text-body-medium font-semibold text-neutral-950">Roles & Skills</h3>
+              <div className="flex flex-wrap gap-1.5">
                 {[...employee.roles, ...employee.skills].length === 0
-                  ? "—"
+                  ? <span className="text-body text-neutral-400">None assigned</span>
                   : [...employee.roles, ...employee.skills].map((s) => (
-                      <span key={s} className="rounded-full bg-neutral-100 px-2 py-0.5 text-caption text-neutral-700">
+                      <span key={s} className="rounded-full bg-[var(--primary-100)] px-2.5 py-0.5 text-caption font-medium text-[var(--primary-600)]">
                         {s}
                       </span>
                     ))}
-              </dd>
-            </div>
+              </div>
+            </Card>
+          </div>
 
-            {canViewFull && (
-              <>
-                <div>
-                  <dt className="text-small text-neutral-600">Date of birth</dt>
-                  <dd className="mt-1 text-body text-neutral-950">{employee.dateOfBirth ?? "—"}</dd>
-                </div>
-                <div>
-                  <dt className="text-small text-neutral-600">Nationality</dt>
-                  <dd className="mt-1 text-body text-neutral-950">{employee.nationality ?? "—"}</dd>
-                </div>
+          {canViewFull && (
+            <Card>
+              <h3 className="mb-3 text-body-medium font-semibold text-neutral-950">Personal</h3>
+              <dl className="grid grid-cols-1 gap-x-8 sm:grid-cols-2">
+                <DetailRow label="Date of birth">{employee.dateOfBirth ?? "—"}</DetailRow>
+                <DetailRow label="Nationality">{employee.nationality ?? "—"}</DetailRow>
                 <div className="sm:col-span-2">
-                  <dt className="text-small text-neutral-600">Address</dt>
-                  <dd className="mt-1 text-body text-neutral-950">
+                  <DetailRow label="Address">
                     {[employee.address, employee.city, employee.state, employee.zipCode].filter(Boolean).join(", ") || "—"}
-                  </dd>
+                  </DetailRow>
                 </div>
-                <div>
-                  <dt className="text-small text-neutral-600">Cost rate (hourly)</dt>
-                  <dd className="mt-1 text-body text-neutral-950">
-                    {employee.costRateHourly != null ? `${employee.currency ?? ""} ${employee.costRateHourly}` : "—"}
-                  </dd>
+                <DetailRow label="Cost rate (hourly)">
+                  {employee.costRateHourly != null ? `${employee.currency ?? ""} ${employee.costRateHourly}` : "—"}
+                </DetailRow>
+              </dl>
+              {employee.notes && (
+                <div className="mt-3 rounded-md bg-neutral-50 p-3">
+                  <p className="text-caption font-medium uppercase tracking-wide text-neutral-400 mb-1">Notes</p>
+                  <p className="whitespace-pre-wrap text-body text-neutral-950">{employee.notes}</p>
                 </div>
-                {employee.notes && (
-                  <div className="sm:col-span-2">
-                    <dt className="text-small text-neutral-600">Notes</dt>
-                    <dd className="mt-1 whitespace-pre-wrap text-body text-neutral-950">{employee.notes}</dd>
-                  </div>
-                )}
-              </>
-            )}
-          </dl>
+              )}
+            </Card>
+          )}
 
           {!canViewFull && (
             <p className="text-caption text-neutral-500">
@@ -393,17 +379,17 @@ function OverviewTab({
           )}
 
           {!employee.userId && (
-            <div className="rounded-md border-l-4 border-info-600 bg-info-100 px-3 py-3">
-              <p className="text-small text-info-600">
+            <Card className="!border-l-4 !border-l-info-600 !bg-info-50">
+              <p className="text-body text-info-700">
                 This record isn&apos;t linked to a login yet. If this employee is you, claim it below.
               </p>
               <Button variant="secondary" className="mt-2" onClick={handleLinkMyAccount} disabled={linking}>
                 {linking ? "Linking…" : "This is me — link my account"}
               </Button>
-            </div>
+            </Card>
           )}
 
-          <div className="flex gap-3 border-t border-neutral-200 pt-4">
+          <div className="flex gap-3">
             {canUpdate && (
               <Button variant="secondary" onClick={() => setEditing(true)}>
                 Edit
@@ -417,7 +403,7 @@ function OverviewTab({
           </div>
         </>
       )}
-    </Card>
+    </div>
   );
 }
 

@@ -230,9 +230,6 @@ function TodaySummary({ record }: { record: AttendanceRecord }) {
       <a href="/hr/attendance" className="block text-small font-medium text-primary-700 hover:underline">
         View history →
       </a>
-      {/* TODO: allow_multiple_checkins org setting would let a checked-out
-          employee check in again today (e.g. clock back in after lunch) —
-          skipped for this batch, single check-in/out pair per day only. */}
     </div>
   );
 }

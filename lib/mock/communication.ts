@@ -1,10 +1,6 @@
-// TODO Phase 7: replace this entire file with real connector data from the
-// Slack / Gmail / Zoom / phone-provider connectors. The shapes below mirror
-// what those connectors will return, so the UI shell doesn't need to change
-// when real data arrives — flip the source and rewire the "send" handlers.
-//
-// Dates are computed relative to `now` so the demo stays fresh no matter
-// when someone lands on the pages.
+// Mock data for Communication pages not yet backed by real connectors
+// (Mail, Calls). Messenger and Video are already wired to ClickUp Chat
+// and Google Meet respectively.
 
 const now = new Date();
 const hoursAgo = (h: number) => new Date(now.getTime() - h * 3600_000).toISOString();

@@ -130,7 +130,6 @@ export default function UnifiedInboxPage() {
                   key={opt.label}
                   type="button"
                   onClick={() => {
-                    console.log("Compose action:", opt.label);
                     toast.show("Mock mode — not sent");
                     setCompose(false);
                   }}

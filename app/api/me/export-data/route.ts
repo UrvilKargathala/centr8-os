@@ -1,15 +1,10 @@
-import { NextRequest, NextResponse } from "next/server";
-import { handleApiError, requireUserId } from "@/lib/api/helpers";
+import { NextRequest } from "next/server";
+import { ApiError, handleApiError, requireUserId } from "@/lib/api/helpers";
 
-// TODO: kick off a real background job that writes the caller's data
-// (projects owned, tasks assigned, comments authored, preferences,
-// audit-log entries) to JSON and emails a download link. For now this
-// just acknowledges the request so the toast UI can flip to "requested".
 export async function POST(req: NextRequest) {
   try {
-    const userId = await requireUserId(req);
-    console.log("me/export-data: TODO — export requested", { userId });
-    return NextResponse.json({ data: { requested: true } });
+    await requireUserId(req);
+    throw new ApiError(501, "Data export is not yet available. This feature is coming soon.");
   } catch (err) {
     return handleApiError(err);
   }

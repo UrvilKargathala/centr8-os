@@ -153,6 +153,7 @@ export const auditLog = pgTable(
 // --- Work hierarchy (FR-2.x): Goals -> Portfolios -> Projects -> Milestones -> Sprints -> Tasks ---
 
 export const projectStatusEnum = pgEnum("project_status", [
+  "draft",
   "planning",
   "active",
   "on_hold",

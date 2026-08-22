@@ -147,11 +147,6 @@ export function NewProjectWizard({
     setSaving(true);
     setSubmitError(null);
 
-    // /api/projects only knows about name/status/portfolio_id/start_date/end_date
-    // today. Everything else on this wizard is UI state only — logged so the
-    // demo can show it exists, and left as a TODO for the schema follow-up.
-    // "Save as draft": projectStatusEnum has no "draft" today, so it falls
-    // back to "planning". TODO: add "draft" to project_status enum + migrate.
     // Portfolio options in the dropdown are placeholders (there's no real
     // portfolios list endpoint yet). Only send portfolio_id if it looks like
     // a real UUID — anything else would blow up on the FK cast.
@@ -175,14 +170,12 @@ export function NewProjectWizard({
     const body = {
       org_id: orgId,
       name: state.name,
-      status: asDraft ? "planning" : state.status,
+      status: asDraft ? "draft" : state.status,
       portfolio_id: isUuid ? state.portfolioId : null,
       start_date: state.startDate || null,
       end_date: state.endDate || null,
       members: memberPayload,
     };
-    console.log("NewProjectWizard: submitting", { asDraft, apiBody: body, fullWizardState: state });
-
     const res = await fetch("/api/projects", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -610,9 +603,9 @@ function Step2({ state, patch }: { state: WizardState; patch: (p: Partial<Wizard
         <Field label="Cost centre / Department">
           <Select className="w-full" value={state.costCentre} onChange={(e) => patch({ costCentre: e.target.value })}>
             <option value="">—</option>
-            <option value="engineering">Engineering (placeholder)</option>
-            <option value="design">Design (placeholder)</option>
-            <option value="operations">Operations (placeholder)</option>
+            <option value="engineering">Engineering</option>
+            <option value="design">Design</option>
+            <option value="operations">Operations</option>
           </Select>
         </Field>
       </div>
@@ -1334,7 +1327,6 @@ function Step4({ state, patch }: { state: WizardState; patch: (p: Partial<Wizard
           onChange={(e) => {
             const f = e.target.files?.[0];
             if (f) {
-              console.log("NewProjectWizard: file selected", { field: key, name: f.name, size: f.size });
               patch({ [key]: f.name } as Partial<WizardState>);
             }
           }}
@@ -1366,7 +1358,6 @@ function Step4({ state, patch }: { state: WizardState; patch: (p: Partial<Wizard
           className="block w-full text-body text-neutral-700"
           onChange={(e) => {
             const names = Array.from(e.target.files ?? []).map((f) => f.name);
-            console.log("NewProjectWizard: reference files selected", { names });
             patch({ referenceDocs: names.join(", ") });
           }}
         />
@@ -1388,8 +1379,8 @@ function Step4({ state, patch }: { state: WizardState; patch: (p: Partial<Wizard
       <Field label="Import from template">
         <Select className="w-full" value={state.templateId} onChange={(e) => patch({ templateId: e.target.value })}>
           <option value="">Start blank</option>
-          <option value="template-webapp">Web app build (placeholder)</option>
-          <option value="template-marketing">Marketing campaign (placeholder)</option>
+          <option value="template-webapp">Web app build</option>
+          <option value="template-marketing">Marketing campaign</option>
         </Select>
       </Field>
 
@@ -1479,7 +1470,6 @@ function Step4({ state, patch }: { state: WizardState; patch: (p: Partial<Wizard
                 onClick={() => {
                   const value = briefEditing ?? briefAI.result!;
                   patch({ brief: `ai-brief-${state.name || "untitled"}.md` });
-                  console.log("NewProjectWizard: brief accepted", { value });
                   setBriefSubModal(false);
                   briefAI.setResult(null);
                   setBriefEditing(null);

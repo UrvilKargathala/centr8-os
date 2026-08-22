@@ -317,10 +317,14 @@ html.dark .glass-gold {
   background: rgba(255, 217, 108, 0.06);
 }
 .glass-navy {
-  background: rgba(109, 40, 217, 0.04);
+  background: rgba(237, 233, 254, 0.85);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
 }
 html.dark .glass-navy {
-  background: rgba(109, 40, 217, 0.06);
+  background: rgba(30, 27, 45, 0.90);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
 }
 
 .gradient-pink-gold {

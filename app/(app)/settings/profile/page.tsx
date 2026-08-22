@@ -765,13 +765,10 @@ function ChangePasswordModal({ onClose }: { onClose: () => void }) {
     if (next !== confirm) return setErr("Passwords do not match");
     setSaving(true);
     setErr(null);
-    // TODO: Supabase doesn't verify the current password server-side on
-    // updateUser({ password }) — you'd need to reauthenticate first. Kept
-    // the field so the UX is right; wiring is a follow-up.
     const res = await fetch("/api/me/change-password", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ new_password: next }),
+      body: JSON.stringify({ current_password: current, new_password: next }),
     });
     setSaving(false);
     const body = await res.json();
