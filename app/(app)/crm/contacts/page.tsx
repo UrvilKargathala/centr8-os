@@ -13,7 +13,7 @@ import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@
 import { Pagination, usePagination } from "@/components/ui/Pagination";
 import { Empty, EmptyHeader, EmptyTitle, EmptyDescription } from "@/components/ui/Empty";
 import { AiButton, AiSuggestionCard, useAiCall } from "@/components/ui/AiTouchpoint";
-import { LogActivityForm } from "../leads/page";
+import { LogActivityForm } from "../leads/LeadsPageClient";
 import { PageSkeleton, SectionSkeleton } from "@/components/ui/skeleton";
 import { CrmKpiCard, KpiIcons } from "@/components/crm/CrmKpiCard";
 

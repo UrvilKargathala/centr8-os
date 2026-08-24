@@ -4,7 +4,7 @@ import { withOrgContext } from "@/db/withOrgContext";
 import { departments, employees } from "@/db/schema";
 import { ApiError, handleApiError, requireUserId } from "@/lib/api/helpers";
 import { hasPermission, requirePermission } from "@/lib/api/permissions";
-import { trimEmployeeFields } from "@/lib/api/employees";
+import { listAllEmployees, trimEmployeeFields } from "@/lib/api/employees";
 
 export async function GET(req: NextRequest) {
   try {
@@ -16,6 +16,11 @@ export async function GET(req: NextRequest) {
     // UI doesn't need to already know its own employee id.
     const mine = req.nextUrl.searchParams.get("mine") === "true";
 
+    if (!mine) {
+      const data = await withOrgContext(userId, (db) => listAllEmployees(db, userId, orgId));
+      return NextResponse.json({ data });
+    }
+
     const { rows, canViewFull } = await withOrgContext(userId, async (db) => {
       await requirePermission(db, userId, orgId, "employee", "read");
       const canViewFull = await hasPermission(db, userId, orgId, "employee", "view_full");
@@ -23,7 +28,7 @@ export async function GET(req: NextRequest) {
         .select({ employee: employees, departmentName: departments.name })
         .from(employees)
         .leftJoin(departments, eq(employees.departmentId, departments.id))
-        .where(mine ? and(eq(employees.orgId, orgId), eq(employees.userId, userId)) : eq(employees.orgId, orgId));
+        .where(and(eq(employees.orgId, orgId), eq(employees.userId, userId)));
       return { rows, canViewFull };
     });
 

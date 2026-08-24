@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useEffect, useState } from "react";
+import { createContext, useContext, useEffect, useRef, useState } from "react";
 import type { PermissionAction, ResourceType } from "@/lib/api/permissions";
 
 export type Org = { id: string; name: string; slug: string; role: string };
@@ -22,17 +22,45 @@ type OrgContextValue = {
 
 const OrgContext = createContext<OrgContextValue | null>(null);
 
-const STORAGE_KEY = "centr8-selected-org-id";
+// Same name as lib/org/currentOrg.ts's ORG_COOKIE — a plain (non-httpOnly)
+// cookie so both this client provider and Server Components can read/write
+// the selected org. Replaces localStorage: Server Components can't read
+// localStorage, and this is the seed Server Components need to render
+// org-scoped data without a client round trip.
+const ORG_COOKIE = "centr8-selected-org-id";
 
-export function OrgProvider({ children }: { children: React.ReactNode }) {
-  const [orgs, setOrgs] = useState<Org[]>([]);
-  const [selectedOrgId, setSelectedOrgIdState] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
+function readOrgCookie(): string | null {
+  if (typeof document === "undefined") return null;
+  return document.cookie.match(new RegExp(`(?:^|; )${ORG_COOKIE}=([^;]*)`))?.[1] ?? null;
+}
+
+function writeOrgCookie(id: string) {
+  if (typeof document === "undefined") return;
+  document.cookie = `${ORG_COOKIE}=${id}; path=/; max-age=31536000; samesite=lax`;
+}
+
+export function OrgProvider({
+  children,
+  initialOrgs,
+  initialOrgId,
+  initialGrants,
+}: {
+  children: React.ReactNode;
+  initialOrgs?: Org[];
+  initialOrgId?: string | null;
+  initialGrants?: { resourceType: string; action: string }[];
+}) {
+  const [orgs, setOrgs] = useState<Org[]>(initialOrgs ?? []);
+  const [selectedOrgId, setSelectedOrgIdState] = useState<string | null>(initialOrgId ?? null);
+  const [loading, setLoading] = useState(!initialOrgs);
   const [error, setError] = useState<string | null>(null);
-  const [grants, setGrants] = useState<Set<string>>(new Set());
-  const [permissionsLoading, setPermissionsLoading] = useState(true);
+  const [grants, setGrants] = useState<Set<string>>(
+    new Set((initialGrants ?? []).map((r) => `${r.resourceType}:${r.action}`)),
+  );
+  const [permissionsLoading, setPermissionsLoading] = useState(!initialGrants);
 
   useEffect(() => {
+    if (initialOrgs) return; // already seeded by the server layout
     fetch("/api/orgs")
       .then(async (res) => {
         const body = await res.json();
@@ -41,16 +69,22 @@ export function OrgProvider({ children }: { children: React.ReactNode }) {
       })
       .then((data) => {
         setOrgs(data);
-        const stored = typeof window !== "undefined" ? localStorage.getItem(STORAGE_KEY) : null;
+        const stored = readOrgCookie();
         const initial = data.find((o) => o.id === stored)?.id ?? data[0]?.id ?? null;
         setSelectedOrgIdState(initial);
       })
       .catch((err) => setError(err instanceof Error ? err.message : "Failed to load organizations"))
       .finally(() => setLoading(false));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  const skippedInitialGrantsFetch = useRef(!!initialGrants);
   useEffect(() => {
     if (!selectedOrgId) return;
+    if (skippedInitialGrantsFetch.current) {
+      skippedInitialGrantsFetch.current = false;
+      return;
+    }
     setPermissionsLoading(true);
     fetch(`/api/permissions?org_id=${selectedOrgId}`)
       .then((res) => res.json())
@@ -64,7 +98,7 @@ export function OrgProvider({ children }: { children: React.ReactNode }) {
 
   function setSelectedOrgId(id: string) {
     setSelectedOrgIdState(id);
-    if (typeof window !== "undefined") localStorage.setItem(STORAGE_KEY, id);
+    writeOrgCookie(id);
   }
 
   function can(resourceType: ResourceType, action: PermissionAction) {

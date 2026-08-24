@@ -213,7 +213,6 @@ function AskAiLottie() {
   return <div ref={container} className="h-5 w-5" />;
 }
 
-// Item rendered in a flyout (collapsed-hover) or inline (expanded).
 function NavLeaf({ item, active, compact = false }: { item: NavItem; active: boolean; compact?: boolean }) {
   const base = `flex items-center gap-2.5 rounded-sm px-3 py-2 text-[13px] font-medium ${
     compact ? "" : ""

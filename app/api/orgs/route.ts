@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { eq } from "drizzle-orm";
 import { withOrgContext } from "@/db/withOrgContext";
-import { orgMemberships, organizations } from "@/db/schema";
+import { listMyOrgs } from "@/lib/api/orgs";
 import { handleApiError, requireUserId } from "@/lib/api/helpers";
 
 // Not part of any PHASE_PROMPT_UI.md prompt — mock data never needed a way
@@ -13,15 +12,7 @@ import { handleApiError, requireUserId } from "@/lib/api/helpers";
 export async function GET(req: NextRequest) {
   try {
     const userId = await requireUserId(req);
-
-    const rows = await withOrgContext(userId, (db) =>
-      db
-        .select({ id: organizations.id, name: organizations.name, slug: organizations.slug, role: orgMemberships.role })
-        .from(orgMemberships)
-        .innerJoin(organizations, eq(organizations.id, orgMemberships.orgId))
-        .where(eq(orgMemberships.userId, userId)),
-    );
-
+    const rows = await withOrgContext(userId, (db) => listMyOrgs(db, userId));
     return NextResponse.json({ data: rows });
   } catch (err) {
     return handleApiError(err);

@@ -23,6 +23,15 @@ export const STAGE_PROBABILITY: Record<string, number> = {
   lost: 0,
 };
 
+// Shared by app/api/crm/leads/route.ts and app/(app)/crm/leads/page.tsx
+// (server-rendered initial load) — the page's status/source/owner/score/
+// search filters are applied via refetch, so the initial server load just
+// needs every lead, same as GET with no query params.
+export async function listAllLeads(db: OrgScopedDb, userId: string, orgId: string) {
+  await requirePermission(db, userId, orgId, "lead", "read");
+  return db.select().from(leads).where(eq(leads.orgId, orgId));
+}
+
 export async function resolveOwnEmployeeId(db: OrgScopedDb, userId: string, orgId: string): Promise<string | null> {
   const [row] = await db.select({ id: employees.id }).from(employees).where(and(eq(employees.orgId, orgId), eq(employees.userId, userId)));
   return row?.id ?? null;

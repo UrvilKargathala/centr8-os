@@ -5,9 +5,9 @@
 // -> that manager's employees.userId matches the caller).
 import { and, eq } from "drizzle-orm";
 import type { OrgScopedDb } from "@/db/withOrgContext";
-import { employees } from "@/db/schema";
+import { departments, employees } from "@/db/schema";
 import { ApiError } from "./helpers";
-import { requirePermission, type PermissionAction, type ResourceType } from "./permissions";
+import { hasPermission, requirePermission, type PermissionAction, type ResourceType } from "./permissions";
 
 export async function isManagerOf(db: OrgScopedDb, userId: string, orgId: string, employeeId: string): Promise<boolean> {
   const [target] = await db
@@ -99,4 +99,17 @@ export function trimEmployeeFields(row: Employee, canViewFull: boolean): Employe
   const trimmed: Record<string, unknown> = { ...row };
   for (const field of FULL_ONLY_FIELDS) delete trimmed[field];
   return trimmed as Employee;
+}
+
+// Shared by app/api/employees/route.ts and app/(app)/hr/employees/page.tsx
+// (server-rendered initial load) — same query + field-trimming logic.
+export async function listAllEmployees(db: OrgScopedDb, userId: string, orgId: string) {
+  await requirePermission(db, userId, orgId, "employee", "read");
+  const canViewFull = await hasPermission(db, userId, orgId, "employee", "view_full");
+  const rows = await db
+    .select({ employee: employees, departmentName: departments.name })
+    .from(employees)
+    .leftJoin(departments, eq(employees.departmentId, departments.id))
+    .where(eq(employees.orgId, orgId));
+  return rows.map((r) => ({ ...trimEmployeeFields(r.employee, canViewFull), departmentName: r.departmentName }));
 }

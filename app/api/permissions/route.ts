@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { and, eq, isNull, or } from "drizzle-orm";
 import { withOrgContext } from "@/db/withOrgContext";
-import { orgMemberships, permissions } from "@/db/schema";
 import { ApiError, handleApiError, requireUserId } from "@/lib/api/helpers";
+import { listMyGrants } from "@/lib/api/permissions";
 
 // Prompt 1.4 task 4: the UI needs to hide/disable actions a role can't
 // perform, sourced from the same table-driven `permissions` data
@@ -16,25 +15,7 @@ export async function GET(req: NextRequest) {
     const orgId = req.nextUrl.searchParams.get("org_id");
     if (!orgId) throw new ApiError(400, "org_id is required");
 
-    const rows = await withOrgContext(userId, async (db) => {
-      const [membership] = await db
-        .select({ role: orgMemberships.role })
-        .from(orgMemberships)
-        .where(and(eq(orgMemberships.userId, userId), eq(orgMemberships.orgId, orgId)));
-
-      if (!membership) throw new ApiError(403, "Not a member of this organization");
-
-      return db
-        .select({ resourceType: permissions.resourceType, action: permissions.action })
-        .from(permissions)
-        .where(
-          and(
-            or(eq(permissions.orgId, orgId), isNull(permissions.orgId)),
-            eq(permissions.role, membership.role),
-          ),
-        );
-    });
-
+    const rows = await withOrgContext(userId, (db) => listMyGrants(db, userId, orgId));
     return NextResponse.json({ data: rows });
   } catch (err) {
     return handleApiError(err);

@@ -12,7 +12,7 @@ import { Badge } from "@/components/ui/Badge";
 import { AiButton, AiSuggestionCard, useAiCall } from "@/components/ui/AiTouchpoint";
 import { useToast } from "@/components/ui/Toast";
 import { PageSkeleton } from "@/components/ui/skeleton";
-import { LogActivityForm } from "../../leads/page";
+import { LogActivityForm } from "../../leads/LeadsPageClient";
 import { STAGE_LABEL, STAGE_BADGE_COLOR, fmtMoney, isStale } from "../page";
 
 type Deal = {

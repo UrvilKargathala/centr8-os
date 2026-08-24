@@ -119,6 +119,27 @@ export type PermissionAction =
   | "log_own"
   | "submit";
 
+// Shared by app/api/permissions/route.ts (client refetch on org switch) and
+// app/(app)/layout.tsx (server-rendered initial seed) — the UI's full
+// resourceType:action grant list for the caller's role in this org, same
+// table-driven data requirePermission()/hasPermission() check against.
+export async function listMyGrants(
+  db: OrgScopedDb,
+  userId: string,
+  orgId: string,
+): Promise<{ resourceType: string; action: string }[]> {
+  const [membership] = await db
+    .select({ role: orgMemberships.role })
+    .from(orgMemberships)
+    .where(and(eq(orgMemberships.userId, userId), eq(orgMemberships.orgId, orgId)));
+  if (!membership) throw new ApiError(403, "Not a member of this organization");
+
+  return db
+    .select({ resourceType: permissions.resourceType, action: permissions.action })
+    .from(permissions)
+    .where(and(or(eq(permissions.orgId, orgId), isNull(permissions.orgId)), eq(permissions.role, membership.role)));
+}
+
 // Non-throwing check — for response shaping (e.g. trimming fields to a
 // "basic" subset when the caller lacks a *:view_full grant) rather than
 // gating the request itself. Use requirePermission below for the latter.

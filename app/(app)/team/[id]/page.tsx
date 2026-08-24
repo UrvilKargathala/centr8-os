@@ -6,7 +6,7 @@ import { PageSkeleton } from "@/components/ui/skeleton";
 import Link from "next/link";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
-import type { Person } from "../page";
+import type { Person } from "../TeamPageClient";
 
 function initials(name: string) {
   return name

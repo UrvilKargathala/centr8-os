@@ -12,7 +12,7 @@ import { AccountTypeBadge, AccountStatusBadge, Badge } from "@/components/ui/Bad
 import { AiButton, AiSuggestionCard, useAiCall } from "@/components/ui/AiTouchpoint";
 import { ACCOUNT_TYPES, ACCOUNT_STATUSES } from "@/lib/constants";
 import { PageSkeleton } from "@/components/ui/skeleton";
-import { LogActivityForm } from "../../leads/page";
+import { LogActivityForm } from "../../leads/LeadsPageClient";
 import { NewDealModal, STAGE_LABEL, STAGE_BADGE_COLOR, fmtMoney } from "../../deals/page";
 
 type Account = {

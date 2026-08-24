@@ -4,6 +4,7 @@ import { withOrgContext } from "@/db/withOrgContext";
 import { leads } from "@/db/schema";
 import { ApiError, handleApiError, requireUserId } from "@/lib/api/helpers";
 import { requirePermission } from "@/lib/api/permissions";
+import { listAllLeads } from "@/lib/api/crm";
 
 export async function GET(req: NextRequest) {
   try {
@@ -17,6 +18,11 @@ export async function GET(req: NextRequest) {
     const scoreMin = params.get("score_min");
     const scoreMax = params.get("score_max");
     const search = params.get("search");
+
+    if (!status && !source && !ownerId && !scoreMin && !scoreMax && !search) {
+      const data = await withOrgContext(userId, (db) => listAllLeads(db, userId, orgId));
+      return NextResponse.json({ data });
+    }
 
     const rows = await withOrgContext(userId, async (db) => {
       await requirePermission(db, userId, orgId, "lead", "read");
