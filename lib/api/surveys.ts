@@ -42,6 +42,27 @@ export async function getSurveyOrThrow(db: OrgScopedDb, id: string): Promise<Eng
   return row;
 }
 
+// Shared by app/api/surveys/route.ts and app/(app)/hr/surveys/page.tsx
+// (server-rendered "Active Surveys" tab, the default).
+export async function listAllSurveys(db: OrgScopedDb, userId: string, orgId: string) {
+  await requirePermission(db, userId, orgId, "engagement", "respond");
+  return db.select().from(engagementSurveys).where(eq(engagementSurveys.orgId, orgId));
+}
+
+// Whether the caller has already responded to a survey — via
+// survey_respondents, never survey_responses, so this can never leak an
+// anonymous answer. Shared by app/api/surveys/[id]/route.ts and
+// app/(app)/hr/surveys/page.tsx's Active Surveys tab (checked per survey).
+export async function hasRespondedToSurvey(db: OrgScopedDb, userId: string, orgId: string, surveyId: string): Promise<boolean> {
+  const ownId = await resolveOwnEmployeeId(db, userId, orgId);
+  if (!ownId) return false;
+  const [respondent] = await db
+    .select({ id: surveyRespondents.id })
+    .from(surveyRespondents)
+    .where(and(eq(surveyRespondents.surveyId, surveyId), eq(surveyRespondents.employeeId, ownId)));
+  return respondent !== undefined;
+}
+
 // Submits a response and records the dedup-tracking row in one call.
 // employeeId is only ever written to survey_responses when the survey is
 // NOT anonymous — for an anonymous survey the row is inserted with

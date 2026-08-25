@@ -1,10 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { eq } from "drizzle-orm";
 import { withOrgContext } from "@/db/withOrgContext";
 import { engagementSurveys } from "@/db/schema";
 import { ApiError, handleApiError, requireUserId } from "@/lib/api/helpers";
-import { requirePermission } from "@/lib/api/permissions";
-import { requireSurveyManageAccess } from "@/lib/api/surveys";
+import { listAllSurveys, requireSurveyManageAccess } from "@/lib/api/surveys";
 
 export async function GET(req: NextRequest) {
   try {
@@ -12,12 +10,8 @@ export async function GET(req: NextRequest) {
     const orgId = req.nextUrl.searchParams.get("org_id");
     if (!orgId) throw new ApiError(400, "org_id is required");
 
-    const rows = await withOrgContext(userId, async (db) => {
-      await requirePermission(db, userId, orgId, "engagement", "respond");
-      return db.select().from(engagementSurveys).where(eq(engagementSurveys.orgId, orgId));
-    });
-
-    return NextResponse.json({ data: rows });
+    const data = await withOrgContext(userId, (db) => listAllSurveys(db, userId, orgId));
+    return NextResponse.json({ data });
   } catch (err) {
     return handleApiError(err);
   }

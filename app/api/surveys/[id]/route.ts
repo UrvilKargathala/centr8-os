@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { and, eq } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { withOrgContext } from "@/db/withOrgContext";
-import { engagementSurveys, surveyRespondents } from "@/db/schema";
+import { engagementSurveys } from "@/db/schema";
 import { ApiError, handleApiError, requireUserId } from "@/lib/api/helpers";
 import { requirePermission } from "@/lib/api/permissions";
-import { getSurveyOrThrow, requireSurveyManageAccess, resolveOwnEmployeeId } from "@/lib/api/surveys";
+import { getSurveyOrThrow, hasRespondedToSurvey, requireSurveyManageAccess } from "@/lib/api/surveys";
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -19,15 +19,7 @@ export async function GET(req: NextRequest, { params }: Params) {
     const result = await withOrgContext(userId, async (db) => {
       const survey = await getSurveyOrThrow(db, id);
       await requirePermission(db, userId, survey.orgId, "engagement", "respond");
-      const ownId = await resolveOwnEmployeeId(db, userId, survey.orgId);
-      let hasResponded = false;
-      if (ownId) {
-        const [respondent] = await db
-          .select({ id: surveyRespondents.id })
-          .from(surveyRespondents)
-          .where(and(eq(surveyRespondents.surveyId, id), eq(surveyRespondents.employeeId, ownId)));
-        hasResponded = respondent !== undefined;
-      }
+      const hasResponded = await hasRespondedToSurvey(db, userId, survey.orgId, id);
       return { survey, hasResponded };
     });
 

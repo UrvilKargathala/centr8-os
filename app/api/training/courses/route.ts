@@ -1,10 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { eq } from "drizzle-orm";
 import { withOrgContext } from "@/db/withOrgContext";
 import { trainingCourses } from "@/db/schema";
 import { ApiError, handleApiError, requireUserId } from "@/lib/api/helpers";
-import { requirePermission } from "@/lib/api/permissions";
-import { requireTrainingManageAccess } from "@/lib/api/training";
+import { listAllCourses, requireTrainingManageAccess } from "@/lib/api/training";
 
 export async function GET(req: NextRequest) {
   try {
@@ -12,12 +10,8 @@ export async function GET(req: NextRequest) {
     const orgId = req.nextUrl.searchParams.get("org_id");
     if (!orgId) throw new ApiError(400, "org_id is required");
 
-    const rows = await withOrgContext(userId, async (db) => {
-      await requirePermission(db, userId, orgId, "training", "read");
-      return db.select().from(trainingCourses).where(eq(trainingCourses.orgId, orgId));
-    });
-
-    return NextResponse.json({ data: rows });
+    const data = await withOrgContext(userId, (db) => listAllCourses(db, userId, orgId));
+    return NextResponse.json({ data });
   } catch (err) {
     return handleApiError(err);
   }

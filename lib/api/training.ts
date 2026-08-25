@@ -4,7 +4,7 @@
 // (training:view_all_progress).
 import { and, eq } from "drizzle-orm";
 import type { OrgScopedDb } from "@/db/withOrgContext";
-import { employees, trainingEnrollments } from "@/db/schema";
+import { employees, trainingCourses, trainingEnrollments } from "@/db/schema";
 import { ApiError } from "./helpers";
 import { requirePermission } from "./permissions";
 
@@ -30,6 +30,23 @@ export async function requireEnrollmentOwnAccess(db: OrgScopedDb, userId: string
   if (!ownId || ownId !== employeeId) {
     throw new ApiError(403, "You can only manage your own enrollment");
   }
+}
+
+// Shared by app/api/training/courses/route.ts and
+// app/(app)/hr/training/page.tsx (server-rendered "Course Catalog" tab,
+// the default).
+export async function listAllCourses(db: OrgScopedDb, userId: string, orgId: string) {
+  await requirePermission(db, userId, orgId, "training", "read");
+  return db.select().from(trainingCourses).where(eq(trainingCourses.orgId, orgId));
+}
+
+// Shared by app/api/training/my-enrollments/route.ts and
+// app/(app)/hr/training/page.tsx.
+export async function getMyEnrollments(db: OrgScopedDb, userId: string, orgId: string) {
+  await requirePermission(db, userId, orgId, "training", "view_own");
+  const ownId = await resolveOwnEmployeeId(db, userId, orgId);
+  if (!ownId) return [];
+  return db.select().from(trainingEnrollments).where(and(eq(trainingEnrollments.orgId, orgId), eq(trainingEnrollments.employeeId, ownId)));
 }
 
 export type TrainingEnrollment = typeof trainingEnrollments.$inferSelect;
