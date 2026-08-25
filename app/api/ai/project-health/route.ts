@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import { desc, eq } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { withOrgContext } from "@/db/withOrgContext";
 import { auditLog, projectHealthSnapshots, projects } from "@/db/schema";
 import { ApiError, handleApiError, requireUserId } from "@/lib/api/helpers";
 import { requirePermission } from "@/lib/api/permissions";
 import { generateAI } from "@/lib/ai/generate";
+import { listLatestHealthSnapshots } from "@/lib/api/projects";
 
 export async function GET(req: NextRequest) {
   try {
@@ -12,19 +13,8 @@ export async function GET(req: NextRequest) {
     const orgId = req.nextUrl.searchParams.get("org_id");
     if (!orgId) throw new ApiError(400, "org_id is required");
 
-    const rows = await withOrgContext(userId, async (db) => {
-      await requirePermission(db, userId, orgId, "project_health_snapshot", "read");
-      return db
-        .selectDistinctOn([projectHealthSnapshots.projectId])
-        .from(projectHealthSnapshots)
-        .innerJoin(projects, eq(projects.id, projectHealthSnapshots.projectId))
-        .where(eq(projectHealthSnapshots.orgId, orgId))
-        .orderBy(projectHealthSnapshots.projectId, desc(projectHealthSnapshots.createdAt));
-    });
-
-    return NextResponse.json({
-      data: rows.map((r) => ({ ...r.project_health_snapshots, projectName: r.projects.name })),
-    });
+    const data = await withOrgContext(userId, (db) => listLatestHealthSnapshots(db, userId, orgId));
+    return NextResponse.json({ data });
   } catch (err) {
     return handleApiError(err);
   }

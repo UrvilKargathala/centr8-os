@@ -1,6 +1,7 @@
 import { desc, eq } from "drizzle-orm";
 import type { OrgScopedDb } from "@/db/withOrgContext";
 import { milestones, people, projectHealthSnapshots, projectMembers, projects, tasks } from "@/db/schema";
+import { requirePermission } from "./permissions";
 
 // Shared by app/api/projects/route.ts and app/(app)/budgets/page.tsx
 // (server-rendered initial load) — every project in the org, unfiltered.
@@ -12,6 +13,20 @@ export function listAllProjects(db: OrgScopedDb, orgId: string) {
 // id+name, same shape its client fetch already narrowed to.
 export function listProjectNames(db: OrgScopedDb, orgId: string) {
   return db.select({ id: projects.id, name: projects.name }).from(projects).where(eq(projects.orgId, orgId));
+}
+
+// Shared by app/api/ai/project-health/route.ts (GET) and
+// app/(app)/health/page.tsx (server-rendered initial load) — latest health
+// snapshot per project.
+export async function listLatestHealthSnapshots(db: OrgScopedDb, userId: string, orgId: string) {
+  await requirePermission(db, userId, orgId, "project_health_snapshot", "read");
+  const rows = await db
+    .selectDistinctOn([projectHealthSnapshots.projectId])
+    .from(projectHealthSnapshots)
+    .innerJoin(projects, eq(projects.id, projectHealthSnapshots.projectId))
+    .where(eq(projectHealthSnapshots.orgId, orgId))
+    .orderBy(projectHealthSnapshots.projectId, desc(projectHealthSnapshots.createdAt));
+  return rows.map((r) => ({ ...r.project_health_snapshots, projectName: r.projects.name }));
 }
 
 // Consolidates what app/(app)/projects/page.tsx's client `loadAll()` used to

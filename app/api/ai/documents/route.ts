@@ -4,6 +4,7 @@ import { withOrgContext } from "@/db/withOrgContext";
 import { generatedDocuments } from "@/db/schema";
 import { ApiError, handleApiError, requireUserId } from "@/lib/api/helpers";
 import { requirePermission } from "@/lib/api/permissions";
+import { listAllDocuments } from "@/lib/api/aiAssistant";
 
 export async function GET(req: NextRequest) {
   try {
@@ -13,6 +14,11 @@ export async function GET(req: NextRequest) {
     const docType = req.nextUrl.searchParams.get("doc_type");
     const status = req.nextUrl.searchParams.get("status");
     const search = req.nextUrl.searchParams.get("search");
+
+    if (!docType && !status && !search) {
+      const data = await withOrgContext(userId, (db) => listAllDocuments(db, userId, orgId));
+      return NextResponse.json({ data });
+    }
 
     const rows = await withOrgContext(userId, async (db) => {
       await requirePermission(db, userId, orgId, "document", "read");

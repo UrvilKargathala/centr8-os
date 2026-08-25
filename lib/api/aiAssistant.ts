@@ -2,11 +2,32 @@
 // Documents) — extracted out of the route handlers so it's directly
 // testable, same "route is a thin HTTP wrapper around a lib function"
 // pattern lib/api/crm.ts established for changeDealStage/convertLead.
-import { eq } from "drizzle-orm";
+import { desc, eq } from "drizzle-orm";
 import type { OrgScopedDb } from "@/db/withOrgContext";
-import { auditLog, sprintPlanProposals, sprints, tasks, generatedDocuments } from "@/db/schema";
+import { aiConversations, auditLog, sprintPlanProposals, sprints, tasks, generatedDocuments } from "@/db/schema";
 import { ApiError } from "./helpers";
 import { requirePermission } from "./permissions";
+
+// Shared by app/api/ai/documents/route.ts (unfiltered case) and
+// app/(app)/ai/documents/page.tsx (server-rendered initial load).
+export async function listAllDocuments(db: OrgScopedDb, userId: string, orgId: string) {
+  await requirePermission(db, userId, orgId, "document", "read");
+  return db.select().from(generatedDocuments).where(eq(generatedDocuments.orgId, orgId)).orderBy(desc(generatedDocuments.createdAt));
+}
+
+// Shared by app/api/ai/conversations/route.ts and app/(app)/ai/ask/page.tsx
+// (server-rendered sidebar list) — no permission gate, RLS alone scopes
+// results to the caller's own conversations.
+export function listMyConversations(db: OrgScopedDb, orgId: string) {
+  return db.select().from(aiConversations).where(eq(aiConversations.orgId, orgId)).orderBy(desc(aiConversations.updatedAt));
+}
+
+// Shared by app/api/ai/sprint-plans/route.ts (unfiltered case) and
+// app/(app)/ai/sprint-plans/page.tsx (server-rendered initial load).
+export async function listAllSprintPlans(db: OrgScopedDb, userId: string, orgId: string) {
+  await requirePermission(db, userId, orgId, "sprint_plan", "read");
+  return db.select().from(sprintPlanProposals).where(eq(sprintPlanProposals.orgId, orgId)).orderBy(desc(sprintPlanProposals.createdAt));
+}
 
 type ProposedTask = { title: string; assignee_name: string; estimate: number; priority: string };
 
