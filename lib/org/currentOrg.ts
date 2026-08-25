@@ -17,10 +17,17 @@ export const ORG_COOKIE = "centr8-selected-org-id";
 export async function getCurrentOrg(
   userId: string,
 ): Promise<{ orgId: string | null; orgs: OrgSummary[]; grants: { resourceType: string; action: string }[] }> {
-  const orgs = await withOrgContext(userId, (db) => listMyOrgs(db, userId));
   const cookieStore = await cookies();
   const stored = cookieStore.get(ORG_COOKIE)?.value;
-  const orgId = orgs.find((o) => o.id === stored)?.id ?? orgs[0]?.id ?? null;
-  const grants = orgId ? await withOrgContext(userId, (db) => listMyGrants(db, userId, orgId)) : [];
-  return { orgId, orgs, grants };
+
+  // One withOrgContext call (one pooled connection/transaction) instead of
+  // two — this runs on every fresh navigation into the app, so the second
+  // round-trip was pure added latency, especially felt against Neon's
+  // network round-trip time in local dev.
+  return withOrgContext(userId, async (db) => {
+    const orgs = await listMyOrgs(db, userId);
+    const orgId = orgs.find((o) => o.id === stored)?.id ?? orgs[0]?.id ?? null;
+    const grants = orgId ? await listMyGrants(db, userId, orgId) : [];
+    return { orgId, orgs, grants };
+  });
 }

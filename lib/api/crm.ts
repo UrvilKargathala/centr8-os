@@ -32,6 +32,29 @@ export async function listAllLeads(db: OrgScopedDb, userId: string, orgId: strin
   return db.select().from(leads).where(eq(leads.orgId, orgId));
 }
 
+// Shared by app/api/crm/accounts/route.ts and app/(app)/crm/accounts/page.tsx.
+export async function listAllAccounts(db: OrgScopedDb, userId: string, orgId: string) {
+  await requirePermission(db, userId, orgId, "account", "read");
+  return db.select().from(accounts).where(eq(accounts.orgId, orgId));
+}
+
+// Shared by app/api/crm/contacts/route.ts and app/(app)/crm/{accounts,contacts}
+// pages (server-rendered initial load).
+export async function listAllContacts(db: OrgScopedDb, userId: string, orgId: string) {
+  await requirePermission(db, userId, orgId, "contact", "read");
+  return db.select().from(contacts).where(eq(contacts.orgId, orgId));
+}
+
+// app/(app)/crm/{contacts,deals}' account-name lookup — just id+name.
+// Requires account:read same as GET /api/crm/accounts does; callers should
+// catch and default to [] the way the pages' original client fetch
+// degraded gracefully when the caller had contact:read but not
+// account:read (Promise.all's other results still populate the page).
+export async function listAccountNames(db: OrgScopedDb, userId: string, orgId: string) {
+  await requirePermission(db, userId, orgId, "account", "read");
+  return db.select({ id: accounts.id, name: accounts.name }).from(accounts).where(eq(accounts.orgId, orgId));
+}
+
 export async function resolveOwnEmployeeId(db: OrgScopedDb, userId: string, orgId: string): Promise<string | null> {
   const [row] = await db.select({ id: employees.id }).from(employees).where(and(eq(employees.orgId, orgId), eq(employees.userId, userId)));
   return row?.id ?? null;
@@ -286,6 +309,60 @@ export function requireCampaignDeleteAccess(db: OrgScopedDb, userId: string, org
 // stored (see forecastTargets' schema comment). ownerId narrows to one
 // rep's deals; omitted, this is the org-wide forecast for the period.
 const OPEN_STAGES = ["prospecting", "discovery", "proposal", "negotiation", "contract_sent"];
+// Shared by app/api/crm/deals/route.ts and app/(app)/crm/deals/page.tsx.
+export async function listAllDeals(db: OrgScopedDb, userId: string, orgId: string) {
+  await requirePermission(db, userId, orgId, "deal", "read");
+  return db.select().from(deals).where(eq(deals.orgId, orgId));
+}
+
+const OPEN_DEAL_PIPELINE_STAGES = ["prospecting", "discovery", "proposal", "negotiation", "contract_sent"];
+
+// Shared by app/api/crm/deals/pipeline-stats/route.ts and
+// app/(app)/crm/deals/page.tsx (server-rendered initial load).
+export async function computePipelineStats(db: OrgScopedDb, userId: string, orgId: string) {
+  await requirePermission(db, userId, orgId, "deal", "read");
+  const allDeals = await db.select().from(deals).where(eq(deals.orgId, orgId));
+
+  const now = Date.now();
+  const byStage: Record<string, { stage: string; count: number; total_value: number; avg_days_in_stage: number }> = {};
+  for (const stage of OPEN_DEAL_PIPELINE_STAGES) byStage[stage] = { stage, count: 0, total_value: 0, avg_days_in_stage: 0 };
+
+  const daysInStageSum: Record<string, number> = {};
+  for (const d of allDeals) {
+    if (!OPEN_DEAL_PIPELINE_STAGES.includes(d.stage)) continue;
+    const bucket = byStage[d.stage];
+    bucket.count += 1;
+    bucket.total_value += Number(d.value ?? 0);
+    const days = (now - d.stageChangedAt.getTime()) / (24 * 60 * 60 * 1000);
+    daysInStageSum[d.stage] = (daysInStageSum[d.stage] ?? 0) + days;
+  }
+  for (const stage of OPEN_DEAL_PIPELINE_STAGES) {
+    const bucket = byStage[stage];
+    bucket.avg_days_in_stage = bucket.count > 0 ? daysInStageSum[stage] / bucket.count : 0;
+  }
+
+  const openDeals = allDeals.filter((d) => OPEN_DEAL_PIPELINE_STAGES.includes(d.stage));
+  const totalPipelineValue = openDeals.reduce((s, d) => s + Number(d.value ?? 0), 0);
+  const weightedPipelineValue = openDeals.reduce((s, d) => s + (Number(d.value ?? 0) * (d.probability ?? 0)) / 100, 0);
+
+  const wonDeals = allDeals.filter((d) => d.stage === "won");
+  const lostDeals = allDeals.filter((d) => d.stage === "lost");
+  const winRate = wonDeals.length + lostDeals.length > 0 ? (wonDeals.length / (wonDeals.length + lostDeals.length)) * 100 : 0;
+
+  const cycleDays = wonDeals
+    .filter((d) => d.actualCloseDate)
+    .map((d) => (new Date(d.actualCloseDate as string).getTime() - d.createdAt.getTime()) / (24 * 60 * 60 * 1000));
+  const avgDealCycleDays = cycleDays.length > 0 ? cycleDays.reduce((s, n) => s + n, 0) / cycleDays.length : 0;
+
+  return {
+    stages: OPEN_DEAL_PIPELINE_STAGES.map((s) => byStage[s]),
+    total_pipeline_value: totalPipelineValue,
+    weighted_pipeline_value: weightedPipelineValue,
+    avg_deal_cycle_days: avgDealCycleDays,
+    win_rate_percent: winRate,
+  };
+}
+
 const COMMITTED_STAGES = ["negotiation", "contract_sent"];
 
 export async function computeForecast(

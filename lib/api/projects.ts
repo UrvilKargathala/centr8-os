@@ -2,6 +2,18 @@ import { desc, eq } from "drizzle-orm";
 import type { OrgScopedDb } from "@/db/withOrgContext";
 import { milestones, people, projectHealthSnapshots, projectMembers, projects, tasks } from "@/db/schema";
 
+// Shared by app/api/projects/route.ts and app/(app)/budgets/page.tsx
+// (server-rendered initial load) — every project in the org, unfiltered.
+export function listAllProjects(db: OrgScopedDb, orgId: string) {
+  return db.select().from(projects).where(eq(projects.orgId, orgId));
+}
+
+// app/(app)/tasks/page.tsx's project filter dropdown / name lookup — just
+// id+name, same shape its client fetch already narrowed to.
+export function listProjectNames(db: OrgScopedDb, orgId: string) {
+  return db.select({ id: projects.id, name: projects.name }).from(projects).where(eq(projects.orgId, orgId));
+}
+
 // Consolidates what app/(app)/projects/page.tsx's client `loadAll()` used to
 // fan out over HTTP (projects, health, per-project milestones/tasks/members)
 // into one server-side load — same tables the individual API routes already

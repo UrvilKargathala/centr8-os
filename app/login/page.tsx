@@ -47,6 +47,7 @@ function LoginForm() {
       setError(error.message);
       return;
     }
+    fetch("/api/me/record-login", { method: "POST" }).catch(() => {});
     router.push(searchParams.get("next") || "/dashboard");
     router.refresh();
   }

@@ -10,7 +10,7 @@ import { Input, Select, Field } from "@/components/ui/Input";
 import { DealStageBadge } from "@/components/ui/Badge";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/Table";
 import { AiButton, AiSuggestionCard, useAiCall } from "@/components/ui/AiTouchpoint";
-import { fmtMoney, isStale } from "../deals/page";
+import { fmtMoney, isStale } from "../deals/DealsPageClient";
 import { PageSkeleton } from "@/components/ui/skeleton";
 import { CrmKpiCard, KpiIcons } from "@/components/crm/CrmKpiCard";
 

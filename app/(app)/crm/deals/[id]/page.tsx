@@ -13,7 +13,7 @@ import { AiButton, AiSuggestionCard, useAiCall } from "@/components/ui/AiTouchpo
 import { useToast } from "@/components/ui/Toast";
 import { PageSkeleton } from "@/components/ui/skeleton";
 import { LogActivityForm } from "../../leads/LeadsPageClient";
-import { STAGE_LABEL, STAGE_BADGE_COLOR, fmtMoney, isStale } from "../page";
+import { STAGE_LABEL, STAGE_BADGE_COLOR, fmtMoney, isStale } from "../DealsPageClient";
 
 type Deal = {
   id: string;

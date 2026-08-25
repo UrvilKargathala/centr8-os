@@ -77,9 +77,10 @@ export async function connectClickUp(db: OrgScopedDb, orgId: string, userId: str
   return created;
 }
 
-// No list-picker UI yet (spec explicitly defers that) — walks
-// space -> folderless lists -> folder lists until it finds any list to
-// read from. Recomputed per call rather than cached; fine at this volume.
+// Fallback when no list has been picked yet (see fetchClickUpAllLists /
+// setClickUpSelectedList below for the picker) — walks space -> folderless
+// lists -> folder lists until it finds any list to read from. Recomputed
+// per call rather than cached; fine at this volume.
 async function findFirstListId(teamId: string, token: string): Promise<string | null> {
   const spaces = await clickupFetch(`/team/${teamId}/space`, token);
   const space = spaces.spaces?.[0];
@@ -95,6 +96,44 @@ async function findFirstListId(teamId: string, token: string): Promise<string | 
   return null;
 }
 
+export type ClickUpListOption = { id: string; name: string; spaceName: string };
+
+// Walks every space -> folderless list + every folder's lists, collecting
+// all of them (unlike findFirstListId, which stops at the first) — powers
+// the list-picker UI.
+export async function fetchClickUpAllLists(teamId: string, token: string): Promise<ClickUpListOption[]> {
+  const spacesBody = await clickupFetch(`/team/${teamId}/space`, token);
+  const result: ClickUpListOption[] = [];
+
+  for (const space of spacesBody.spaces ?? []) {
+    const folderlessLists = await clickupFetch(`/space/${space.id}/list`, token);
+    for (const list of folderlessLists.lists ?? []) {
+      result.push({ id: list.id, name: list.name, spaceName: space.name });
+    }
+
+    const foldersBody = await clickupFetch(`/space/${space.id}/folder`, token);
+    for (const folder of foldersBody.folders ?? []) {
+      for (const list of folder.lists ?? []) {
+        result.push({ id: list.id, name: list.name, spaceName: space.name });
+      }
+    }
+  }
+
+  return result;
+}
+
+// Merges into the same config jsonb connectClickUp already writes to
+// (api_token/team_id/team_name) — no migration needed, this just adds two
+// more optional keys read back by fetchClickUpTasks below.
+export async function setClickUpSelectedList(db: OrgScopedDb, orgId: string, listId: string, listName: string) {
+  const [row] = await db.select().from(integrations).where(and(eq(integrations.orgId, orgId), eq(integrations.provider, "clickup")));
+  if (!row) throw new ApiError(400, "ClickUp is not connected");
+
+  const config = { ...(row.config as Record<string, unknown>), selected_list_id: listId, selected_list_name: listName };
+  const [updated] = await db.update(integrations).set({ config }).where(eq(integrations.id, row.id)).returning();
+  return updated;
+}
+
 export type ClickUpTask = {
   id: string;
   name: string;
@@ -104,8 +143,8 @@ export type ClickUpTask = {
   url: string;
 };
 
-export async function fetchClickUpTasks(teamId: string, token: string): Promise<ClickUpTask[]> {
-  const listId = await findFirstListId(teamId, token);
+export async function fetchClickUpTasks(teamId: string, token: string, selectedListId?: string): Promise<ClickUpTask[]> {
+  const listId = selectedListId ?? (await findFirstListId(teamId, token));
   if (!listId) return [];
 
   const body = await clickupFetch(`/list/${listId}/task`, token);
@@ -290,19 +329,21 @@ export async function createClickUpChatDM(teamId: string, token: string, memberI
 // deliberately excluded from that: it's a transient rate-limit, not a
 // broken connection, and marking the whole integration 'error' (prompting
 // reconnect) over a rate limit would be actively wrong.
+export type ClickUpConfig = { api_token?: string; team_id?: string; team_name?: string; selected_list_id?: string; selected_list_name?: string };
+
 export async function withConnectedClickUp<T>(
   db: OrgScopedDb,
   orgId: string,
-  fn: (teamId: string, token: string) => Promise<T>,
+  fn: (teamId: string, token: string, config: ClickUpConfig) => Promise<T>,
 ): Promise<T> {
   const [row] = await db.select().from(integrations).where(and(eq(integrations.orgId, orgId), eq(integrations.provider, "clickup")));
   if (!row || row.status !== "connected") throw new ApiError(400, "ClickUp is not connected");
 
-  const config = row.config as { api_token?: string; team_id?: string };
+  const config = row.config as ClickUpConfig;
   if (!config.api_token || !config.team_id) throw new ApiError(400, "ClickUp is not connected");
 
   try {
-    const result = await fn(config.team_id, config.api_token);
+    const result = await fn(config.team_id, config.api_token, config);
     await db.update(integrations).set({ lastSyncedAt: new Date(), lastError: null }).where(eq(integrations.id, row.id));
     return result;
   } catch (err) {

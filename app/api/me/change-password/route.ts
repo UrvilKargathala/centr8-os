@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
+import { auditLog } from "@/db/schema";
+import { withOrgContext } from "@/db/withOrgContext";
 import { ApiError, handleApiError } from "@/lib/api/helpers";
 import { createClient } from "@/lib/supabase/server";
+import { getCurrentOrg } from "@/lib/org/currentOrg";
 
 export async function POST(req: NextRequest) {
   try {
@@ -22,6 +25,21 @@ export async function POST(req: NextRequest) {
 
     const { error } = await supabase.auth.updateUser({ password: new_password });
     if (error) throw new ApiError(400, error.message);
+
+    const { orgId } = await getCurrentOrg(userData.user.id);
+    if (orgId) {
+      await withOrgContext(userData.user.id, (db) =>
+        db.insert(auditLog).values({
+          orgId,
+          actorUserId: userData.user.id,
+          actorType: "human",
+          action: "user_password_changed",
+          targetType: "user",
+          targetId: userData.user.id,
+          metadata: {},
+        }),
+      ).catch(() => {});
+    }
 
     return NextResponse.json({ data: { ok: true } });
   } catch (err) {

@@ -12,7 +12,7 @@ export async function GET(req: NextRequest) {
 
     const tasks = await withOrgContext(userId, async (db) => {
       await requirePermission(db, userId, orgId, "integration", "read");
-      return withConnectedClickUp(db, orgId, (teamId, token) => fetchClickUpTasks(teamId, token));
+      return withConnectedClickUp(db, orgId, (teamId, token, config) => fetchClickUpTasks(teamId, token, config.selected_list_id));
     });
 
     return NextResponse.json({ data: tasks });

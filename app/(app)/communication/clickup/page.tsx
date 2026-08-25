@@ -5,7 +5,7 @@ import { useOrg } from "@/lib/context/OrgContext";
 import { SectionSkeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
-import { Input } from "@/components/ui/Input";
+import { Input, Select, Field } from "@/components/ui/Input";
 import { Modal } from "@/components/ui/Modal";
 import { AiBanner } from "@/components/ui/AiBanner";
 import { useToast } from "@/components/ui/Toast";
@@ -13,6 +13,7 @@ import { CommunicationBanner } from "@/components/CommunicationChrome";
 import { generateAI } from "@/lib/ai/generate";
 
 type ClickUpTask = { id: string; name: string; status: string; assignees: string[]; dueDate: string | null; url: string };
+type ClickUpListOption = { id: string; name: string; spaceName: string };
 type ClickUpComment = { id: string; text: string; authorName: string; postedAt: string };
 type ClickUpDoc = { id: string; name: string; updatedAt: string };
 type ClickUpDocPage = { id: string; name: string; content: string };
@@ -23,6 +24,10 @@ export default function ClickUpPage() {
 
   const [tab, setTab] = useState<"tasks" | "docs">("tasks");
   const [connected, setConnected] = useState<boolean | null>(null);
+  const [selectedListId, setSelectedListId] = useState<string | null>(null);
+  const [selectedListName, setSelectedListName] = useState<string | null>(null);
+  const [listOptions, setListOptions] = useState<ClickUpListOption[]>([]);
+  const [listOptionsLoading, setListOptionsLoading] = useState(false);
   const [tasks, setTasks] = useState<ClickUpTask[]>([]);
   const [tasksLoading, setTasksLoading] = useState(false);
   const [tasksError, setTasksError] = useState<string | null>(null);
@@ -50,10 +55,42 @@ export default function ClickUpPage() {
     fetch(`/api/integrations?org_id=${selectedOrgId}`)
       .then((r) => r.json())
       .then((body) => {
-        const row = (body.data ?? []).find((i: { provider: string; status: string }) => i.provider === "clickup");
+        const row = (body.data ?? []).find(
+          (i: { provider: string; status: string; selectedListId?: string | null; selectedListName?: string | null }) =>
+            i.provider === "clickup",
+        );
         setConnected(row?.status === "connected");
+        setSelectedListId(row?.selectedListId ?? null);
+        setSelectedListName(row?.selectedListName ?? null);
       });
   }, [selectedOrgId]);
+
+  function loadListOptions() {
+    if (!selectedOrgId) return;
+    setListOptionsLoading(true);
+    fetch(`/api/integrations/clickup/lists?org_id=${selectedOrgId}`)
+      .then((r) => r.json())
+      .then((body) => setListOptions(body.data ?? []))
+      .finally(() => setListOptionsLoading(false));
+  }
+
+  function selectList(listId: string) {
+    if (!selectedOrgId) return;
+    const option = listOptions.find((l) => l.id === listId);
+    if (!option) return;
+    fetch(`/api/integrations/clickup/lists`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ org_id: selectedOrgId, list_id: option.id, list_name: option.name }),
+    })
+      .then((r) => r.json())
+      .then((body) => {
+        if (!body.data) return;
+        setSelectedListId(body.data.selectedListId ?? option.id);
+        setSelectedListName(body.data.selectedListName ?? option.name);
+        loadTasks();
+      });
+  }
 
   function loadTasks() {
     if (!selectedOrgId) return;
@@ -70,7 +107,10 @@ export default function ClickUpPage() {
   }
 
   useEffect(() => {
-    if (connected) loadTasks();
+    if (connected) {
+      loadTasks();
+      loadListOptions();
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [connected, selectedOrgId]);
 
@@ -195,6 +235,23 @@ export default function ClickUpPage() {
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-[340px_1fr]">
           <aside className="space-y-2 glass-card p-3">
             <p className="mb-1 text-caption font-semibold uppercase tracking-wider text-neutral-500">Tasks</p>
+            <Field label="List">
+              <Select
+                className="w-full"
+                value={selectedListId ?? ""}
+                disabled={listOptionsLoading}
+                onChange={(e) => e.target.value && selectList(e.target.value)}
+              >
+                <option value="" disabled={!!selectedListId}>
+                  {selectedListId ? selectedListName ?? "Selected list" : "Auto (first list found)"}
+                </option>
+                {listOptions.map((l) => (
+                  <option key={l.id} value={l.id}>
+                    {l.spaceName} / {l.name}
+                  </option>
+                ))}
+              </Select>
+            </Field>
             {tasksLoading ? (
               <SectionSkeleton variant="list" />
             ) : tasksError ? (

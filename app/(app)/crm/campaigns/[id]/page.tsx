@@ -13,7 +13,7 @@ import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@
 import { AiButton, AiSuggestionCard, useAiCall } from "@/components/ui/AiTouchpoint";
 import { useToast } from "@/components/ui/Toast";
 import { PageSkeleton } from "@/components/ui/skeleton";
-import { fmtMoney } from "../../deals/page";
+import { fmtMoney } from "../../deals/DealsPageClient";
 
 const CAMPAIGN_TYPES = ["email", "social", "event", "webinar", "referral", "paid_ads", "content", "cold_outreach", "other"] as const;
 const CAMPAIGN_STATUSES = ["planned", "draft", "active", "paused", "completed", "cancelled"] as const;

@@ -9,7 +9,7 @@ import { Modal } from "@/components/ui/Modal";
 import { Input, Select, Field, Textarea } from "@/components/ui/Input";
 import { Badge, type BadgeColor } from "@/components/ui/Badge";
 import { Empty, EmptyHeader, EmptyTitle, EmptyDescription } from "@/components/ui/Empty";
-import { fmtMoney } from "../deals/page";
+import { fmtMoney } from "../deals/DealsPageClient";
 import { PageSkeleton } from "@/components/ui/skeleton";
 import { CrmKpiCard, KpiIcons } from "@/components/crm/CrmKpiCard";
 

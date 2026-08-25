@@ -17,6 +17,11 @@ export function toPublicIntegration(row: IntegrationRow) {
     // Display-only: Slack's workspace/team name, or Gmail's connected email
     // address — whichever the provider's callback stored. Never a token.
     accountLabel: typeof config.team_name === "string" ? config.team_name : null,
+    // ClickUp only — which list the Tasks tab reads from, or null when
+    // falling back to findFirstListId's auto-pick. Not secret, same class
+    // of display data as accountLabel.
+    selectedListId: typeof config.selected_list_id === "string" ? config.selected_list_id : null,
+    selectedListName: typeof config.selected_list_name === "string" ? config.selected_list_name : null,
     lastSyncedAt: row.lastSyncedAt,
     lastError: row.lastError,
   };

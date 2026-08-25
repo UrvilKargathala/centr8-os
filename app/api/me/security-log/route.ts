@@ -5,10 +5,10 @@ import { auditLog } from "@/db/schema";
 import { handleApiError, requireUserId } from "@/lib/api/helpers";
 
 // Recent activity this user performed, drawn from audit_log filtered by
-// actorUserId. Auth-specific events (login, password change, 2FA enable)
-// aren't emitted into audit_log yet — TODO once we start writing them from
-// the Supabase auth callback. For now this returns whatever the user has
-// done in the app, most-recent first.
+// actorUserId. user_login (app/api/me/record-login) and
+// user_password_changed (app/api/me/change-password) are real auth events
+// now, alongside whatever else the user has done in the app — most-recent
+// first.
 export async function GET(req: NextRequest) {
   try {
     const userId = await requireUserId(req);

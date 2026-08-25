@@ -88,23 +88,11 @@ export async function GET(req: NextRequest) {
         }
       }
 
-      // task_overdue: notify assignees of overdue tasks (dedup per task per day)
-      if (overdueTasks.length > 0) {
-        const startOfDay = new Date();
-        startOfDay.setHours(0, 0, 0, 0);
-        for (const t of overdueTasks.slice(0, 10)) {
-          if (!t.assigneeId) continue;
-          const [person] = await db.select({ userId: people.userId }).from(people).where(eq(people.id, t.assigneeId));
-          if (!person?.userId) continue;
-          const [dup] = await db
-            .select({ id: notifications.id })
-            .from(notifications)
-            .where(and(eq(notifications.userId, person.userId), eq(notifications.type, "task_overdue"), eq(notifications.linkId, t.id), gte(notifications.createdAt, startOfDay)));
-          if (!dup) {
-            createNotification(db, { orgId, userId: person.userId, type: "task_overdue", title: "Task overdue", body: t.title, linkType: "task", linkId: t.id }).catch(() => {});
-          }
-        }
-      }
+      // task_overdue notifications are fired from lib/api/dashboard.ts only
+      // (persisted tasks.overdueNotifiedAt flag) — this route used to also
+      // fire them via a same-day-notification-exists check, but the two
+      // mechanisms don't know about each other, so an overdue task could be
+      // notified twice on the same day. One source of truth now.
 
       // deal_stage_changed: notify deal owners of stale deals (dedup per deal per day)
       if (atRiskDealNames.length > 0) {

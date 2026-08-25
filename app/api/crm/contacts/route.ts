@@ -4,6 +4,7 @@ import { withOrgContext } from "@/db/withOrgContext";
 import { contacts } from "@/db/schema";
 import { ApiError, handleApiError, requireUserId } from "@/lib/api/helpers";
 import { requirePermission } from "@/lib/api/permissions";
+import { listAllContacts } from "@/lib/api/crm";
 
 export async function GET(req: NextRequest) {
   try {
@@ -15,6 +16,11 @@ export async function GET(req: NextRequest) {
     const ownerId = params.get("owner_id");
     const isDecisionMaker = params.get("is_decision_maker");
     const search = params.get("search");
+
+    if (!accountId && !ownerId && !isDecisionMaker && !search) {
+      const data = await withOrgContext(userId, (db) => listAllContacts(db, userId, orgId));
+      return NextResponse.json({ data });
+    }
 
     const rows = await withOrgContext(userId, async (db) => {
       await requirePermission(db, userId, orgId, "contact", "read");

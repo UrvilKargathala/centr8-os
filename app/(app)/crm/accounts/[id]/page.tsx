@@ -13,7 +13,7 @@ import { AiButton, AiSuggestionCard, useAiCall } from "@/components/ui/AiTouchpo
 import { ACCOUNT_TYPES, ACCOUNT_STATUSES } from "@/lib/constants";
 import { PageSkeleton } from "@/components/ui/skeleton";
 import { LogActivityForm } from "../../leads/LeadsPageClient";
-import { NewDealModal, STAGE_LABEL, STAGE_BADGE_COLOR, fmtMoney } from "../../deals/page";
+import { NewDealModal, STAGE_LABEL, STAGE_BADGE_COLOR, fmtMoney } from "../../deals/DealsPageClient";
 
 type Account = {
   id: string;

@@ -4,6 +4,7 @@ import { withOrgContext } from "@/db/withOrgContext";
 import { accounts } from "@/db/schema";
 import { ApiError, handleApiError, requireUserId } from "@/lib/api/helpers";
 import { requirePermission } from "@/lib/api/permissions";
+import { listAllAccounts } from "@/lib/api/crm";
 
 export async function GET(req: NextRequest) {
   try {
@@ -16,6 +17,11 @@ export async function GET(req: NextRequest) {
     const industry = params.get("industry");
     const ownerId = params.get("owner_id");
     const search = params.get("search");
+
+    if (!type && !status && !industry && !ownerId && !search) {
+      const data = await withOrgContext(userId, (db) => listAllAccounts(db, userId, orgId));
+      return NextResponse.json({ data });
+    }
 
     const rows = await withOrgContext(userId, async (db) => {
       await requirePermission(db, userId, orgId, "account", "read");

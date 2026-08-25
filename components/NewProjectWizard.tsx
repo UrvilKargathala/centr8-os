@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useOrg } from "@/lib/context/OrgContext";
 import { Modal } from "@/components/ui/Modal";
 import { Button } from "@/components/ui/Button";
 import { Input, Textarea, Select, Field } from "@/components/ui/Input";
@@ -461,6 +462,11 @@ function Step1({
 // ─────────────────────────────────────────────────────────────
 
 function Step2({ state, patch }: { state: WizardState; patch: (p: Partial<WizardState>) => void }) {
+  const { can } = useOrg();
+  // Same tier the Budgets page gates editing on (can("budget", "update"))
+  // — cost centre is finance-adjacent data, not something every project
+  // creator should be able to see or set.
+  const canSetCostCentre = can("budget", "update");
   const timelineAI = useAiCall<{ start_date: string; end_date: string; reasoning: string }>("Planner", "suggest_timeline");
   const budgetAI = useAiCall<{ amount_low: number; amount_high: number; currency: string; reasoning: string }>(
     "Analyst",
@@ -600,14 +606,16 @@ function Step2({ state, patch }: { state: WizardState; patch: (p: Partial<Wizard
             />
           </Field>
         )}
-        <Field label="Cost centre / Department">
-          <Select className="w-full" value={state.costCentre} onChange={(e) => patch({ costCentre: e.target.value })}>
-            <option value="">—</option>
-            <option value="engineering">Engineering</option>
-            <option value="design">Design</option>
-            <option value="operations">Operations</option>
-          </Select>
-        </Field>
+        {canSetCostCentre && (
+          <Field label="Cost centre / Department">
+            <Select className="w-full" value={state.costCentre} onChange={(e) => patch({ costCentre: e.target.value })}>
+              <option value="">—</option>
+              <option value="engineering">Engineering</option>
+              <option value="design">Design</option>
+              <option value="operations">Operations</option>
+            </Select>
+          </Field>
+        )}
       </div>
 
       <div className="glass-card space-y-3 p-4">

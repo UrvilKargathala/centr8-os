@@ -4,7 +4,7 @@ import { withOrgContext } from "@/db/withOrgContext";
 import { dealStageHistory, deals } from "@/db/schema";
 import { ApiError, handleApiError, requireUserId } from "@/lib/api/helpers";
 import { requirePermission } from "@/lib/api/permissions";
-import { resolveOwnEmployeeId, STAGE_PROBABILITY } from "@/lib/api/crm";
+import { listAllDeals, resolveOwnEmployeeId, STAGE_PROBABILITY } from "@/lib/api/crm";
 
 export async function GET(req: NextRequest) {
   try {
@@ -21,6 +21,11 @@ export async function GET(req: NextRequest) {
     const closeAfter = params.get("expected_close_after");
     const source = params.get("source");
     const search = params.get("search");
+
+    if (!stage && !ownerId && !accountId && !valueMin && !valueMax && !closeBefore && !closeAfter && !source && !search) {
+      const data = await withOrgContext(userId, (db) => listAllDeals(db, userId, orgId));
+      return NextResponse.json({ data });
+    }
 
     const rows = await withOrgContext(userId, async (db) => {
       await requirePermission(db, userId, orgId, "deal", "read");
