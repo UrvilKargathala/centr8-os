@@ -113,3 +113,13 @@ export async function listAllEmployees(db: OrgScopedDb, userId: string, orgId: s
     .where(eq(employees.orgId, orgId));
   return rows.map((r) => ({ ...trimEmployeeFields(r.employee, canViewFull), departmentName: r.departmentName }));
 }
+
+// Shared by app/api/employees/[id]/route.ts (GET) and
+// app/(app)/hr/employees/[id]/page.tsx (server-rendered initial load).
+export async function getEmployeeDetail(db: OrgScopedDb, userId: string, id: string) {
+  const [existing] = await db.select().from(employees).where(eq(employees.id, id));
+  if (!existing) return undefined;
+  await requirePermission(db, userId, existing.orgId, "employee", "read");
+  const canViewFull = await hasPermission(db, userId, existing.orgId, "employee", "view_full");
+  return trimEmployeeFields(existing, canViewFull);
+}

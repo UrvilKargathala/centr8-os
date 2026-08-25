@@ -3,8 +3,8 @@ import { eq } from "drizzle-orm";
 import { withOrgContext } from "@/db/withOrgContext";
 import { employees } from "@/db/schema";
 import { ApiError, handleApiError, requireUserId } from "@/lib/api/helpers";
-import { hasPermission, requirePermission } from "@/lib/api/permissions";
-import { trimEmployeeFields } from "@/lib/api/employees";
+import { requirePermission } from "@/lib/api/permissions";
+import { getEmployeeDetail } from "@/lib/api/employees";
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -13,13 +13,7 @@ export async function GET(req: NextRequest, { params }: Params) {
     const { id } = await params;
     const userId = await requireUserId(req);
 
-    const row = await withOrgContext(userId, async (db) => {
-      const [existing] = await db.select().from(employees).where(eq(employees.id, id));
-      if (!existing) return undefined;
-      await requirePermission(db, userId, existing.orgId, "employee", "read");
-      const canViewFull = await hasPermission(db, userId, existing.orgId, "employee", "view_full");
-      return trimEmployeeFields(existing, canViewFull);
-    });
+    const row = await withOrgContext(userId, (db) => getEmployeeDetail(db, userId, id));
     if (!row) throw new ApiError(404, "Employee not found");
 
     return NextResponse.json({ data: row });
