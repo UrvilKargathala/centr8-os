@@ -38,6 +38,15 @@ export async function requireCaseViewAccess(db: OrgScopedDb, userId: string, org
   throw new ApiError(403, "Not authorized to view this case");
 }
 
+// Shared by app/api/hr-cases/my/route.ts and app/(app)/hr/cases/page.tsx
+// (server-rendered "My Cases" tab, the default).
+export async function getMyHrCases(db: OrgScopedDb, userId: string, orgId: string) {
+  await requirePermission(db, userId, orgId, "hr_case", "view_own");
+  const ownId = await resolveOwnEmployeeId(db, userId, orgId);
+  if (!ownId) return [];
+  return db.select().from(hrCases).where(and(eq(hrCases.orgId, orgId), eq(hrCases.employeeId, ownId)));
+}
+
 export type HrCase = typeof hrCases.$inferSelect;
 
 export async function getCaseOrThrow(db: OrgScopedDb, id: string): Promise<HrCase> {

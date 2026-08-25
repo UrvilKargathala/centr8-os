@@ -3,7 +3,7 @@ import { and, eq } from "drizzle-orm";
 import { withOrgContext } from "@/db/withOrgContext";
 import { jobPostings } from "@/db/schema";
 import { ApiError, handleApiError, requireUserId } from "@/lib/api/helpers";
-import { requireCreateJobAccess, requireRecruitmentViewAccess } from "@/lib/api/recruitment";
+import { listAllJobPostings, requireCreateJobAccess, requireRecruitmentViewAccess } from "@/lib/api/recruitment";
 
 export async function GET(req: NextRequest) {
   try {
@@ -11,6 +11,11 @@ export async function GET(req: NextRequest) {
     const orgId = req.nextUrl.searchParams.get("org_id");
     if (!orgId) throw new ApiError(400, "org_id is required");
     const status = req.nextUrl.searchParams.get("status");
+
+    if (!status) {
+      const data = await withOrgContext(userId, (db) => listAllJobPostings(db, userId, orgId));
+      return NextResponse.json({ data });
+    }
 
     const rows = await withOrgContext(userId, async (db) => {
       await requireRecruitmentViewAccess(db, userId, orgId);

@@ -6,7 +6,7 @@
 // interviewer on that interview, not just holding the grant.
 import { eq } from "drizzle-orm";
 import type { OrgScopedDb } from "@/db/withOrgContext";
-import { employees, interviewSchedules } from "@/db/schema";
+import { employees, interviewSchedules, jobPostings } from "@/db/schema";
 import { ApiError } from "./helpers";
 import { requirePermission } from "./permissions";
 
@@ -34,6 +34,14 @@ export async function requireInterviewFeedbackAccess(db: OrgScopedDb, userId: st
   if (!own || own.id !== interviewerId) {
     throw new ApiError(403, "You can only submit feedback for interviews assigned to you");
   }
+}
+
+// Shared by app/api/recruitment/jobs/route.ts (unfiltered case) and
+// app/(app)/hr/recruitment/page.tsx (server-rendered "Job Postings" tab,
+// the default).
+export async function listAllJobPostings(db: OrgScopedDb, userId: string, orgId: string) {
+  await requireRecruitmentViewAccess(db, userId, orgId);
+  return db.select().from(jobPostings).where(eq(jobPostings.orgId, orgId));
 }
 
 export type InterviewSchedule = typeof interviewSchedules.$inferSelect;

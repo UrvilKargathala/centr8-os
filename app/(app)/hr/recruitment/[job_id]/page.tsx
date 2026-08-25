@@ -10,7 +10,7 @@ import { Modal } from "@/components/ui/Modal";
 import { Input, Select, Field, Textarea } from "@/components/ui/Input";
 import { AiButton, AiSuggestionCard, useAiCall } from "@/components/ui/AiTouchpoint";
 import { PageSkeleton } from "@/components/ui/skeleton";
-import { CANDIDATE_STAGES, JOB_POSTING_STATUSES, type JobPosting, type Candidate } from "../page";
+import { CANDIDATE_STAGES, JOB_POSTING_STATUSES, type JobPosting, type Candidate } from "../RecruitmentPageClient";
 
 const STAGE_LABEL: Record<string, string> = {
   applied: "Applied",
