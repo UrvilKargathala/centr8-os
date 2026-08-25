@@ -4,7 +4,7 @@
 // pattern lib/api/crm.ts established for changeDealStage/convertLead.
 import { desc, eq } from "drizzle-orm";
 import type { OrgScopedDb } from "@/db/withOrgContext";
-import { aiConversations, auditLog, sprintPlanProposals, sprints, tasks, generatedDocuments } from "@/db/schema";
+import { aiConversations, auditLog, sprintPlanProposals, sprints, tasks, generatedDocuments, projects } from "@/db/schema";
 import { ApiError } from "./helpers";
 import { requirePermission } from "./permissions";
 
@@ -150,6 +150,20 @@ export async function finalizeDocument(db: OrgScopedDb, userId: string, docId: s
     .where(eq(generatedDocuments.id, docId))
     .returning();
   return result;
+}
+
+// Shared by app/api/ai/documents/[id]/route.ts (GET) and
+// app/(app)/ai/documents/[id]/page.tsx (server-rendered initial load) —
+// mirrors the page's own load(), including the linked-project lookup.
+export async function getDocumentDetail(db: OrgScopedDb, userId: string, id: string) {
+  const [doc] = await db.select().from(generatedDocuments).where(eq(generatedDocuments.id, id));
+  if (!doc) return null;
+  await requirePermission(db, userId, doc.orgId, "document", "read");
+
+  const projectId = (doc.contextSource as { projectId?: string } | null)?.projectId;
+  const project = projectId ? (await db.select().from(projects).where(eq(projects.id, projectId)))[0] ?? null : null;
+
+  return { doc, project };
 }
 
 export async function editDocument(db: OrgScopedDb, userId: string, docId: string, patch: { title?: string; content?: string }) {

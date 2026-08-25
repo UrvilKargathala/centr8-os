@@ -3,7 +3,7 @@
 // lead/contact/account/deal/activity's existing grid), with lead
 // conversion and reassignment as separate, more tightly-held actions
 // (lead:convert, */assign) layered on top.
-import { and, desc, eq, gte, lte } from "drizzle-orm";
+import { and, desc, eq, gte, inArray, lte } from "drizzle-orm";
 import type { OrgScopedDb } from "@/db/withOrgContext";
 import { accounts, activities, campaigns, contacts, dealStageHistory, deals, employees, forecastTargets, leads } from "@/db/schema";
 import { ApiError } from "./helpers";
@@ -594,3 +594,96 @@ export async function getCampaignsStats(db: OrgScopedDb, orgId: string) {
 }
 
 export type Campaign = typeof campaigns.$inferSelect;
+
+// Shared by app/api/crm/accounts/[id]/route.ts (GET) and
+// app/(app)/crm/accounts/[id]/page.tsx (server-rendered initial load).
+export async function getAccountDetail(db: OrgScopedDb, userId: string, id: string) {
+  const [account] = await db.select().from(accounts).where(eq(accounts.id, id));
+  if (!account) return undefined;
+  await requirePermission(db, userId, account.orgId, "account", "read");
+  const [linkedContacts, accountDeals] = await Promise.all([
+    db.select().from(contacts).where(eq(contacts.accountId, id)),
+    db.select().from(deals).where(eq(deals.accountId, id)),
+  ]);
+
+  const dealIds = accountDeals.map((d) => d.id);
+  const relatedIds = [id, ...dealIds];
+  const timeline = await db
+    .select()
+    .from(activities)
+    .where(inArray(activities.relatedId, relatedIds))
+    .orderBy(desc(activities.activityDate));
+  const relevantActivities = timeline.filter(
+    (a) => (a.relatedType === "account" && a.relatedId === id) || (a.relatedType === "deal" && dealIds.includes(a.relatedId)),
+  );
+
+  return { account, contacts: linkedContacts, deals: accountDeals, activities: relevantActivities };
+}
+
+// Shared by app/api/crm/deals/[id]/route.ts (GET) and
+// app/(app)/crm/deals/[id]/page.tsx (server-rendered initial load). The
+// page's client also fetches this account's contacts separately (its
+// Contacts tab) — seeded here too so that lazy fetch is skipped on first load.
+export async function getDealDetail(db: OrgScopedDb, userId: string, id: string) {
+  const [deal] = await db.select().from(deals).where(eq(deals.id, id));
+  if (!deal) return undefined;
+  await requirePermission(db, userId, deal.orgId, "deal", "read");
+
+  const [account, contact, stageHistory, timeline, accountContacts] = await Promise.all([
+    deal.accountId ? db.select().from(accounts).where(eq(accounts.id, deal.accountId)).then((r) => r[0] ?? null) : Promise.resolve(null),
+    deal.primaryContactId ? db.select().from(contacts).where(eq(contacts.id, deal.primaryContactId)).then((r) => r[0] ?? null) : Promise.resolve(null),
+    db.select().from(dealStageHistory).where(eq(dealStageHistory.dealId, id)).orderBy(desc(dealStageHistory.changedAt)),
+    db.select().from(activities).where(eq(activities.relatedId, id)).orderBy(desc(activities.activityDate)),
+    deal.accountId ? db.select().from(contacts).where(eq(contacts.accountId, deal.accountId)) : Promise.resolve([]),
+  ]);
+
+  return { deal, account, contact, stageHistory, activities: timeline.filter((a) => a.relatedType === "deal"), accountContacts };
+}
+
+// Shared by app/api/crm/campaigns/[id]/route.ts (GET) and
+// app/(app)/crm/campaigns/[id]/page.tsx (server-rendered initial load).
+export async function getCampaignDetail(db: OrgScopedDb, userId: string, id: string) {
+  const [campaign] = await db.select().from(campaigns).where(eq(campaigns.id, id));
+  if (!campaign) return undefined;
+  await requirePermission(db, userId, campaign.orgId, "campaign", "read");
+
+  const metrics = await computeCampaignMetrics(db, campaign.orgId, id);
+  const roi = campaignRoi(metrics.revenue_won, campaign.budgetSpent);
+  const costPerLead = metrics.leads_count > 0 ? campaign.budgetSpent / metrics.leads_count : null;
+
+  return {
+    campaign,
+    leads_count: metrics.leads_count,
+    deals_count: metrics.deals_count,
+    revenue_won: metrics.revenue_won,
+    roi_percent: roi,
+    cost_per_lead: costPerLead,
+  };
+}
+
+// app/(app)/crm/campaigns/[id]/page.tsx's own load() fetches the campaign
+// detail plus its leads/deals lists together — this mirrors that, computing
+// metrics once and reusing it for all three instead of the client's three
+// separate requests (each of which recomputes computeCampaignMetrics itself).
+export async function getCampaignFullDetail(db: OrgScopedDb, userId: string, id: string) {
+  const [campaign] = await db.select().from(campaigns).where(eq(campaigns.id, id));
+  if (!campaign) return undefined;
+  await requirePermission(db, userId, campaign.orgId, "campaign", "read");
+
+  const metrics = await computeCampaignMetrics(db, campaign.orgId, id);
+  const roi = campaignRoi(metrics.revenue_won, campaign.budgetSpent);
+  const costPerLead = metrics.leads_count > 0 ? campaign.budgetSpent / metrics.leads_count : null;
+
+  return {
+    detail: {
+      campaign,
+      leads_count: metrics.leads_count,
+      deals_count: metrics.deals_count,
+      revenue_won: metrics.revenue_won,
+      roi_percent: roi,
+      cost_per_lead: costPerLead,
+    },
+    leads: metrics.leads,
+    deals: metrics.deals,
+  };
+}

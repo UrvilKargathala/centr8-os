@@ -1,10 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { eq } from "drizzle-orm";
 import { withOrgContext } from "@/db/withOrgContext";
-import { generatedDocuments } from "@/db/schema";
 import { ApiError, handleApiError, requireUserId } from "@/lib/api/helpers";
-import { requirePermission } from "@/lib/api/permissions";
-import { editDocument } from "@/lib/api/aiAssistant";
+import { editDocument, getDocumentDetail } from "@/lib/api/aiAssistant";
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -13,15 +10,10 @@ export async function GET(req: NextRequest, { params }: Params) {
     const { id } = await params;
     const userId = await requireUserId(req);
 
-    const doc = await withOrgContext(userId, async (db) => {
-      const [row] = await db.select().from(generatedDocuments).where(eq(generatedDocuments.id, id));
-      if (!row) return null;
-      await requirePermission(db, userId, row.orgId, "document", "read");
-      return row;
-    });
+    const result = await withOrgContext(userId, (db) => getDocumentDetail(db, userId, id));
 
-    if (!doc) throw new ApiError(404, "Document not found");
-    return NextResponse.json({ data: doc });
+    if (!result) throw new ApiError(404, "Document not found");
+    return NextResponse.json({ data: result.doc });
   } catch (err) {
     return handleApiError(err);
   }

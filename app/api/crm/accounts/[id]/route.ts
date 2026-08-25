@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { desc, eq, inArray } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { withOrgContext } from "@/db/withOrgContext";
-import { accounts, activities, contacts, deals } from "@/db/schema";
+import { accounts } from "@/db/schema";
 import { ApiError, handleApiError, requireUserId } from "@/lib/api/helpers";
 import { requirePermission } from "@/lib/api/permissions";
+import { getAccountDetail } from "@/lib/api/crm";
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -12,33 +13,7 @@ export async function GET(req: NextRequest, { params }: Params) {
     const { id } = await params;
     const userId = await requireUserId(req);
 
-    const result = await withOrgContext(userId, async (db) => {
-      const [account] = await db.select().from(accounts).where(eq(accounts.id, id));
-      if (!account) return undefined;
-      await requirePermission(db, userId, account.orgId, "account", "read");
-      const [linkedContacts, accountDeals] = await Promise.all([
-        db.select().from(contacts).where(eq(contacts.accountId, id)),
-        db.select().from(deals).where(eq(deals.accountId, id)),
-      ]);
-
-      // Rolls up activities logged directly on the account AND activities
-      // logged on any of the account's deals (joined through
-      // deals.accountId, since activities has no direct account link for
-      // deal-related entries) — a common CRM expectation: "show me
-      // everything that happened with this account."
-      const dealIds = accountDeals.map((d) => d.id);
-      const relatedIds = [id, ...dealIds];
-      const timeline = await db
-        .select()
-        .from(activities)
-        .where(inArray(activities.relatedId, relatedIds))
-        .orderBy(desc(activities.activityDate));
-      const relevantActivities = timeline.filter(
-        (a) => (a.relatedType === "account" && a.relatedId === id) || (a.relatedType === "deal" && dealIds.includes(a.relatedId)),
-      );
-
-      return { account, contacts: linkedContacts, deals: accountDeals, activities: relevantActivities };
-    });
+    const result = await withOrgContext(userId, (db) => getAccountDetail(db, userId, id));
     if (!result) throw new ApiError(404, "Account not found");
 
     return NextResponse.json({ data: result });

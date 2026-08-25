@@ -4,9 +4,9 @@
 // owner/admin/member (the "hiring manager can be any role" tier);
 // submit_feedback additionally requires being the specific assigned
 // interviewer on that interview, not just holding the grant.
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import type { OrgScopedDb } from "@/db/withOrgContext";
-import { employees, interviewSchedules, jobPostings } from "@/db/schema";
+import { candidates, employees, interviewSchedules, jobPostings } from "@/db/schema";
 import { ApiError } from "./helpers";
 import { requirePermission } from "./permissions";
 
@@ -45,3 +45,20 @@ export async function listAllJobPostings(db: OrgScopedDb, userId: string, orgId:
 }
 
 export type InterviewSchedule = typeof interviewSchedules.$inferSelect;
+
+// Shared by app/(app)/hr/recruitment/[job_id]/page.tsx (server-rendered
+// initial load) — mirrors the page's own load(): every job (the page finds
+// the matching one client-side, same as its original fetch-all-jobs
+// approach), this job's candidates, and every employee (for interviewer
+// pickers). The candidate detail panel's own interview list stays
+// client-fetched, only loaded once a candidate is selected.
+export async function getJobDetailData(db: OrgScopedDb, userId: string, orgId: string, jobId: string) {
+  await requireRecruitmentViewAccess(db, userId, orgId);
+  const [jobs, jobCandidates, allEmployees] = await Promise.all([
+    db.select().from(jobPostings).where(eq(jobPostings.orgId, orgId)),
+    db.select().from(candidates).where(and(eq(candidates.orgId, orgId), eq(candidates.jobPostingId, jobId))),
+    db.select().from(employees).where(eq(employees.orgId, orgId)),
+  ]);
+  const job = jobs.find((j) => j.id === jobId) ?? null;
+  return { job, candidates: jobCandidates, employees: allEmployees };
+}

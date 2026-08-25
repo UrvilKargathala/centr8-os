@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { desc, eq } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { withOrgContext } from "@/db/withOrgContext";
-import { accounts, activities, contacts, dealStageHistory, deals } from "@/db/schema";
+import { deals } from "@/db/schema";
 import { ApiError, handleApiError, requireUserId } from "@/lib/api/helpers";
 import { requirePermission } from "@/lib/api/permissions";
+import { getDealDetail } from "@/lib/api/crm";
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -12,20 +13,7 @@ export async function GET(req: NextRequest, { params }: Params) {
     const { id } = await params;
     const userId = await requireUserId(req);
 
-    const result = await withOrgContext(userId, async (db) => {
-      const [deal] = await db.select().from(deals).where(eq(deals.id, id));
-      if (!deal) return undefined;
-      await requirePermission(db, userId, deal.orgId, "deal", "read");
-
-      const [account, contact, stageHistory, timeline] = await Promise.all([
-        deal.accountId ? db.select().from(accounts).where(eq(accounts.id, deal.accountId)).then((r) => r[0] ?? null) : Promise.resolve(null),
-        deal.primaryContactId ? db.select().from(contacts).where(eq(contacts.id, deal.primaryContactId)).then((r) => r[0] ?? null) : Promise.resolve(null),
-        db.select().from(dealStageHistory).where(eq(dealStageHistory.dealId, id)).orderBy(desc(dealStageHistory.changedAt)),
-        db.select().from(activities).where(eq(activities.relatedId, id)).orderBy(desc(activities.activityDate)),
-      ]);
-
-      return { deal, account, contact, stageHistory, activities: timeline.filter((a) => a.relatedType === "deal") };
-    });
+    const result = await withOrgContext(userId, (db) => getDealDetail(db, userId, id));
     if (!result) throw new ApiError(404, "Deal not found");
 
     return NextResponse.json({ data: result });
