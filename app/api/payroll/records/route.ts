@@ -4,6 +4,7 @@ import { withOrgContext } from "@/db/withOrgContext";
 import { payslipRecords } from "@/db/schema";
 import { ApiError, handleApiError, requireUserId } from "@/lib/api/helpers";
 import { requireCompensationViewAccess } from "@/lib/api/employees";
+import { listPayslipRecordsForPeriod } from "@/lib/api/payroll";
 
 // Zero self-service in this pillar (unlike Attendance/Leave) — always
 // requires compensation:view_sensitive, org-wide, even when filtering to
@@ -17,6 +18,11 @@ export async function GET(req: NextRequest) {
     const periodStart = req.nextUrl.searchParams.get("period_start");
     const periodEnd = req.nextUrl.searchParams.get("period_end");
     const status = req.nextUrl.searchParams.get("status");
+
+    if (!employeeId && !status && periodStart && periodEnd) {
+      const data = await withOrgContext(userId, (db) => listPayslipRecordsForPeriod(db, userId, orgId, periodStart, periodEnd));
+      return NextResponse.json({ data });
+    }
 
     const rows = await withOrgContext(userId, async (db) => {
       await requireCompensationViewAccess(db, userId, orgId);

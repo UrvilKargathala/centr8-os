@@ -14,7 +14,7 @@ import { AttendanceCalendar, type AttendanceRecord, type AttendanceSettings } fr
 import { AttendanceHistoryList } from "@/components/hr/AttendanceHistoryList";
 import { ManualEntryModal } from "@/components/hr/ManualEntryModal";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/Table";
-import type { BalanceEntry, LeaveRequest, LeaveType } from "@/app/(app)/hr/leave/page";
+import type { BalanceEntry, LeaveRequest, LeaveType } from "@/app/(app)/hr/leave/LeavePageClient";
 import { EMPLOYMENT_STATUSES } from "@/lib/constants";
 
 type Employee = {

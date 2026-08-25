@@ -5,6 +5,7 @@ import { leaveRequests } from "@/db/schema";
 import { ApiError, handleApiError, requireUserId } from "@/lib/api/helpers";
 import { requirePermission } from "@/lib/api/permissions";
 import { resolveOwnEmployeeId } from "@/lib/api/attendance";
+import { getMyLeaveRequests } from "@/lib/api/leave";
 
 export async function GET(req: NextRequest) {
   try {
@@ -12,6 +13,11 @@ export async function GET(req: NextRequest) {
     const orgId = req.nextUrl.searchParams.get("org_id");
     if (!orgId) throw new ApiError(400, "org_id is required");
     const status = req.nextUrl.searchParams.get("status");
+
+    if (!status) {
+      const data = await withOrgContext(userId, (db) => getMyLeaveRequests(db, userId, orgId));
+      return NextResponse.json({ data });
+    }
 
     const rows = await withOrgContext(userId, async (db) => {
       await requirePermission(db, userId, orgId, "leave", "view_own");

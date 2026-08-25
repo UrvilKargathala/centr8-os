@@ -1,12 +1,12 @@
 // HR Batch 2 — Leave Management self-service. Same helper shape as
 // lib/api/attendance.ts: permission wrappers plus the balance/day-count
 // math every route needs, so it's written once and every route calls it.
-import { and, eq } from "drizzle-orm";
+import { and, desc, eq } from "drizzle-orm";
 import type { OrgScopedDb } from "@/db/withOrgContext";
-import { employees, leaveBalances, leavePolicies, leaveTypes } from "@/db/schema";
+import { employees, leaveBalances, leavePolicies, leaveRequests, leaveTypes } from "@/db/schema";
 import { ApiError } from "./helpers";
 import { hasPermission, requirePermission } from "./permissions";
-import { getOrCreateSettings, isWeekendDate } from "./attendance";
+import { getOrCreateSettings, isWeekendDate, resolveOwnEmployeeId } from "./attendance";
 import { isManagerOf } from "./employees";
 
 // leave:view_all (see anyone) OR leave:view_own + it's the caller's own
@@ -122,6 +122,28 @@ export async function getOrCreateBalance(
 
 export function remainingDays(balance: LeaveBalance): number {
   return balance.allottedDays + balance.carriedForwardDays - balance.usedDays - balance.pendingDays;
+}
+
+// Shared by app/api/leave/my-balance/route.ts and
+// app/(app)/hr/leave/page.tsx (server-rendered "My Leave" tab, the default).
+export async function getMyLeaveBalances(db: OrgScopedDb, userId: string, orgId: string, year = new Date().getFullYear()) {
+  await requirePermission(db, userId, orgId, "leave", "view_own");
+  const employeeId = await resolveOwnEmployeeId(db, userId, orgId);
+  if (!employeeId) return [];
+
+  const types = await db.select().from(leaveTypes).where(and(eq(leaveTypes.orgId, orgId), eq(leaveTypes.isActive, true)));
+  const balances = await Promise.all(types.map((t) => getOrCreateBalance(db, orgId, employeeId, t.id, year)));
+  return types.map((t, i) => ({ leave_type: t, balance: balances[i] }));
+}
+
+// Shared by app/api/leave/my-requests/route.ts and
+// app/(app)/hr/leave/page.tsx.
+export async function getMyLeaveRequests(db: OrgScopedDb, userId: string, orgId: string) {
+  await requirePermission(db, userId, orgId, "leave", "view_own");
+  const employeeId = await resolveOwnEmployeeId(db, userId, orgId);
+  if (!employeeId) return [];
+
+  return db.select().from(leaveRequests).where(eq(leaveRequests.employeeId, employeeId)).orderBy(desc(leaveRequests.requestedAt));
 }
 
 export type LeaveType = typeof leaveTypes.$inferSelect;

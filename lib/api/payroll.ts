@@ -5,8 +5,9 @@
 // Attendance/Leave grew.
 import { and, eq, lte } from "drizzle-orm";
 import type { OrgScopedDb } from "@/db/withOrgContext";
-import { compensationRecords } from "@/db/schema";
+import { compensationRecords, payslipRecords } from "@/db/schema";
 import { requirePermission } from "./permissions";
+import { requireCompensationViewAccess } from "./employees";
 
 export function requirePayrollGenerateAccess(db: OrgScopedDb, userId: string, orgId: string) {
   return requirePermission(db, userId, orgId, "payroll", "generate");
@@ -83,6 +84,17 @@ export function totalDeductions(deductions: unknown): number {
 // Monthly periods for the current + previous 12 months — the only
 // frequency with real generation math right now (see compensationRecords.
 // payFrequency's TODO comment in db/schema.ts).
+// Shared by app/api/payroll/records/route.ts (unfiltered-by-employee case)
+// and app/(app)/hr/payroll/page.tsx (server-rendered initial load for the
+// most recent period). Zero self-service in this pillar, same as the route.
+export async function listPayslipRecordsForPeriod(db: OrgScopedDb, userId: string, orgId: string, periodStart: string, periodEnd: string) {
+  await requireCompensationViewAccess(db, userId, orgId);
+  return db
+    .select()
+    .from(payslipRecords)
+    .where(and(eq(payslipRecords.orgId, orgId), eq(payslipRecords.periodStart, periodStart), eq(payslipRecords.periodEnd, periodEnd)));
+}
+
 export function monthlyPeriods(count = 13): { period_start: string; period_end: string; label: string }[] {
   const periods: { period_start: string; period_end: string; label: string }[] = [];
   const now = new Date();
@@ -93,7 +105,7 @@ export function monthlyPeriods(count = 13): { period_start: string; period_end: 
     const start = `${year}-${String(month + 1).padStart(2, "0")}-01`;
     const lastDay = new Date(year, month + 1, 0).getDate();
     const end = `${year}-${String(month + 1).padStart(2, "0")}-${String(lastDay).padStart(2, "0")}`;
-    periods.push({ period_start: start, period_end: end, label: d.toLocaleDateString(undefined, { month: "long", year: "numeric" }) });
+    periods.push({ period_start: start, period_end: end, label: d.toLocaleDateString("en-US", { month: "long", year: "numeric" }) });
   }
   return periods;
 }
