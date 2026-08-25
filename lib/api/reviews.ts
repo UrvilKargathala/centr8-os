@@ -7,7 +7,7 @@
 // tiers on the same row, not one shared self-service action.
 import { and, eq } from "drizzle-orm";
 import type { OrgScopedDb } from "@/db/withOrgContext";
-import { employees, performanceReviews } from "@/db/schema";
+import { employees, okrs, performanceReviews, reviewCycles } from "@/db/schema";
 import { ApiError } from "./helpers";
 import { hasPermission, requirePermission } from "./permissions";
 import { isManagerOf } from "./employees";
@@ -80,6 +80,17 @@ export async function requireOkrViewAccess(db: OrgScopedDb, userId: string, orgI
   throw new ApiError(403, "Not authorized to view this OKR");
 }
 
+// Shared by app/api/okrs/route.ts (employee_id-filtered case) and
+// app/(app)/hr/okrs/page.tsx (server-rendered "My OKRs" tab, the default) —
+// resolves the caller's own employee id first, same as the client's
+// two-step "mine=true" lookup then okrs?employee_id= fetch used to do.
+export async function getMyOkrs(db: OrgScopedDb, userId: string, orgId: string) {
+  const ownId = await resolveOwnEmployeeId(db, userId, orgId);
+  if (!ownId) return [];
+  await requireOkrViewAccess(db, userId, orgId, ownId);
+  return db.select().from(okrs).where(and(eq(okrs.orgId, orgId), eq(okrs.employeeId, ownId)));
+}
+
 export type PerformanceReview = typeof performanceReviews.$inferSelect;
 
 // Lazily creates the employee's review row for a cycle on first access —
@@ -105,4 +116,17 @@ export async function getOrCreateReview(db: OrgScopedDb, orgId: string, cycleId:
     .from(performanceReviews)
     .where(and(eq(performanceReviews.cycleId, cycleId), eq(performanceReviews.employeeId, employeeId)));
   return row;
+}
+
+// Shared by app/api/reviews/my/route.ts and app/(app)/hr/reviews/page.tsx
+// (server-rendered "My Reviews" tab, the default).
+export async function getMyReviews(db: OrgScopedDb, userId: string, orgId: string) {
+  await requirePermission(db, userId, orgId, "review", "view_own");
+  const employeeId = await resolveOwnEmployeeId(db, userId, orgId);
+  if (!employeeId) return [];
+
+  const cycles = await db.select().from(reviewCycles).where(eq(reviewCycles.orgId, orgId));
+  const activeCycles = cycles.filter((c) => c.status !== "draft");
+  const reviews = await Promise.all(activeCycles.map((c) => getOrCreateReview(db, orgId, c.id, employeeId)));
+  return activeCycles.map((cycle, i) => ({ cycle, review: reviews[i] }));
 }
