@@ -3,7 +3,7 @@
 // lead/contact/account/deal/activity's existing grid), with lead
 // conversion and reassignment as separate, more tightly-held actions
 // (lead:convert, */assign) layered on top.
-import { and, desc, eq, gte, inArray, lte } from "drizzle-orm";
+import { and, desc, eq, gte, inArray, lte, sql } from "drizzle-orm";
 import type { OrgScopedDb } from "@/db/withOrgContext";
 import { accounts, activities, campaigns, contacts, dealStageHistory, deals, employees, forecastTargets, leads } from "@/db/schema";
 import { ApiError } from "./helpers";
@@ -27,6 +27,44 @@ export const STAGE_PROBABILITY: Record<string, number> = {
 // (server-rendered initial load) — the page's status/source/owner/score/
 // search filters are applied via refetch, so the initial server load just
 // needs every lead, same as GET with no query params.
+// Shared by app/api/crm/stats/route.ts and app/(app)/crm/page.tsx
+// (server-rendered initial load).
+export async function getCrmStats(db: OrgScopedDb, userId: string, orgId: string) {
+  await requirePermission(db, userId, orgId, "lead", "read");
+
+  const now = new Date();
+  const startOfThisMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+  const startOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+  const startOfWeek = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+
+  const allLeads = await db.select().from(leads).where(eq(leads.orgId, orgId));
+  const byStatus: Record<string, number> = {};
+  for (const l of allLeads) byStatus[l.status] = (byStatus[l.status] ?? 0) + 1;
+  const totalLeads = allLeads.filter((l) => l.status !== "lost" && l.status !== "converted").length;
+  const convertedCount = byStatus["converted"] ?? 0;
+  const conversionRate = allLeads.length > 0 ? convertedCount / allLeads.length : 0;
+  const leadsThisMonth = allLeads.filter((l) => l.createdAt >= startOfThisMonth).length;
+  const leadsLastMonth = allLeads.filter((l) => l.createdAt >= startOfLastMonth && l.createdAt < startOfThisMonth).length;
+
+  const [{ count: totalAccounts }] = await db.select({ count: sql<number>`count(*)::int` }).from(accounts).where(eq(accounts.orgId, orgId));
+  const [{ count: totalContacts }] = await db.select({ count: sql<number>`count(*)::int` }).from(contacts).where(eq(contacts.orgId, orgId));
+  const [{ count: activitiesThisWeek }] = await db
+    .select({ count: sql<number>`count(*)::int` })
+    .from(activities)
+    .where(and(eq(activities.orgId, orgId), gte(activities.activityDate, startOfWeek)));
+
+  return {
+    total_leads: totalLeads,
+    leads_by_status: byStatus,
+    conversion_rate: conversionRate,
+    leads_this_month: leadsThisMonth,
+    leads_last_month: leadsLastMonth,
+    total_accounts: totalAccounts,
+    total_contacts: totalContacts,
+    activities_this_week: activitiesThisWeek,
+  };
+}
+
 export async function listAllLeads(db: OrgScopedDb, userId: string, orgId: string) {
   await requirePermission(db, userId, orgId, "lead", "read");
   return db.select().from(leads).where(eq(leads.orgId, orgId));

@@ -4,25 +4,7 @@ import { withOrgContext } from "@/db/withOrgContext";
 import { userPreferences } from "@/db/schema";
 import { ApiError, handleApiError, requireUserId } from "@/lib/api/helpers";
 import { createClient as createServerClient } from "@/lib/supabase/server";
-
-// Loads (or lazily inserts) the caller's user_preferences row for the given
-// org. Everything the profile page shows lives on this row plus the user's
-// Supabase auth record.
-async function loadOrInit(userId: string, orgId: string) {
-  return withOrgContext(userId, async (db) => {
-    const existing = await db
-      .select()
-      .from(userPreferences)
-      .where(and(eq(userPreferences.userId, userId), eq(userPreferences.orgId, orgId)))
-      .limit(1);
-    if (existing[0]) return existing[0];
-    const [row] = await db
-      .insert(userPreferences)
-      .values({ userId, orgId })
-      .returning();
-    return row;
-  });
-}
+import { assembleProfile, loadOrInitPreferences } from "@/lib/api/me";
 
 export async function GET(req: NextRequest) {
   try {
@@ -32,24 +14,9 @@ export async function GET(req: NextRequest) {
 
     const supabase = await createServerClient();
     const { data: userData } = await supabase.auth.getUser();
-    const user = userData.user;
-    const prefs = await loadOrInit(userId, orgId);
+    const prefs = await withOrgContext(userId, (db) => loadOrInitPreferences(db, userId, orgId));
 
-    // SSO detection: Supabase surfaces the provider(s) that produced this
-    // session via user.app_metadata.providers. If there's anything other
-    // than "email" (or nothing at all) we treat the email as SSO-managed.
-    const providers: string[] = (user?.app_metadata?.providers as string[] | undefined) ?? [];
-    const isSsoManaged = providers.length > 0 && providers.every((p) => p !== "email");
-
-    return NextResponse.json({
-      data: {
-        email: user?.email ?? null,
-        emailVerified: !!user?.email_confirmed_at,
-        providers,
-        isSsoManaged,
-        preferences: prefs,
-      },
-    });
+    return NextResponse.json({ data: assembleProfile(userData.user, prefs) });
   } catch (err) {
     return handleApiError(err);
   }

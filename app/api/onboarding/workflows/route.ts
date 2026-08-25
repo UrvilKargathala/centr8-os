@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { and, eq } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { withOrgContext } from "@/db/withOrgContext";
 import { employees, onboardingWorkflows, templates } from "@/db/schema";
 import { ApiError, handleApiError, requireUserId } from "@/lib/api/helpers";
 import { requirePermission } from "@/lib/api/permissions";
+import { listOnboardingWorkflows } from "@/lib/api/onboarding";
 
 type TemplateStep = {
   step_id: string;
@@ -21,17 +22,7 @@ export async function GET(req: NextRequest) {
     if (!orgId) throw new ApiError(400, "org_id is required");
     const employeeId = req.nextUrl.searchParams.get("employee_id");
 
-    const rows = await withOrgContext(userId, async (db) => {
-      await requirePermission(db, userId, orgId, "employee", "read");
-      return db
-        .select()
-        .from(onboardingWorkflows)
-        .where(
-          employeeId
-            ? and(eq(onboardingWorkflows.orgId, orgId), eq(onboardingWorkflows.employeeId, employeeId))
-            : eq(onboardingWorkflows.orgId, orgId),
-        );
-    });
+    const rows = await withOrgContext(userId, (db) => listOnboardingWorkflows(db, userId, orgId, employeeId ?? undefined));
 
     return NextResponse.json({ data: rows });
   } catch (err) {

@@ -180,3 +180,15 @@ export async function settlePendingDays(
     })
     .where(eq(leaveBalances.id, balance.id));
 }
+
+// Shared by app/api/leave/pending-approvals/route.ts and
+// app/(app)/hr/dashboard/page.tsx (server-rendered initial load).
+export async function listPendingLeaveApprovals(db: OrgScopedDb, userId: string, orgId: string) {
+  await requirePermission(db, userId, orgId, "leave", "approve");
+  const pending = await db.select().from(leaveRequests).where(and(eq(leaveRequests.orgId, orgId), eq(leaveRequests.status, "pending")));
+
+  if (await hasPermission(db, userId, orgId, "leave", "view_all")) return pending;
+
+  const decisions = await Promise.all(pending.map((r) => isManagerOf(db, userId, orgId, r.employeeId)));
+  return pending.filter((_, i) => decisions[i]);
+}

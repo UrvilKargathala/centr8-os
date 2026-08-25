@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { desc, eq } from "drizzle-orm";
 import { withOrgContext } from "@/db/withOrgContext";
-import { auditLog } from "@/db/schema";
 import { handleApiError, requireUserId } from "@/lib/api/helpers";
+import { listMySecurityLog } from "@/lib/api/me";
 
 // Recent activity this user performed, drawn from audit_log filtered by
 // actorUserId. user_login (app/api/me/record-login) and
@@ -12,14 +11,7 @@ import { handleApiError, requireUserId } from "@/lib/api/helpers";
 export async function GET(req: NextRequest) {
   try {
     const userId = await requireUserId(req);
-    const rows = await withOrgContext(userId, (db) =>
-      db
-        .select()
-        .from(auditLog)
-        .where(eq(auditLog.actorUserId, userId))
-        .orderBy(desc(auditLog.createdAt))
-        .limit(10),
-    );
+    const rows = await withOrgContext(userId, (db) => listMySecurityLog(db, userId));
     return NextResponse.json({ data: rows });
   } catch (err) {
     return handleApiError(err);

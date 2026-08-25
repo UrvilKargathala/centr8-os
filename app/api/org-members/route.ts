@@ -4,12 +4,12 @@
 // its own resourceType/action pair and the two-migration enum dance that
 // comes with one.
 import { NextRequest, NextResponse } from "next/server";
-import { eq } from "drizzle-orm";
 import { withOrgContext } from "@/db/withOrgContext";
 import { orgMemberships } from "@/db/schema";
 import { ApiError, handleApiError, requireUserId } from "@/lib/api/helpers";
 import { requirePermission } from "@/lib/api/permissions";
 import { supabaseAdminClient, findAuthUserByEmail } from "@/lib/api/supabaseAdmin";
+import { listOrgMembers } from "@/lib/api/orgMembers";
 
 export async function GET(req: NextRequest) {
   try {
@@ -17,23 +17,7 @@ export async function GET(req: NextRequest) {
     const orgId = req.nextUrl.searchParams.get("org_id");
     if (!orgId) throw new ApiError(400, "org_id is required");
 
-    const rows = await withOrgContext(userId, async (db) => {
-      await requirePermission(db, userId, orgId, "organization", "update");
-      return db.select().from(orgMemberships).where(eq(orgMemberships.orgId, orgId));
-    });
-
-    const supabase = supabaseAdminClient();
-    const members = await Promise.all(
-      rows.map(async (row) => {
-        const { data } = await supabase.auth.admin.getUserById(row.userId);
-        return {
-          userId: row.userId,
-          email: data.user?.email ?? null,
-          role: row.role,
-          deactivatedAt: row.deactivatedAt,
-        };
-      }),
-    );
+    const members = await withOrgContext(userId, (db) => listOrgMembers(db, userId, orgId));
 
     return NextResponse.json({ data: members });
   } catch (err) {

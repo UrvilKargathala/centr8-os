@@ -170,3 +170,13 @@ export async function getMyAttendanceHistory(db: OrgScopedDb, userId: string, or
     .orderBy(desc(attendanceRecords.workDate))
     .limit(limit);
 }
+
+// Shared by app/api/attendance/team-today/route.ts and
+// app/(app)/hr/dashboard/page.tsx (server-rendered initial load, last 7 days).
+export async function listTeamAttendanceForDate(db: OrgScopedDb, userId: string, orgId: string, date: string) {
+  await requirePermission(db, userId, orgId, "attendance", "view_all");
+  return db
+    .select()
+    .from(attendanceRecords)
+    .where(and(eq(attendanceRecords.orgId, orgId), eq(attendanceRecords.workDate, date)));
+}

@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import { eq } from "drizzle-orm";
 import { withOrgContext } from "@/db/withOrgContext";
 import { holidays } from "@/db/schema";
 import { ApiError, handleApiError, requireUserId } from "@/lib/api/helpers";
 import { requirePermission } from "@/lib/api/permissions";
+import { listHolidays } from "@/lib/api/holidays";
 
 export async function GET(req: NextRequest) {
   try {
@@ -11,10 +11,7 @@ export async function GET(req: NextRequest) {
     const orgId = req.nextUrl.searchParams.get("org_id");
     if (!orgId) throw new ApiError(400, "org_id is required");
 
-    const rows = await withOrgContext(userId, async (db) => {
-      await requirePermission(db, userId, orgId, "holiday", "read");
-      return db.select().from(holidays).where(eq(holidays.orgId, orgId));
-    });
+    const rows = await withOrgContext(userId, (db) => listHolidays(db, userId, orgId));
 
     return NextResponse.json({ data: rows });
   } catch (err) {

@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { and, desc, eq } from "drizzle-orm";
 import { withOrgContext } from "@/db/withOrgContext";
-import { notifications } from "@/db/schema";
 import { ApiError, handleApiError, requireUserId } from "@/lib/api/helpers";
+import { listNotifications } from "@/lib/api/notifications";
 
 // No permission gate — RLS alone scopes every row to its recipient
 // (notifications_select: user_id = auth.uid()), same reasoning as
@@ -21,17 +20,7 @@ export async function GET(req: NextRequest) {
     const offsetParam = Number(params.get("offset") ?? "0");
     const offset = Number.isFinite(offsetParam) ? Math.max(offsetParam, 0) : 0;
 
-    const rows = await withOrgContext(userId, (db) => {
-      const conditions = [eq(notifications.orgId, orgId)];
-      if (unreadOnly) conditions.push(eq(notifications.isRead, false));
-      return db
-        .select()
-        .from(notifications)
-        .where(and(...conditions))
-        .orderBy(desc(notifications.createdAt))
-        .limit(limit)
-        .offset(offset);
-    });
+    const rows = await withOrgContext(userId, (db) => listNotifications(db, orgId, { unreadOnly, limit, offset }));
 
     return NextResponse.json({ data: rows });
   } catch (err) {
