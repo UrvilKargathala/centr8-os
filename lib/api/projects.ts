@@ -1,6 +1,6 @@
 import { desc, eq } from "drizzle-orm";
 import type { OrgScopedDb } from "@/db/withOrgContext";
-import { milestones, people, projectHealthSnapshots, projectMembers, projects, tasks } from "@/db/schema";
+import { auditLog, milestones, people, projectHealthSnapshots, projectMembers, projects, sprints, tasks } from "@/db/schema";
 import { requirePermission } from "./permissions";
 
 // Shared by app/api/projects/route.ts and app/(app)/budgets/page.tsx
@@ -13,6 +13,30 @@ export function listAllProjects(db: OrgScopedDb, orgId: string) {
 // id+name, same shape its client fetch already narrowed to.
 export function listProjectNames(db: OrgScopedDb, orgId: string) {
   return db.select({ id: projects.id, name: projects.name }).from(projects).where(eq(projects.orgId, orgId));
+}
+
+// Shared by app/api/audit-log/route.ts and app/(app)/projects/dashboard/page.tsx.
+export function listRecentAuditLog(db: OrgScopedDb, orgId: string, limit: number) {
+  return db.select().from(auditLog).where(eq(auditLog.orgId, orgId)).orderBy(desc(auditLog.createdAt)).limit(limit);
+}
+
+// Shared by app/(app)/projects/dashboard/page.tsx (server-rendered initial
+// load) — per-project tasks + sprints, same per-project fan-out the page's
+// client `loadAll()` used to do over HTTP, just direct DB queries instead.
+export async function getProjectsDashboardData(db: OrgScopedDb, orgId: string) {
+  const projectRows = await db.select({ id: projects.id, name: projects.name, status: projects.status }).from(projects).where(eq(projects.orgId, orgId));
+
+  const perProject = await Promise.all(
+    projectRows.map(async (p) => {
+      const [projTasks, projSprints] = await Promise.all([
+        db.select().from(tasks).where(eq(tasks.projectId, p.id)),
+        db.select({ id: sprints.id, projectId: sprints.projectId, name: sprints.name, status: sprints.status }).from(sprints).where(eq(sprints.projectId, p.id)),
+      ]);
+      return { project: p, tasks: projTasks, sprints: projSprints };
+    }),
+  );
+
+  return { projects: projectRows, perProject };
 }
 
 // Shared by app/api/ai/project-health/route.ts (GET) and

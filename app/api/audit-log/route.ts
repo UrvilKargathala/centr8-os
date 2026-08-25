@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { desc, eq } from "drizzle-orm";
 import { withOrgContext } from "@/db/withOrgContext";
-import { auditLog } from "@/db/schema";
 import { ApiError, handleApiError, requireUserId } from "@/lib/api/helpers";
+import { listRecentAuditLog } from "@/lib/api/projects";
 
 // Not part of any PHASE_PROMPT_UI.md prompt — the dashboard's "recent
 // activity feed" (Prompt 0.4) explicitly wants mock entries, but audit_log
@@ -20,14 +19,7 @@ export async function GET(req: NextRequest) {
     const limitParam = Number(req.nextUrl.searchParams.get("limit") ?? "20");
     const limit = Number.isFinite(limitParam) ? Math.min(Math.max(limitParam, 1), 100) : 20;
 
-    const rows = await withOrgContext(userId, (db) =>
-      db
-        .select()
-        .from(auditLog)
-        .where(eq(auditLog.orgId, orgId))
-        .orderBy(desc(auditLog.createdAt))
-        .limit(limit),
-    );
+    const rows = await withOrgContext(userId, (db) => listRecentAuditLog(db, orgId, limit));
 
     return NextResponse.json({ data: rows });
   } catch (err) {

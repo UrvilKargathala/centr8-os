@@ -1,6 +1,7 @@
 import { and, desc, eq, gte, lte, sql, sum } from "drizzle-orm";
 import type { OrgScopedDb } from "@/db/withOrgContext";
-import { people, projects, tasks, timeEntries } from "@/db/schema";
+import { people, projects, tasks, timeEntries, timesheetSubmissions } from "@/db/schema";
+import { requirePermission } from "./permissions";
 
 export async function resolveOwnPersonId(
   db: OrgScopedDb,
@@ -116,4 +117,28 @@ export async function getTimeEntrySummary(
     byProject,
     byDate,
   };
+}
+
+// Shared by app/(app)/projects/time-tracking/page.tsx (server-rendered
+// initial load, default "My" tab / current week) — mirrors the page's own
+// client loadData() for mine=true: entries + summary + this week's
+// submission status, all for the caller's own person row.
+export async function getMyTimeTrackingWeek(db: OrgScopedDb, userId: string, orgId: string, startDate: string, endDate: string) {
+  await requirePermission(db, userId, orgId, "time", "view_own");
+  const personId = await resolveOwnPersonId(db, userId, orgId);
+  if (!personId) {
+    return { entries: [], summary: { totalHours: "0", billableHours: "0", entryCount: 0, byProject: [], byDate: [] }, submission: null };
+  }
+
+  const [entries, summary, [submission]] = await Promise.all([
+    listTimeEntries(db, orgId, { personId, startDate, endDate, limit: 200, offset: 0 }),
+    getTimeEntrySummary(db, orgId, { personId, startDate, endDate }),
+    db
+      .select()
+      .from(timesheetSubmissions)
+      .where(and(eq(timesheetSubmissions.orgId, orgId), eq(timesheetSubmissions.personId, personId), eq(timesheetSubmissions.weekStart, startDate)))
+      .limit(1),
+  ]);
+
+  return { entries, summary, submission: submission ?? null };
 }
