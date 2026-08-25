@@ -1,6 +1,7 @@
-import { and, eq, inArray, ne } from "drizzle-orm";
+import { and, desc, eq, inArray, ne, sql } from "drizzle-orm";
 import type { OrgScopedDb } from "@/db/withOrgContext";
 import { people, tasks } from "@/db/schema";
+import { ApiError } from "./helpers";
 
 // Shared by app/api/team/route.ts (client-side filtered refetch) and
 // app/(app)/team/page.tsx (server-rendered initial load) — the Team page's
@@ -52,4 +53,67 @@ export function listCapacityData(db: OrgScopedDb, orgId: string) {
       .from(tasks)
       .where(and(eq(tasks.orgId, orgId), inArray(tasks.status, ["todo", "in_progress", "in_review"]))),
   ]);
+}
+
+// Shared by app/api/team/[id]/route.ts (GET) and
+// app/(app)/team/[id]/page.tsx (server-rendered initial load).
+export async function getPerson(db: OrgScopedDb, id: string) {
+  const [row] = await db.select().from(people).where(eq(people.id, id)).limit(1);
+  if (!row) throw new ApiError(404, "Person not found");
+  return row;
+}
+
+// Shared by app/api/team/[id]/stats/route.ts and
+// app/(app)/team/[id]/page.tsx (server-rendered initial load).
+export async function getPersonStats(db: OrgScopedDb, personId: string) {
+  const assigned = eq(tasks.assigneeId, personId);
+
+  const monthly = await db
+    .select({
+      month: sql<string>`to_char(${tasks.updatedAt}, 'YYYY-MM')`.as("month"),
+      count: sql<number>`count(*)::int`.as("count"),
+    })
+    .from(tasks)
+    .where(and(assigned, eq(tasks.status, "done")))
+    .groupBy(sql`to_char(${tasks.updatedAt}, 'YYYY-MM')`)
+    .orderBy(sql`to_char(${tasks.updatedAt}, 'YYYY-MM')`);
+
+  const daily = await db
+    .select({
+      day: sql<string>`to_char(${tasks.updatedAt}, 'YYYY-MM-DD')`.as("day"),
+      count: sql<number>`count(*)::int`.as("count"),
+    })
+    .from(tasks)
+    .where(and(assigned, eq(tasks.status, "done")))
+    .groupBy(sql`to_char(${tasks.updatedAt}, 'YYYY-MM-DD')`)
+    .orderBy(sql`to_char(${tasks.updatedAt}, 'YYYY-MM-DD')`);
+
+  const [utilization] = await db
+    .select({
+      totalEstimate: sql<number>`coalesce(sum(${tasks.estimate}), 0)::int`.as("total_estimate"),
+      openCount: sql<number>`count(*)::int`.as("open_count"),
+    })
+    .from(tasks)
+    .where(and(assigned, ne(tasks.status, "done"), ne(tasks.status, "cancelled")));
+
+  const recentTasks = await db
+    .select({
+      id: tasks.id,
+      title: tasks.title,
+      status: tasks.status,
+      priority: tasks.priority,
+      dueDate: tasks.dueDate,
+      updatedAt: tasks.updatedAt,
+    })
+    .from(tasks)
+    .where(assigned)
+    .orderBy(desc(tasks.updatedAt))
+    .limit(10);
+
+  return {
+    monthly,
+    daily,
+    utilization: utilization ?? { totalEstimate: 0, openCount: 0 },
+    recentTasks,
+  };
 }

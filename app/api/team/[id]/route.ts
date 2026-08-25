@@ -4,15 +4,12 @@ import { withOrgContext } from "@/db/withOrgContext";
 import { people } from "@/db/schema";
 import { ApiError, handleApiError, requireUserId } from "@/lib/api/helpers";
 import { requirePermission } from "@/lib/api/permissions";
+import { getPerson } from "@/lib/api/team";
 
 type Params = { params: Promise<{ id: string }> };
 
 async function loadPerson(userId: string, id: string) {
-  const row = await withOrgContext(userId, (db) =>
-    db.select().from(people).where(eq(people.id, id)).limit(1),
-  );
-  if (!row[0]) throw new ApiError(404, "Person not found");
-  return row[0];
+  return withOrgContext(userId, (db) => getPerson(db, id));
 }
 
 export async function GET(req: NextRequest, { params }: Params) {
