@@ -2,9 +2,9 @@
 // shape: small helpers wrapping requirePermission with the extra
 // "is this actually the caller's own record" check self-service actions
 // need, so every route calls the same logic instead of re-deriving it.
-import { and, eq } from "drizzle-orm";
+import { and, desc, eq, gte, lte } from "drizzle-orm";
 import type { OrgScopedDb } from "@/db/withOrgContext";
-import { attendanceSettings, employees } from "@/db/schema";
+import { attendanceRecords, attendanceSettings, employees } from "@/db/schema";
 import { ApiError } from "./helpers";
 import { hasPermission, requirePermission } from "./permissions";
 
@@ -93,4 +93,80 @@ const DAY_NAMES = ["sunday", "monday", "tuesday", "wednesday", "thursday", "frid
 export function isWeekendDate(dateStr: string, weekendDays: string[]): boolean {
   const day = DAY_NAMES[new Date(`${dateStr}T00:00:00`).getDay()];
   return weekendDays.includes(day);
+}
+
+function isoDate(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+function startOfMonth(): string {
+  const d = new Date();
+  return isoDate(new Date(d.getFullYear(), d.getMonth(), 1));
+}
+function startOfWeek(): string {
+  const d = new Date();
+  const diff = d.getDate() - d.getDay();
+  return isoDate(new Date(d.getFullYear(), d.getMonth(), diff));
+}
+
+// Shared by app/api/attendance/stats?scope=me and
+// app/(app)/hr/attendance/page.tsx (server-rendered initial load of the
+// default "My Attendance" view). Only the scope=me case — org/employee
+// scopes stay in the route, not worth extracting for one caller each.
+export async function getMyAttendanceStats(db: OrgScopedDb, userId: string, orgId: string) {
+  await requirePermission(db, userId, orgId, "attendance", "view_own");
+  const employeeId = await resolveOwnEmployeeId(db, userId, orgId);
+  if (!employeeId) return null;
+
+  const settings = await getOrCreateSettings(db, orgId);
+  const monthRecords = await db
+    .select()
+    .from(attendanceRecords)
+    .where(and(eq(attendanceRecords.orgId, orgId), eq(attendanceRecords.employeeId, employeeId), gte(attendanceRecords.workDate, startOfMonth())));
+
+  const workedDays = monthRecords.filter((r) => r.status === "checked_out" || r.status === "half_day" || r.status === "checked_in");
+  const weekdaysElapsed = (() => {
+    const start = new Date(`${startOfMonth()}T00:00:00Z`).getTime();
+    const end = new Date(`${isoDate(new Date())}T00:00:00Z`).getTime();
+    let count = 0;
+    for (let t = start; t <= end; t += 86_400_000) {
+      const iso = new Date(t).toISOString().slice(0, 10);
+      if (!isWeekendDate(iso, settings.weekendDays as string[])) count++;
+    }
+    return count;
+  })();
+  const attendanceRatePercent = weekdaysElapsed > 0 ? Math.round((workedDays.length / weekdaysElapsed) * 100) : 0;
+
+  const withMinutes = monthRecords.filter((r) => r.totalMinutes != null);
+  const avgHoursPerDay = withMinutes.length
+    ? Math.round((withMinutes.reduce((sum, r) => sum + (r.totalMinutes ?? 0), 0) / withMinutes.length / 60) * 10) / 10
+    : 0;
+
+  const checkedInRecords = monthRecords.filter((r) => r.checkInTime);
+  const lateRecords = checkedInRecords.filter((r) => isLateArrival(r.checkInTime!, r.workDate, settings));
+  const onTimeRate = checkedInRecords.length ? Math.round(((checkedInRecords.length - lateRecords.length) / checkedInRecords.length) * 100) : 0;
+
+  const weekStart = startOfWeek();
+  const lateArrivalsThisWeek = lateRecords.filter((r) => r.workDate >= weekStart).length;
+
+  return {
+    attendance_rate_percent: attendanceRatePercent,
+    avg_hours_per_day: avgHoursPerDay,
+    late_arrivals_this_week: lateArrivalsThisWeek,
+    on_time_rate: onTimeRate,
+  };
+}
+
+// Shared by app/api/attendance/my-history/route.ts and
+// app/(app)/hr/attendance/page.tsx (server-rendered initial load).
+export async function getMyAttendanceHistory(db: OrgScopedDb, userId: string, orgId: string, limit = 30) {
+  await requirePermission(db, userId, orgId, "attendance", "view_own");
+  const employeeId = await resolveOwnEmployeeId(db, userId, orgId);
+  if (!employeeId) return [];
+
+  return db
+    .select()
+    .from(attendanceRecords)
+    .where(eq(attendanceRecords.employeeId, employeeId))
+    .orderBy(desc(attendanceRecords.workDate))
+    .limit(limit);
 }

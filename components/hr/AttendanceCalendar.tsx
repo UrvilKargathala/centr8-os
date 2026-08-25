@@ -119,7 +119,7 @@ export function AttendanceCalendar({
           ‹
         </button>
         <p className="text-body-medium font-semibold text-neutral-950">
-          {month.toLocaleDateString(undefined, { month: "long", year: "numeric" })}
+          {month.toLocaleDateString("en-US", { month: "long", year: "numeric" })}
         </p>
         <button
           type="button"
@@ -144,7 +144,7 @@ export function AttendanceCalendar({
           const { color, empty } = cellColor(dateIso, record, settings, employmentStartDate ?? null);
           const dayNum = Number(dateIso.slice(-2));
           const title = record
-            ? `${dateIso} — ${record.status.replace(/_/g, " ")}${record.checkInTime ? `, in ${new Date(record.checkInTime).toLocaleTimeString()}` : ""}${record.checkOutTime ? `, out ${new Date(record.checkOutTime).toLocaleTimeString()}` : ""}${record.totalMinutes != null ? `, ${(record.totalMinutes / 60).toFixed(1)}h` : ""}`
+            ? `${dateIso} — ${record.status.replace(/_/g, " ")}${record.checkInTime ? `, in ${new Date(record.checkInTime).toLocaleTimeString("en-US")}` : ""}${record.checkOutTime ? `, out ${new Date(record.checkOutTime).toLocaleTimeString("en-US")}` : ""}${record.totalMinutes != null ? `, ${(record.totalMinutes / 60).toFixed(1)}h` : ""}`
             : dateIso;
           return (
             <button
@@ -192,11 +192,11 @@ export function AttendanceCalendar({
                 </div>
                 <div className="flex justify-between">
                   <dt>Check-in</dt>
-                  <dd>{selected.checkInTime ? new Date(selected.checkInTime).toLocaleTimeString() : "—"}</dd>
+                  <dd>{selected.checkInTime ? new Date(selected.checkInTime).toLocaleTimeString("en-US") : "—"}</dd>
                 </div>
                 <div className="flex justify-between">
                   <dt>Check-out</dt>
-                  <dd>{selected.checkOutTime ? new Date(selected.checkOutTime).toLocaleTimeString() : "—"}</dd>
+                  <dd>{selected.checkOutTime ? new Date(selected.checkOutTime).toLocaleTimeString("en-US") : "—"}</dd>
                 </div>
                 <div className="flex justify-between">
                   <dt>Total hours</dt>

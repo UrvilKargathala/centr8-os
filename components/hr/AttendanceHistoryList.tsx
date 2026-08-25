@@ -39,9 +39,9 @@ export function AttendanceHistoryList({ history, settings }: { history: Attendan
                           ⚠
                         </span>
                       )}
-                      {r.checkInTime ? new Date(r.checkInTime).toLocaleTimeString() : "—"}
+                      {r.checkInTime ? new Date(r.checkInTime).toLocaleTimeString("en-US") : "—"}
                     </TableCell>
-                    <TableCell className="text-neutral-600">{r.checkOutTime ? new Date(r.checkOutTime).toLocaleTimeString() : "—"}</TableCell>
+                    <TableCell className="text-neutral-600">{r.checkOutTime ? new Date(r.checkOutTime).toLocaleTimeString("en-US") : "—"}</TableCell>
                     <TableCell className="text-neutral-600">{r.totalMinutes != null ? (r.totalMinutes / 60).toFixed(1) : "—"}</TableCell>
                     <TableCell>
                       <Badge>{r.status.replace(/_/g, " ")}</Badge>
