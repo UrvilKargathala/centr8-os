@@ -2,6 +2,8 @@ import { desc, eq } from "drizzle-orm";
 import type { OrgScopedDb } from "@/db/withOrgContext";
 import { auditLog, milestones, people, projectHealthSnapshots, projectMembers, projects, sprints, tasks } from "@/db/schema";
 import { requirePermission } from "./permissions";
+import { listTasksFiltered } from "./tasks";
+import { listActivePeople } from "./team";
 
 // Shared by app/api/projects/route.ts and app/(app)/budgets/page.tsx
 // (server-rendered initial load) — every project in the org, unfiltered.
@@ -116,4 +118,23 @@ export async function getProjectsPageData(db: OrgScopedDb, orgId: string) {
   );
 
   return { projects: projectRows, health, milestoneCounts, taskProgress, taskDeadlines, projectMembers: projectMembersMap };
+}
+
+// Shared by app/(app)/projects/[id]/page.tsx (server-rendered initial load,
+// Overview tab) — mirrors the page's own client loadAll() + the always-on
+// team lookup. Tab-specific data (Team/Activity/Portal-access sub-tabs) stays
+// client-fetched on tab switch, same convention as every other tabbed page.
+export async function getProjectDetailData(db: OrgScopedDb, orgId: string, projectId: string) {
+  const [[project], projectMilestones, projectSprints, projectTasks, activePeople] = await Promise.all([
+    db.select().from(projects).where(eq(projects.id, projectId)),
+    db.select().from(milestones).where(eq(milestones.projectId, projectId)),
+    db.select().from(sprints).where(eq(sprints.projectId, projectId)),
+    listTasksFiltered(db, { projectId }),
+    listActivePeople(db, orgId),
+  ]);
+
+  const peopleById: Record<string, { fullName: string }> = {};
+  for (const p of activePeople) peopleById[p.id] = { fullName: p.fullName };
+
+  return { project, milestones: projectMilestones, sprints: projectSprints, tasks: projectTasks, peopleById };
 }
