@@ -4,6 +4,7 @@ import { withOrgContext, type OrgScopedDb } from "@/db/withOrgContext";
 import { accounts, activities, contacts, deals, leads } from "@/db/schema";
 import { ApiError, handleApiError, requireUserId } from "@/lib/api/helpers";
 import { requirePermission } from "@/lib/api/permissions";
+import { listAllActivities } from "@/lib/api/crm";
 
 export async function GET(req: NextRequest) {
   try {
@@ -17,6 +18,11 @@ export async function GET(req: NextRequest) {
     const performedBy = params.get("performed_by");
     const dateFrom = params.get("date_from");
     const dateTo = params.get("date_to");
+
+    if (!relatedType && !relatedId && !activityType && !performedBy && !dateFrom && !dateTo) {
+      const data = await withOrgContext(userId, (db) => listAllActivities(db, userId, orgId));
+      return NextResponse.json({ data });
+    }
 
     const rows = await withOrgContext(userId, async (db) => {
       await requirePermission(db, userId, orgId, "activity", "read");

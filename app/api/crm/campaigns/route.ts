@@ -4,7 +4,7 @@ import { withOrgContext } from "@/db/withOrgContext";
 import { campaigns } from "@/db/schema";
 import { ApiError, handleApiError, requireUserId } from "@/lib/api/helpers";
 import { requirePermission } from "@/lib/api/permissions";
-import { requireCampaignCreateAccess } from "@/lib/api/crm";
+import { listAllCampaigns, requireCampaignCreateAccess } from "@/lib/api/crm";
 
 export async function GET(req: NextRequest) {
   try {
@@ -18,6 +18,11 @@ export async function GET(req: NextRequest) {
     const dateFrom = params.get("date_from");
     const dateTo = params.get("date_to");
     const search = params.get("search");
+
+    if (!status && !type && !ownerId && !dateFrom && !dateTo && !search) {
+      const data = await withOrgContext(userId, (db) => listAllCampaigns(db, userId, orgId));
+      return NextResponse.json({ data });
+    }
 
     const rows = await withOrgContext(userId, async (db) => {
       await requirePermission(db, userId, orgId, "campaign", "read");

@@ -1,10 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { and, eq } from "drizzle-orm";
 import { withOrgContext } from "@/db/withOrgContext";
-import { forecastTargets } from "@/db/schema";
 import { ApiError, handleApiError, requireUserId } from "@/lib/api/helpers";
 import { requirePermission } from "@/lib/api/permissions";
-import { computeForecast } from "@/lib/api/crm";
+import { getForecastForPeriod } from "@/lib/api/crm";
 
 export async function GET(req: NextRequest) {
   try {
@@ -19,27 +17,7 @@ export async function GET(req: NextRequest) {
 
     const result = await withOrgContext(userId, async (db) => {
       await requirePermission(db, userId, orgId, "forecast", "read");
-      const forecast = await computeForecast(db, orgId, periodStart, periodEnd, ownerId);
-
-      const targetConditions = [eq(forecastTargets.orgId, orgId)];
-      if (period) targetConditions.push(eq(forecastTargets.period, period));
-      if (ownerId) targetConditions.push(eq(forecastTargets.ownerId, ownerId));
-      const targetRows = await db.select().from(forecastTargets).where(and(...targetConditions));
-      const target = targetRows.find((t) => (ownerId ? t.ownerId === ownerId : t.ownerId === null)) ?? targetRows[0] ?? null;
-      const targetValue = target?.targetValue ?? 0;
-
-      return {
-        period: period ?? `${periodStart}..${periodEnd}`,
-        target_value: targetValue,
-        pipeline_value: forecast.pipeline_value,
-        weighted_value: forecast.weighted_value,
-        committed_value: forecast.committed_value,
-        won_value: forecast.won_value,
-        gap: targetValue - forecast.won_value - forecast.weighted_value,
-        deals_count: forecast.deals_count,
-        deals_by_stage: forecast.deals_by_stage,
-        deals: forecast.deals,
-      };
+      return getForecastForPeriod(db, orgId, periodStart, periodEnd, period, ownerId);
     });
 
     return NextResponse.json({ data: result });

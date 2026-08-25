@@ -3,9 +3,9 @@
 // lead/contact/account/deal/activity's existing grid), with lead
 // conversion and reassignment as separate, more tightly-held actions
 // (lead:convert, */assign) layered on top.
-import { and, eq, gte, lte } from "drizzle-orm";
+import { and, desc, eq, gte, lte } from "drizzle-orm";
 import type { OrgScopedDb } from "@/db/withOrgContext";
-import { accounts, activities, campaigns, contacts, dealStageHistory, deals, employees, leads } from "@/db/schema";
+import { accounts, activities, campaigns, contacts, dealStageHistory, deals, employees, forecastTargets, leads } from "@/db/schema";
 import { ApiError } from "./helpers";
 import { requirePermission } from "./permissions";
 import { createNotification } from "@/lib/notifications/create";
@@ -309,6 +309,12 @@ export function requireCampaignDeleteAccess(db: OrgScopedDb, userId: string, org
 // stored (see forecastTargets' schema comment). ownerId narrows to one
 // rep's deals; omitted, this is the org-wide forecast for the period.
 const OPEN_STAGES = ["prospecting", "discovery", "proposal", "negotiation", "contract_sent"];
+// Shared by app/api/crm/activities/route.ts and app/(app)/crm/activities/page.tsx.
+export async function listAllActivities(db: OrgScopedDb, userId: string, orgId: string) {
+  await requirePermission(db, userId, orgId, "activity", "read");
+  return db.select().from(activities).where(eq(activities.orgId, orgId)).orderBy(desc(activities.activityDate));
+}
+
 // Shared by app/api/crm/deals/route.ts and app/(app)/crm/deals/page.tsx.
 export async function listAllDeals(db: OrgScopedDb, userId: string, orgId: string) {
   await requirePermission(db, userId, orgId, "deal", "read");
@@ -403,6 +409,128 @@ export async function computeForecast(
   };
 }
 
+// Shared by app/api/crm/forecasts/route.ts and
+// app/(app)/crm/forecasts/page.tsx (server-rendered initial load).
+export async function getForecastForPeriod(
+  db: OrgScopedDb,
+  orgId: string,
+  periodStart: string,
+  periodEnd: string,
+  period: string | null,
+  ownerId?: string | null,
+) {
+  const forecast = await computeForecast(db, orgId, periodStart, periodEnd, ownerId);
+
+  const targetConditions = [eq(forecastTargets.orgId, orgId)];
+  if (period) targetConditions.push(eq(forecastTargets.period, period));
+  if (ownerId) targetConditions.push(eq(forecastTargets.ownerId, ownerId));
+  const targetRows = await db.select().from(forecastTargets).where(and(...targetConditions));
+  const target = targetRows.find((t) => (ownerId ? t.ownerId === ownerId : t.ownerId === null)) ?? targetRows[0] ?? null;
+  const targetValue = target?.targetValue ?? 0;
+
+  return {
+    period: period ?? `${periodStart}..${periodEnd}`,
+    target_value: targetValue,
+    pipeline_value: forecast.pipeline_value,
+    weighted_value: forecast.weighted_value,
+    committed_value: forecast.committed_value,
+    won_value: forecast.won_value,
+    gap: targetValue - forecast.won_value - forecast.weighted_value,
+    deals_count: forecast.deals_count,
+    deals_by_stage: forecast.deals_by_stage,
+    deals: forecast.deals,
+  };
+}
+
+// Shared by app/api/crm/forecasts/by-rep/route.ts and
+// app/(app)/crm/forecasts/page.tsx.
+export async function getForecastByRep(db: OrgScopedDb, orgId: string, periodStart: string, periodEnd: string, period: string | null) {
+  const reps = await db.select().from(employees).where(eq(employees.orgId, orgId));
+  const targets = period ? await db.select().from(forecastTargets).where(eq(forecastTargets.orgId, orgId)) : [];
+
+  return Promise.all(
+    reps.map(async (rep) => {
+      const forecast = await computeForecast(db, orgId, periodStart, periodEnd, rep.id);
+      const target = targets.find((t) => t.ownerId === rep.id && t.period === period);
+      const targetValue = target?.targetValue ?? 0;
+      return {
+        owner_id: rep.id,
+        owner_name: rep.fullName,
+        target_value: targetValue,
+        won_value: forecast.won_value,
+        weighted_value: forecast.weighted_value,
+        pipeline_value: forecast.pipeline_value,
+        gap: targetValue - forecast.won_value - forecast.weighted_value,
+      };
+    }),
+  );
+}
+
+function isoDate(d: Date) {
+  return d.toISOString().slice(0, 10);
+}
+
+// Builds the last N periods (ending at the current one) for a given
+// period_type, each as { period, start, end } — moved here from
+// app/api/crm/forecasts/trend/route.ts so app/(app)/crm/forecasts/page.tsx
+// (server-rendered initial load) can call the same bucketing logic.
+export function buildForecastPeriods(periodType: string, count: number) {
+  const now = new Date();
+  const periods: { period: string; start: string; end: string }[] = [];
+
+  if (periodType === "monthly") {
+    for (let i = count - 1; i >= 0; i--) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const start = new Date(d.getFullYear(), d.getMonth(), 1);
+      const end = new Date(d.getFullYear(), d.getMonth() + 1, 0);
+      periods.push({ period: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`, start: isoDate(start), end: isoDate(end) });
+    }
+  } else if (periodType === "quarterly") {
+    const currentQuarter = Math.floor(now.getMonth() / 3);
+    for (let i = count - 1; i >= 0; i--) {
+      const totalQuarters = now.getFullYear() * 4 + currentQuarter - i;
+      const year = Math.floor(totalQuarters / 4);
+      const q = totalQuarters % 4;
+      const start = new Date(year, q * 3, 1);
+      const end = new Date(year, q * 3 + 3, 0);
+      periods.push({ period: `Q${q + 1} ${year}`, start: isoDate(start), end: isoDate(end) });
+    }
+  } else {
+    for (let i = count - 1; i >= 0; i--) {
+      const year = now.getFullYear() - i;
+      periods.push({ period: `${year}`, start: isoDate(new Date(year, 0, 1)), end: isoDate(new Date(year, 11, 31)) });
+    }
+  }
+  return periods;
+}
+
+// Shared by app/api/crm/forecasts/trend/route.ts and
+// app/(app)/crm/forecasts/page.tsx.
+export async function getForecastTrend(db: OrgScopedDb, orgId: string, periodType: string, count: number) {
+  const periods = buildForecastPeriods(periodType, count);
+  const targets = await db.select().from(forecastTargets).where(eq(forecastTargets.orgId, orgId));
+
+  return Promise.all(
+    periods.map(async (p) => {
+      const forecast = await computeForecast(db, orgId, p.start, p.end);
+      const target = targets.find((t) => t.period === p.period && t.ownerId === null);
+      return {
+        period: p.period,
+        target: target?.targetValue ?? 0,
+        won: forecast.won_value,
+        weighted: forecast.weighted_value,
+        pipeline: forecast.pipeline_value,
+      };
+    }),
+  );
+}
+
+// Shared by app/api/crm/campaigns/route.ts and app/(app)/crm/campaigns/page.tsx.
+export async function listAllCampaigns(db: OrgScopedDb, userId: string, orgId: string) {
+  await requirePermission(db, userId, orgId, "campaign", "read");
+  return db.select().from(campaigns).where(eq(campaigns.orgId, orgId));
+}
+
 // CRM Batch 3 — campaign metrics, always computed live from leads/deals
 // (never stored on the campaigns row) — same reasoning as forecasts.
 // Deal attribution runs through TWO paths: deals.campaignId set directly,
@@ -431,6 +559,38 @@ export async function computeCampaignMetrics(db: OrgScopedDb, orgId: string, cam
 export function campaignRoi(revenueWon: number, budgetSpent: number): number | null {
   if (!budgetSpent) return null;
   return ((revenueWon - budgetSpent) / budgetSpent) * 100;
+}
+
+// Shared by app/api/crm/campaigns/stats/route.ts and
+// app/(app)/crm/campaigns/page.tsx.
+export async function getCampaignsStats(db: OrgScopedDb, orgId: string) {
+  const allCampaigns = await db.select().from(campaigns).where(eq(campaigns.orgId, orgId));
+
+  const active = allCampaigns.filter((c) => c.status === "active");
+  const totalBudgetAllocated = active.reduce((s, c) => s + Number(c.budgetAllocated ?? 0), 0);
+  const totalBudgetSpent = active.reduce((s, c) => s + Number(c.budgetSpent ?? 0), 0);
+
+  let totalLeads = 0;
+  let best: { name: string; roi: number } | null = null;
+  let worst: { name: string; roi: number } | null = null;
+  for (const c of allCampaigns) {
+    const metrics = await computeCampaignMetrics(db, orgId, c.id);
+    totalLeads += metrics.leads_count;
+    const roi = campaignRoi(metrics.revenue_won, c.budgetSpent);
+    if (roi !== null) {
+      if (!best || roi > best.roi) best = { name: c.name, roi };
+      if (!worst || roi < worst.roi) worst = { name: c.name, roi };
+    }
+  }
+
+  return {
+    active_campaigns: active.length,
+    total_budget_allocated: totalBudgetAllocated,
+    total_budget_spent: totalBudgetSpent,
+    total_leads_generated: totalLeads,
+    best_performing: best,
+    worst_performing: worst,
+  };
 }
 
 export type Campaign = typeof campaigns.$inferSelect;
