@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Script from "next/script";
 import { Geom, Cabin, Roboto_Mono } from "next/font/google";
 import "./globals.css";
 
@@ -39,11 +40,14 @@ export default function RootLayout({
       suppressHydrationWarning
     >
       <head>
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `(function(){try{var t=localStorage.getItem("centr8-theme");if(t==="dark"||(t!=="light"&&matchMedia("(prefers-color-scheme:dark)").matches))document.documentElement.classList.add("dark")}catch(e){}})()`,
-          }}
-        />
+        {/* beforeInteractive: Next.js injects this outside the normal React
+            tree (not as a plain rendered <script>), so it runs before
+            hydration without React's "scripts inside components never
+            execute" console warning — same theme-flash-prevention script,
+            just placed the way Next.js expects it. */}
+        <Script id="theme-init" strategy="beforeInteractive">
+          {`(function(){try{var t=localStorage.getItem("centr8-theme");if(t==="dark"||(t!=="light"&&matchMedia("(prefers-color-scheme:dark)").matches))document.documentElement.classList.add("dark")}catch(e){}})()`}
+        </Script>
       </head>
       <body className="min-h-full flex flex-col">{children}</body>
     </html>
