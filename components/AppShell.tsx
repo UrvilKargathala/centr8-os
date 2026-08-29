@@ -477,7 +477,7 @@ function AppSidebar({
 export function AppShell({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
-  const { orgs, selectedOrgId, setSelectedOrgId, loading, can } = useOrg();
+  const { orgs, selectedOrgId, setSelectedOrgId, addOrg, loading, can } = useOrg();
   const isAdmin = can("sso", "configure");
   const [email, setEmail] = useState<string | null>(null);
   const [collapsed, setCollapsed] = useState(false);
@@ -485,7 +485,35 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const [askOpen, setAskOpen] = useState(false);
   const { callCount: aiCallCount } = useAiUsage();
   const [orgMenuOpen, setOrgMenuOpen] = useState(false);
+  const [creatingOrg, setCreatingOrg] = useState(false);
+  const [newOrgName, setNewOrgName] = useState("");
+  const [createOrgError, setCreateOrgError] = useState<string | null>(null);
+  const [createOrgLoading, setCreateOrgLoading] = useState(false);
   const orgMenuRef = useRef<HTMLDivElement>(null);
+
+  async function handleCreateOrg() {
+    const name = newOrgName.trim();
+    if (!name) return;
+    setCreateOrgLoading(true);
+    setCreateOrgError(null);
+    try {
+      const res = await fetch("/api/orgs", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name }),
+      });
+      const body = await res.json();
+      if (!res.ok) throw new Error(body.error ?? "Failed to create organization");
+      addOrg(body.data);
+      setNewOrgName("");
+      setCreatingOrg(false);
+      setOrgMenuOpen(false);
+    } catch (err) {
+      setCreateOrgError(err instanceof Error ? err.message : "Failed to create organization");
+    } finally {
+      setCreateOrgLoading(false);
+    }
+  }
   const mainRef = useRef<HTMLElement>(null);
 
   useEffect(() => {
@@ -653,8 +681,63 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                         );
                       })}
                     </ul>
+
+                    <div className="border-t border-neutral-200 p-2">
+                      {creatingOrg ? (
+                        <div className="space-y-1.5 px-1 py-1">
+                          <input
+                            autoFocus
+                            type="text"
+                            placeholder="Organization name"
+                            value={newOrgName}
+                            onChange={(e) => setNewOrgName(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter") handleCreateOrg();
+                              if (e.key === "Escape") {
+                                setCreatingOrg(false);
+                                setNewOrgName("");
+                                setCreateOrgError(null);
+                              }
+                            }}
+                            className="w-full rounded-sm border border-neutral-300 bg-neutral-50 px-2 py-1.5 text-small text-neutral-950 focus:border-primary-500 focus:outline-none"
+                          />
+                          {createOrgError && <p className="text-caption text-error-600">{createOrgError}</p>}
+                          <div className="flex gap-1.5">
+                            <button
+                              type="button"
+                              onClick={handleCreateOrg}
+                              disabled={createOrgLoading || !newOrgName.trim()}
+                              className="flex-1 rounded-sm bg-primary-600 px-2 py-1.5 text-small font-medium text-neutral-50 hover:bg-primary-700 disabled:opacity-50"
+                            >
+                              {createOrgLoading ? "Creating…" : "Create"}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setCreatingOrg(false);
+                                setNewOrgName("");
+                                setCreateOrgError(null);
+                              }}
+                              className="rounded-sm px-2 py-1.5 text-small text-neutral-600 hover:bg-neutral-100"
+                            >
+                              Cancel
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => setCreatingOrg(true)}
+                          className="flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-left text-small font-medium text-primary-600 hover:bg-neutral-100"
+                        >
+                          <Icon path="M12 4v16m8-8H4" className="h-4 w-4" />
+                          New Organization
+                        </button>
+                      )}
+                    </div>
+
                     <Link
-                      href="/admin/members"
+                      href="/admin/organization"
                       onClick={() => setOrgMenuOpen(false)}
                       className="block border-t border-neutral-200 px-3 py-2 text-small text-neutral-700 hover:bg-neutral-100"
                     >

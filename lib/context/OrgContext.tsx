@@ -10,6 +10,7 @@ type OrgContextValue = {
   selectedOrgId: string | null;
   selectedOrg: Org | null;
   setSelectedOrgId: (id: string) => void;
+  addOrg: (org: Org) => void;
   loading: boolean;
   error: string | null;
   // Table-driven, sourced from GET /api/permissions — the same `permissions`
@@ -101,6 +102,13 @@ export function OrgProvider({
     writeOrgCookie(id);
   }
 
+  // Appends a just-created org and switches to it, without refetching the
+  // whole list — used by the "+ New Organization" flow in AppShell.
+  function addOrg(org: Org) {
+    setOrgs((prev) => [...prev, org]);
+    setSelectedOrgId(org.id);
+  }
+
   function can(resourceType: ResourceType, action: PermissionAction) {
     return grants.has(`${resourceType}:${action}`);
   }
@@ -109,7 +117,7 @@ export function OrgProvider({
 
   return (
     <OrgContext.Provider
-      value={{ orgs, selectedOrgId, selectedOrg, setSelectedOrgId, loading, error, can, permissionsLoading }}
+      value={{ orgs, selectedOrgId, selectedOrg, setSelectedOrgId, addOrg, loading, error, can, permissionsLoading }}
     >
       {children}
     </OrgContext.Provider>

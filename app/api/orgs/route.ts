@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { withOrgContext } from "@/db/withOrgContext";
-import { listMyOrgs } from "@/lib/api/orgs";
-import { handleApiError, requireUserId } from "@/lib/api/helpers";
+import { listMyOrgs, createOrg } from "@/lib/api/orgs";
+import { ApiError, handleApiError, requireUserId } from "@/lib/api/helpers";
 
 // Not part of any PHASE_PROMPT_UI.md prompt — mock data never needed a way
 // to discover "which orgs is this user in," since it just assumed one. Real
@@ -14,6 +14,23 @@ export async function GET(req: NextRequest) {
     const userId = await requireUserId(req);
     const rows = await withOrgContext(userId, (db) => listMyOrgs(db, userId));
     return NextResponse.json({ data: rows });
+  } catch (err) {
+    return handleApiError(err);
+  }
+}
+
+// Any authenticated user may create their own new org and becomes its
+// owner — distinct from joining an *existing* org, which stays invite-only
+// (CLAUDE.md §11a) via POST /api/org-members.
+export async function POST(req: NextRequest) {
+  try {
+    const userId = await requireUserId(req);
+    const body = await req.json();
+    const name = typeof body.name === "string" ? body.name.trim() : "";
+    if (!name) throw new ApiError(400, "name is required");
+
+    const org = await createOrg(userId, name);
+    return NextResponse.json({ data: org }, { status: 201 });
   } catch (err) {
     return handleApiError(err);
   }
