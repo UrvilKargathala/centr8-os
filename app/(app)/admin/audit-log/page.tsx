@@ -1,12 +1,11 @@
-import { createClient } from "@/lib/supabase/server";
+import { getAuthUser } from "@/lib/supabase/server";
 import { withOrgContext } from "@/db/withOrgContext";
 import { getCurrentOrg } from "@/lib/org/currentOrg";
 import { listRecentAuditLog } from "@/lib/api/projects";
 import AuditLogPageClient, { type AuditEntry } from "./AuditLogPageClient";
 
 export default async function AuditLogPage() {
-  const supabase = await createClient();
-  const { data } = await supabase.auth.getUser();
+  const { data } = await getAuthUser();
   const userId = data.user!.id;
   const { orgId } = await getCurrentOrg(userId);
 

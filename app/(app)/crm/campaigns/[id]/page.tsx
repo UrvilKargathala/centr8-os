@@ -1,12 +1,11 @@
-import { createClient } from "@/lib/supabase/server";
+import { getAuthUser } from "@/lib/supabase/server";
 import { withOrgContext } from "@/db/withOrgContext";
 import { getCampaignFullDetail } from "@/lib/api/crm";
 import CampaignDetailPageClient, { type CampaignDetailInitialData } from "./CampaignDetailPageClient";
 
 export default async function CampaignDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const supabase = await createClient();
-  const { data } = await supabase.auth.getUser();
+  const { data } = await getAuthUser();
   const userId = data.user!.id;
 
   try {

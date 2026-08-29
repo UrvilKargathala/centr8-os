@@ -1,12 +1,11 @@
-import { createClient } from "@/lib/supabase/server";
+import { getAuthUser } from "@/lib/supabase/server";
 import { withOrgContext } from "@/db/withOrgContext";
 import { getDocumentDetail } from "@/lib/api/aiAssistant";
 import DocumentDetailPageClient, { type DocumentDetailInitialData } from "./DocumentDetailPageClient";
 
 export default async function DocumentDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const supabase = await createClient();
-  const { data } = await supabase.auth.getUser();
+  const { data } = await getAuthUser();
   const userId = data.user!.id;
 
   try {

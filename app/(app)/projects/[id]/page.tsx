@@ -1,4 +1,4 @@
-import { createClient } from "@/lib/supabase/server";
+import { getAuthUser } from "@/lib/supabase/server";
 import { withOrgContext } from "@/db/withOrgContext";
 import { getCurrentOrg } from "@/lib/org/currentOrg";
 import { getProjectDetailData } from "@/lib/api/projects";
@@ -9,8 +9,7 @@ import ProjectDetailPageClient, { type ProjectDetailInitialData } from "./Projec
 // switch, same convention as every other tabbed page.
 export default async function ProjectDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const supabase = await createClient();
-  const { data } = await supabase.auth.getUser();
+  const { data } = await getAuthUser();
   const userId = data.user!.id;
   const { orgId } = await getCurrentOrg(userId);
 

@@ -1,4 +1,4 @@
-import { createClient } from "@/lib/supabase/server";
+import { getAuthUser } from "@/lib/supabase/server";
 import { withOrgContext } from "@/db/withOrgContext";
 import { getCurrentOrg } from "@/lib/org/currentOrg";
 import { listAllLeads } from "@/lib/api/crm";
@@ -14,8 +14,7 @@ import { LeadsPageClient, type Employee, type Lead } from "./LeadsPageClient";
 // page was server-rendered, so a permission-denied visit degrades exactly
 // like it already did rather than crashing the page.
 export default async function LeadsPage() {
-  const supabase = await createClient();
-  const { data } = await supabase.auth.getUser();
+  const { data } = await getAuthUser();
   const userId = data.user!.id;
   const { orgId } = await getCurrentOrg(userId);
 

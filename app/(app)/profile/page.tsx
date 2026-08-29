@@ -1,8 +1,7 @@
-import { createClient } from "@/lib/supabase/server";
+import { getAuthUser } from "@/lib/supabase/server";
 import ProfilePageClient from "./ProfilePageClient";
 
 export default async function ProfilePage() {
-  const supabase = await createClient();
-  const { data } = await supabase.auth.getUser();
+  const { data } = await getAuthUser();
   return <ProfilePageClient initialEmail={data.user?.email ?? null} />;
 }

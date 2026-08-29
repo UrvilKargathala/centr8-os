@@ -1,4 +1,4 @@
-import { createClient } from "@/lib/supabase/server";
+import { getAuthUser } from "@/lib/supabase/server";
 import { withOrgContext } from "@/db/withOrgContext";
 import { getCurrentOrg } from "@/lib/org/currentOrg";
 import { listAllPeople, listOpenTaskEstimates } from "@/lib/api/team";
@@ -9,8 +9,7 @@ import { TeamPageClient, type Person } from "./TeamPageClient";
 // route uses) instead of showing a skeleton then fetching client-side.
 // AppLayout already redirects unauthenticated visits, so a user is present.
 export default async function TeamPage() {
-  const supabase = await createClient();
-  const { data } = await supabase.auth.getUser();
+  const { data } = await getAuthUser();
   const userId = data.user!.id;
   const { orgId } = await getCurrentOrg(userId);
 

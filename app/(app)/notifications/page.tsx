@@ -1,4 +1,4 @@
-import { createClient } from "@/lib/supabase/server";
+import { getAuthUser } from "@/lib/supabase/server";
 import { withOrgContext } from "@/db/withOrgContext";
 import { getCurrentOrg } from "@/lib/org/currentOrg";
 import { listNotifications } from "@/lib/api/notifications";
@@ -7,8 +7,7 @@ import NotificationsPageClient, { type NotificationsInitialData } from "./Notifi
 const PAGE_SIZE = 20;
 
 export default async function NotificationsPage() {
-  const supabase = await createClient();
-  const { data } = await supabase.auth.getUser();
+  const { data } = await getAuthUser();
   const userId = data.user!.id;
   const { orgId } = await getCurrentOrg(userId);
 

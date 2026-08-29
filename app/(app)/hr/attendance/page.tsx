@@ -1,4 +1,4 @@
-import { createClient } from "@/lib/supabase/server";
+import { getAuthUser } from "@/lib/supabase/server";
 import { withOrgContext } from "@/db/withOrgContext";
 import { getCurrentOrg } from "@/lib/org/currentOrg";
 import { getMyAttendanceHistory, getMyAttendanceStats, getOrCreateSettings } from "@/lib/api/attendance";
@@ -8,8 +8,7 @@ import { AttendancePageClient, type MyAttendanceInitialData } from "./Attendance
 // (admin-only, canViewAll-gated) stays client-fetched on tab switch, same
 // as before; most visits never leave the default view.
 export default async function AttendancePage() {
-  const supabase = await createClient();
-  const { data } = await supabase.auth.getUser();
+  const { data } = await getAuthUser();
   const userId = data.user!.id;
   const { orgId } = await getCurrentOrg(userId);
 

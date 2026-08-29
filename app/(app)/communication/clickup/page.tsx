@@ -1,5 +1,5 @@
 import { eq, and } from "drizzle-orm";
-import { createClient } from "@/lib/supabase/server";
+import { getAuthUser } from "@/lib/supabase/server";
 import { withOrgContext } from "@/db/withOrgContext";
 import { integrations } from "@/db/schema";
 import { getCurrentOrg } from "@/lib/org/currentOrg";
@@ -11,8 +11,7 @@ import { ClickUpPageClient, type ClickUpInitialData } from "./ClickUpPageClient"
 // list picker options, task list). Docs tab loads lazily on switch,
 // unchanged.
 export default async function ClickUpPage() {
-  const supabase = await createClient();
-  const { data } = await supabase.auth.getUser();
+  const { data } = await getAuthUser();
   const userId = data.user!.id;
   const { orgId } = await getCurrentOrg(userId);
 

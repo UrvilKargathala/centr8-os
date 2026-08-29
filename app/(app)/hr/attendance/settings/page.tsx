@@ -1,4 +1,4 @@
-import { createClient } from "@/lib/supabase/server";
+import { getAuthUser } from "@/lib/supabase/server";
 import { withOrgContext } from "@/db/withOrgContext";
 import { getCurrentOrg } from "@/lib/org/currentOrg";
 import { getOrCreateSettings } from "@/lib/api/attendance";
@@ -6,8 +6,7 @@ import { requirePermission } from "@/lib/api/permissions";
 import AttendanceSettingsPageClient, { type AttendanceSettingsData } from "./AttendanceSettingsPageClient";
 
 export default async function AttendanceSettingsPage() {
-  const supabase = await createClient();
-  const { data } = await supabase.auth.getUser();
+  const { data } = await getAuthUser();
   const userId = data.user!.id;
   const { orgId } = await getCurrentOrg(userId);
 

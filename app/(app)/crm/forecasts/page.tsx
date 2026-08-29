@@ -1,4 +1,4 @@
-import { createClient } from "@/lib/supabase/server";
+import { getAuthUser } from "@/lib/supabase/server";
 import { withOrgContext } from "@/db/withOrgContext";
 import { getCurrentOrg } from "@/lib/org/currentOrg";
 import { getForecastByRep, getForecastForPeriod, getForecastTrend, listAccountNames } from "@/lib/api/crm";
@@ -9,8 +9,7 @@ import { ForecastsPageClient, currentPeriod, type ForecastsInitialData } from ".
 const PERIOD_TYPE: ForecastsInitialData["periodType"] = "monthly";
 
 export default async function ForecastsPage() {
-  const supabase = await createClient();
-  const { data } = await supabase.auth.getUser();
+  const { data } = await getAuthUser();
   const userId = data.user!.id;
   const { orgId } = await getCurrentOrg(userId);
 

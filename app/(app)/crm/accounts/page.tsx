@@ -1,4 +1,4 @@
-import { createClient } from "@/lib/supabase/server";
+import { getAuthUser } from "@/lib/supabase/server";
 import { withOrgContext } from "@/db/withOrgContext";
 import { getCurrentOrg } from "@/lib/org/currentOrg";
 import { listAllAccounts, listAllContacts } from "@/lib/api/crm";
@@ -9,8 +9,7 @@ import { AccountsPageClient, type AccountsInitialData } from "./AccountsPageClie
 // throws) falls through to the client component with no initial data — same
 // degrade-to-client-fetch behavior as CRM Leads' server page.
 export default async function AccountsPage() {
-  const supabase = await createClient();
-  const { data } = await supabase.auth.getUser();
+  const { data } = await getAuthUser();
   const userId = data.user!.id;
   const { orgId } = await getCurrentOrg(userId);
 

@@ -1,4 +1,4 @@
-import { createClient } from "@/lib/supabase/server";
+import { getAuthUser } from "@/lib/supabase/server";
 import { withOrgContext } from "@/db/withOrgContext";
 import { getCurrentOrg } from "@/lib/org/currentOrg";
 import { listMyConversations } from "@/lib/api/aiAssistant";
@@ -9,8 +9,7 @@ import { AskAiPageClient, type Conversation } from "./AskAiPageClient";
 // localStorage key (shared with the header widget), which a Server
 // Component has no way to read, so that part stays client-driven.
 export default async function AskAiPage() {
-  const supabase = await createClient();
-  const { data } = await supabase.auth.getUser();
+  const { data } = await getAuthUser();
   const userId = data.user!.id;
   const { orgId } = await getCurrentOrg(userId);
 

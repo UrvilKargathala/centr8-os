@@ -1,4 +1,4 @@
-import { createClient } from "@/lib/supabase/server";
+import { getAuthUser } from "@/lib/supabase/server";
 import { withOrgContext } from "@/db/withOrgContext";
 import { getCurrentOrg } from "@/lib/org/currentOrg";
 import { loadDashboard } from "@/lib/api/dashboard";
@@ -8,8 +8,7 @@ import { DashboardPageClient, type DashboardData } from "./DashboardPageClient";
 // function app/api/dashboard/route.ts calls, just invoked directly during
 // render instead of over HTTP after mount.
 export default async function DashboardPage() {
-  const supabase = await createClient();
-  const { data } = await supabase.auth.getUser();
+  const { data } = await getAuthUser();
   const userId = data.user!.id;
   const { orgId } = await getCurrentOrg(userId);
 

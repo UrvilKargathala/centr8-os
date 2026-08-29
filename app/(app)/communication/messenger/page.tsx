@@ -1,4 +1,4 @@
-import { createClient } from "@/lib/supabase/server";
+import { getAuthUser } from "@/lib/supabase/server";
 import { withOrgContext } from "@/db/withOrgContext";
 import { getCurrentOrg } from "@/lib/org/currentOrg";
 import { fetchClickUpChatChannels, withConnectedClickUp } from "@/lib/api/clickup";
@@ -11,8 +11,7 @@ import { MessengerPageClient, type ClickUpChatChannel } from "./MessengerPageCli
 // with connected=false, same as the page's own client check resolving to
 // false — CommunicationBanner already handles that state.
 export default async function MessengerPage() {
-  const supabase = await createClient();
-  const { data } = await supabase.auth.getUser();
+  const { data } = await getAuthUser();
   const userId = data.user!.id;
   const { orgId } = await getCurrentOrg(userId);
 

@@ -1,4 +1,4 @@
-import { createClient } from "@/lib/supabase/server";
+import { getAuthUser } from "@/lib/supabase/server";
 import { withOrgContext } from "@/db/withOrgContext";
 import { getCurrentOrg } from "@/lib/org/currentOrg";
 import { listAllEmployees } from "@/lib/api/employees";
@@ -11,8 +11,7 @@ import { EmployeesPageClient, type Employee } from "./EmployeesPageClient";
 // initial data, which degrades to its own fetch + existing error handling
 // exactly like it did before this page was server-rendered.
 export default async function EmployeeDirectoryPage() {
-  const supabase = await createClient();
-  const { data } = await supabase.auth.getUser();
+  const { data } = await getAuthUser();
   const userId = data.user!.id;
   const { orgId } = await getCurrentOrg(userId);
 

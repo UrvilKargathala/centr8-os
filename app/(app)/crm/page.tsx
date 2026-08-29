@@ -1,12 +1,11 @@
-import { createClient } from "@/lib/supabase/server";
+import { getAuthUser } from "@/lib/supabase/server";
 import { withOrgContext } from "@/db/withOrgContext";
 import { getCurrentOrg } from "@/lib/org/currentOrg";
 import { getCrmStats, listAllLeads, listAllActivities, computePipelineStats } from "@/lib/api/crm";
 import CrmDashboardPageClient, { type CrmDashboardInitialData } from "./CrmDashboardPageClient";
 
 export default async function CrmDashboardPage() {
-  const supabase = await createClient();
-  const { data } = await supabase.auth.getUser();
+  const { data } = await getAuthUser();
   const userId = data.user!.id;
   const { orgId, grants } = await getCurrentOrg(userId);
 

@@ -1,4 +1,4 @@
-import { createClient } from "@/lib/supabase/server";
+import { getAuthUser } from "@/lib/supabase/server";
 import { withOrgContext } from "@/db/withOrgContext";
 import { getCurrentOrg } from "@/lib/org/currentOrg";
 import { getMyLeaveBalances, getMyLeaveRequests } from "@/lib/api/leave";
@@ -8,8 +8,7 @@ import { LeavePageClient, type MyLeaveInitialData } from "./LeavePageClient";
 // Calendar/Policies stay client-fetched on tab switch, same reasoning as
 // the Attendance page's "Team Today" tab.
 export default async function LeaveManagementPage() {
-  const supabase = await createClient();
-  const { data } = await supabase.auth.getUser();
+  const { data } = await getAuthUser();
   const userId = data.user!.id;
   const { orgId } = await getCurrentOrg(userId);
 

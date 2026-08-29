@@ -1,4 +1,4 @@
-import { createClient } from "@/lib/supabase/server";
+import { getAuthUser } from "@/lib/supabase/server";
 import { withOrgContext } from "@/db/withOrgContext";
 import { getCurrentOrg } from "@/lib/org/currentOrg";
 import { listGmailMessages, withConnectedGmail } from "@/lib/api/gmail";
@@ -8,8 +8,7 @@ import { MailPageClient, type MailInitialData } from "./MailPageClient";
 // Seeds the default Inbox view (tab="Inbox", no search, no page token).
 // Any other tab/search/pagination stays client-fetched, unchanged.
 export default async function MailPage() {
-  const supabase = await createClient();
-  const { data } = await supabase.auth.getUser();
+  const { data } = await getAuthUser();
   const userId = data.user!.id;
   const { orgId } = await getCurrentOrg(userId);
 

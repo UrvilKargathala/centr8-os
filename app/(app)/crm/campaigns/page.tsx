@@ -1,4 +1,4 @@
-import { createClient } from "@/lib/supabase/server";
+import { getAuthUser } from "@/lib/supabase/server";
 import { withOrgContext } from "@/db/withOrgContext";
 import { getCurrentOrg } from "@/lib/org/currentOrg";
 import { campaignRoi, computeCampaignMetrics, getCampaignsStats, listAllCampaigns } from "@/lib/api/crm";
@@ -6,8 +6,7 @@ import { listAllEmployees } from "@/lib/api/employees";
 import { CampaignsPageClient, type CampaignsInitialData, type Metrics } from "./CampaignsPageClient";
 
 export default async function CampaignsPage() {
-  const supabase = await createClient();
-  const { data } = await supabase.auth.getUser();
+  const { data } = await getAuthUser();
   const userId = data.user!.id;
   const { orgId } = await getCurrentOrg(userId);
 

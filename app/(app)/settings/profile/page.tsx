@@ -1,12 +1,11 @@
-import { createClient } from "@/lib/supabase/server";
+import { getAuthUser } from "@/lib/supabase/server";
 import { withOrgContext } from "@/db/withOrgContext";
 import { getCurrentOrg } from "@/lib/org/currentOrg";
 import { assembleProfile, loadOrInitPreferences, listMySecurityLog } from "@/lib/api/me";
 import ProfileSettingsPageClient, { type ProfileSettingsInitialData } from "./ProfileSettingsPageClient";
 
 export default async function ProfileSettingsPage() {
-  const supabase = await createClient();
-  const { data } = await supabase.auth.getUser();
+  const { data } = await getAuthUser();
   const userId = data.user!.id;
   const { orgId } = await getCurrentOrg(userId);
 

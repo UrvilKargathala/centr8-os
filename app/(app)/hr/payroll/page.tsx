@@ -1,4 +1,4 @@
-import { createClient } from "@/lib/supabase/server";
+import { getAuthUser } from "@/lib/supabase/server";
 import { withOrgContext } from "@/db/withOrgContext";
 import { getCurrentOrg } from "@/lib/org/currentOrg";
 import { listPayslipRecordsForPeriod, monthlyPeriods } from "@/lib/api/payroll";
@@ -9,8 +9,7 @@ import { PayrollPageClient, type PayrollInitialData } from "./PayrollPageClient"
 // — falls through to the client component with no initial data on denial,
 // same as CRM's degrade-to-client pattern.
 export default async function PayrollPage() {
-  const supabase = await createClient();
-  const { data } = await supabase.auth.getUser();
+  const { data } = await getAuthUser();
   const userId = data.user!.id;
   const { orgId } = await getCurrentOrg(userId);
 

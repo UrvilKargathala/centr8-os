@@ -1,4 +1,4 @@
-import { createClient } from "@/lib/supabase/server";
+import { getAuthUser } from "@/lib/supabase/server";
 import { withOrgContext } from "@/db/withOrgContext";
 import { getCurrentOrg } from "@/lib/org/currentOrg";
 import { getJobDetailData } from "@/lib/api/recruitment";
@@ -6,8 +6,7 @@ import JobDetailPageClient, { type JobDetailInitialData } from "./JobDetailPageC
 
 export default async function JobDetailPage({ params }: { params: Promise<{ job_id: string }> }) {
   const { job_id } = await params;
-  const supabase = await createClient();
-  const { data } = await supabase.auth.getUser();
+  const { data } = await getAuthUser();
   const userId = data.user!.id;
   const { orgId } = await getCurrentOrg(userId);
 

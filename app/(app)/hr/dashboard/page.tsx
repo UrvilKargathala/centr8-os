@@ -1,4 +1,4 @@
-import { createClient } from "@/lib/supabase/server";
+import { getAuthUser } from "@/lib/supabase/server";
 import { withOrgContext } from "@/db/withOrgContext";
 import { getCurrentOrg } from "@/lib/org/currentOrg";
 import { listAllEmployees } from "@/lib/api/employees";
@@ -17,8 +17,7 @@ function last7Days(): string[] {
 }
 
 export default async function HrDashboardPage() {
-  const supabase = await createClient();
-  const { data } = await supabase.auth.getUser();
+  const { data } = await getAuthUser();
   const userId = data.user!.id;
   const { orgId, grants } = await getCurrentOrg(userId);
 

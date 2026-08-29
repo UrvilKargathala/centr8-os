@@ -1,4 +1,4 @@
-import { createClient } from "@/lib/supabase/server";
+import { getAuthUser } from "@/lib/supabase/server";
 import { withOrgContext } from "@/db/withOrgContext";
 import { getCurrentOrg } from "@/lib/org/currentOrg";
 import { getMyTimeTrackingWeek } from "@/lib/api/timeEntries";
@@ -20,8 +20,7 @@ function currentWeekRange(): [string, string] {
 // Seeds the default "My" tab, current week. Team tab and other weeks stay
 // client-fetched, unchanged.
 export default async function TimeTrackingPage() {
-  const supabase = await createClient();
-  const { data } = await supabase.auth.getUser();
+  const { data } = await getAuthUser();
   const userId = data.user!.id;
   const { orgId } = await getCurrentOrg(userId);
 

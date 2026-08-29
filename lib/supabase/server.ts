@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 
@@ -27,3 +28,12 @@ export async function createClient() {
     },
   );
 }
+
+// Deduplicate supabase.auth.getUser() within a single request/render pass.
+// Without this, proxy.ts + layout.tsx + page.tsx each call getUser()
+// independently — 3 sequential Supabase HTTP round-trips. With cache(),
+// only the first call hits Supabase; the rest return the cached result.
+export const getAuthUser = cache(async () => {
+  const supabase = await createClient();
+  return supabase.auth.getUser();
+});

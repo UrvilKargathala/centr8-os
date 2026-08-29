@@ -1,4 +1,4 @@
-import { createClient } from "@/lib/supabase/server";
+import { getAuthUser } from "@/lib/supabase/server";
 import { withOrgContext } from "@/db/withOrgContext";
 import { getCurrentOrg } from "@/lib/org/currentOrg";
 import { listAllSprintPlans } from "@/lib/api/aiAssistant";
@@ -6,8 +6,7 @@ import { listProjectNames } from "@/lib/api/projects";
 import { SprintPlansPageClient, type SprintPlanProposal } from "./SprintPlansPageClient";
 
 export default async function SprintPlansPage() {
-  const supabase = await createClient();
-  const { data } = await supabase.auth.getUser();
+  const { data } = await getAuthUser();
   const userId = data.user!.id;
   const { orgId } = await getCurrentOrg(userId);
 

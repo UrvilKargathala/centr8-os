@@ -1,4 +1,4 @@
-import { createClient } from "@/lib/supabase/server";
+import { getAuthUser } from "@/lib/supabase/server";
 import { withOrgContext } from "@/db/withOrgContext";
 import { getCurrentOrg } from "@/lib/org/currentOrg";
 import { listGoogleMeetings, withGoogleCalendar } from "@/lib/api/googleMeet";
@@ -6,8 +6,7 @@ import { requirePermission } from "@/lib/api/permissions";
 import { VideoPageClient, type VideoInitialData } from "./VideoPageClient";
 
 export default async function VideoPage() {
-  const supabase = await createClient();
-  const { data } = await supabase.auth.getUser();
+  const { data } = await getAuthUser();
   const userId = data.user!.id;
   const { orgId } = await getCurrentOrg(userId);
 
