@@ -50,7 +50,7 @@ export function TaskCalendarView({ tasks, onTaskClick }: { tasks: Task[]; onTask
           id: m.id,
           title: m.title,
           iso: toIsoDate(d),
-          time: d.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" }),
+          time: d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" }),
           kind: "upcoming" as const,
         };
       }),
@@ -60,7 +60,7 @@ export function TaskCalendarView({ tasks, onTaskClick }: { tasks: Task[]; onTask
           id: m.id,
           title: m.title,
           iso: toIsoDate(d),
-          time: d.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" }),
+          time: d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" }),
           kind: "past" as const,
         };
       }),
@@ -82,7 +82,7 @@ export function TaskCalendarView({ tasks, onTaskClick }: { tasks: Task[]; onTask
     <div className="space-y-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h3 className="text-h3 font-semibold text-neutral-950">
-          {cursor.toLocaleDateString(undefined, { month: "long", year: "numeric" })}
+          {cursor.toLocaleDateString("en-US", { month: "long", year: "numeric" })}
         </h3>
         <div className="flex flex-wrap items-center gap-3">
           <label className="flex items-center gap-1.5 text-caption text-neutral-600">
