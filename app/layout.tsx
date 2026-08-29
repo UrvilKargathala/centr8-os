@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import Script from "next/script";
 import { Geom, Cabin, Roboto_Mono } from "next/font/google";
 import "./globals.css";
 
@@ -37,18 +36,16 @@ export default function RootLayout({
     <html
       lang="en"
       className={`${fontHeading.variable} ${fontBody.variable} ${fontMono.variable} h-full antialiased`}
-      suppressHydrationWarning
     >
-      <head>
-        {/* beforeInteractive: Next.js injects this outside the normal React
-            tree (not as a plain rendered <script>), so it runs before
-            hydration without React's "scripts inside components never
-            execute" console warning — same theme-flash-prevention script,
-            just placed the way Next.js expects it. */}
-        <Script id="theme-init" strategy="beforeInteractive">
-          {`(function(){try{var t=localStorage.getItem("centr8-theme");if(t==="dark"||(t!=="light"&&matchMedia("(prefers-color-scheme:dark)").matches))document.documentElement.classList.add("dark")}catch(e){}})()`}
-        </Script>
-      </head>
+      {/* Dark mode is temporarily disabled (removed the theme-init script,
+          the AppShell toggle, and the Settings theme selector) — it hit a
+          known, currently-open React 19 + Next.js issue where any <script>
+          rendered in the root layout (needed to apply the class before
+          hydration, avoiding a flash of the wrong theme) logs a false-positive
+          "Encountered a script tag" console warning with no real fix short of
+          a cookie-based SSR theme read (see shadcn-ui/ui#10104). The
+          `.dark` CSS in globals.css is left in place — re-adding dark mode
+          later means restoring the toggle/script, not rebuilding the styles. */}
       <body className="min-h-full flex flex-col">{children}</body>
     </html>
   );

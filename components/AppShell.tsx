@@ -487,7 +487,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const [orgMenuOpen, setOrgMenuOpen] = useState(false);
   const orgMenuRef = useRef<HTMLDivElement>(null);
   const mainRef = useRef<HTMLElement>(null);
-  const [theme, setTheme] = useState<"light" | "dark">("light");
 
   useEffect(() => {
     mainRef.current?.scrollTo(0, 0);
@@ -519,26 +518,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     document.addEventListener("mousedown", onClickOutside);
     return () => document.removeEventListener("mousedown", onClickOutside);
   }, []);
-
-  useEffect(() => {
-    const stored = (localStorage.getItem("centr8:theme") ?? "light") as "light" | "dark";
-    setTheme(stored);
-    document.documentElement.classList.toggle("dark", stored === "dark");
-  }, []);
-
-  function toggleTheme() {
-    setTheme((prev) => {
-      const next = prev === "dark" ? "light" : "dark";
-      localStorage.setItem("centr8:theme", next);
-      document.documentElement.classList.toggle("dark", next === "dark");
-      return next;
-    });
-  }
-
-  function applyTheme(t: "light" | "dark") {
-    document.documentElement.classList.toggle("dark", t === "dark");
-  }
-
 
   async function handleSignOut() {
     const supabase = createClient();
@@ -611,23 +590,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             </button>
 
             <div className="hidden h-5 w-px bg-neutral-300 sm:block" />
-
-            <button
-              type="button"
-              onClick={toggleTheme}
-              title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
-              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-sm text-neutral-600 hover:bg-neutral-200"
-            >
-              {theme === "dark" ? (
-                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
-                </svg>
-              ) : (
-                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
-                </svg>
-              )}
-            </button>
 
             <NotificationBell orgId={selectedOrgId} />
 

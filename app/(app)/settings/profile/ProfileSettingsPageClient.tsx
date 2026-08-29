@@ -290,11 +290,6 @@ export default function ProfileSettingsPageClient({ initial: initialData }: { in
       toast.show("Preferences saved");
       if (initial.current) initial.current.prefs = prefs;
       setPrefs({ ...prefs });
-      // Apply theme to document
-      const isDark = prefs.theme === "dark" || (prefs.theme === "system" && matchMedia("(prefers-color-scheme:dark)").matches);
-      document.documentElement.classList.toggle("dark", isDark);
-      if (prefs.theme === "system") localStorage.removeItem("centr8-theme");
-      else localStorage.setItem("centr8-theme", prefs.theme);
     } else {
       const b = await res.json();
       toast.show(b.error ?? "Failed to save", "error");
@@ -544,17 +539,6 @@ export default function ProfileSettingsPageClient({ initial: initialData }: { in
           {/* ── SECTION 3 — Preferences ─────────────────────────── */}
           <SectionCard id="preferences" title="Preferences" subtitle="Personalize how Centr8 OS looks and behaves for you">
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <Field label="Theme">
-                <Segmented
-                  value={prefs.theme}
-                  onChange={(v) => setPrefs({ ...prefs, theme: v })}
-                  options={[
-                    { value: "light", label: "Light" },
-                    { value: "dark", label: "Dark" },
-                    { value: "system", label: "System" },
-                  ]}
-                />
-              </Field>
               <Field label="Density">
                 <Segmented
                   value={prefs.density}
