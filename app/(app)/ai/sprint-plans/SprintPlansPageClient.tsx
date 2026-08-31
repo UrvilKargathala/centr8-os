@@ -151,12 +151,12 @@ export function SprintPlansPageClient({
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-start justify-between gap-4">
+      <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h1 className="text-h2 font-semibold text-neutral-950">Sprint Plans</h1>
-          <p className="text-body text-neutral-600">AI-drafted sprint plans awaiting your review.</p>
+          <p className="mt-1 text-body text-neutral-600">AI-drafted sprint plans awaiting your review.</p>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex items-center gap-2">
           <Select className="w-48" value={projectFilter} onChange={(e) => setProjectFilter(e.target.value)}>
             <option value="">All projects</option>
             {projects.map((p) => (
