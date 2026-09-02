@@ -229,7 +229,7 @@ async function getApprovedLeaveByWeek(
     const leaveStart = new Date(lr.startDate);
     const leaveEnd = new Date(lr.endDate);
 
-    let cur = new Date(weekStart);
+    const cur = new Date(weekStart);
     const end = new Date(weekEnd);
     end.setDate(end.getDate() + 6);
 

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import Link from "next/link";
 import { useOrg } from "@/lib/context/OrgContext";
 import { SectionSkeleton } from "@/components/ui/skeleton";
 import { Card } from "@/components/ui/Card";
@@ -309,9 +310,9 @@ function TeamTodayView({ orgId, canEditAny }: { orgId: string; canEditAny: boole
                   <span>
                     <strong>{a.employee_name}</strong> — {a.pattern}
                   </span>
-                  <a href="/hr/employees" className="text-caption font-medium text-primary-700 hover:underline">
+                  <Link href="/hr/employees" className="text-caption font-medium text-primary-700 hover:underline">
                     View employee
-                  </a>
+                  </Link>
                 </li>
               ))}
             </ul>

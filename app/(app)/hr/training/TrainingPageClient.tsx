@@ -412,10 +412,13 @@ function ProgressOverviewTab({ orgId }: { orgId: string }) {
       .finally(() => setLoading(false));
   }, [orgId]);
 
+  // Hoisted above the loading early return — hooks must run unconditionally
+  // on every render (was previously called after it, breaking hook order).
+  const { page, setPage, pageSize, total, paged: pagedEmployees } = usePagination(employees, 10);
+
   if (loading) return <SectionSkeleton variant="table" />;
 
   const requiredCourses = courses.filter((c) => c.requiredForRoles?.length > 0);
-  const { page, setPage, pageSize, total, paged: pagedEmployees } = usePagination(employees, 10);
   if (requiredCourses.length === 0) {
     return (
       <Empty>

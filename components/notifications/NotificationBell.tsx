@@ -54,7 +54,7 @@ export function NotificationBell({ orgId }: { orgId: string | null }) {
       .then((r) => (r.ok ? r.json() : { data: [] }))
       .then((j) =>
         setApprovals(
-          (j.data ?? []).map((p: any) => ({
+          (j.data ?? []).map((p: { id: string; title?: string; summary?: string }) => ({
             id: p.id,
             action: p.title ?? "Sprint plan",
             agent: "Planner",

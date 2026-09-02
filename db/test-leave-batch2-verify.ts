@@ -106,7 +106,7 @@ async function main() {
     // --- Check 4: balance math across create -> approve ---
     const year = 2026;
     const totalDays = 3;
-    let balance = await withOrgContext(ADMIN_USER, (db) => getOrCreateBalance(db, ORG_ID, EMP_A_ID, LEAVE_TYPE_ID, year));
+    const balance = await withOrgContext(ADMIN_USER, (db) => getOrCreateBalance(db, ORG_ID, EMP_A_ID, LEAVE_TYPE_ID, year));
     assert(balance !== null, "balance should lazily initialize from the policy");
     assert(balance!.allottedDays === 10, `expected allotted_days 10 from policy, got ${balance!.allottedDays}`);
 

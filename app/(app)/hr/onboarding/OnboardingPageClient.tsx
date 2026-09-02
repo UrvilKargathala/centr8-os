@@ -89,6 +89,12 @@ function ActiveOnboardingTab({ orgId, initial }: { orgId: string; initial?: Onbo
       .finally(() => setLoading(false));
   }, [orgId]);
 
+  // Hooks must run unconditionally on every render — hoisted above the
+  // loading/error/empty early returns below (was previously called after
+  // them, breaking hook order the moment workflows went empty<->populated
+  // across renders of the same mounted instance).
+  const { page, setPage, pageSize, total, paged: pagedWorkflows } = usePagination(workflows, 10);
+
   if (loading) return <SectionSkeleton variant="list" />;
   if (error) return <p className="rounded-md bg-danger-100 p-3 text-body text-danger-600">{error}</p>;
 
@@ -109,7 +115,6 @@ function ActiveOnboardingTab({ orgId, initial }: { orgId: string; initial?: Onbo
   }
 
   const employeeName = (id: string) => employees.find((e) => e.id === id)?.fullName ?? "Unknown";
-  const { page, setPage, pageSize, total, paged: pagedWorkflows } = usePagination(workflows, 10);
 
   return (
     <Card padding="sm">
