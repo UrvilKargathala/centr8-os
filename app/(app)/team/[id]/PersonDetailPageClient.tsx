@@ -153,6 +153,16 @@ export default function PersonDetailPageClient({ initial }: { initial?: PersonDe
               <Fact icon={ICON_TASKS} label="Open Tasks" value={String(stats?.utilization.openCount ?? 0)} />
               <Fact icon={ICON_CAL} label="Joined" value={joined} />
             </div>
+
+            {person.linkedEmployee && (
+              <Link
+                href={`/hr/employees/${person.linkedEmployee.id}`}
+                className="mt-4 flex items-center justify-between rounded-md border border-neutral-200 px-3 py-2 text-small text-neutral-700 hover:bg-neutral-100"
+              >
+                <span>Also see HR record: {person.linkedEmployee.fullName}</span>
+                <span aria-hidden>→</span>
+              </Link>
+            )}
           </div>
 
           <div className="glass-card p-5">

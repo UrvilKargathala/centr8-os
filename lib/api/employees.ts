@@ -5,7 +5,7 @@
 // -> that manager's employees.userId matches the caller).
 import { and, eq } from "drizzle-orm";
 import type { OrgScopedDb } from "@/db/withOrgContext";
-import { departments, employees } from "@/db/schema";
+import { departments, employees, people } from "@/db/schema";
 import { ApiError } from "./helpers";
 import { hasPermission, requirePermission, type PermissionAction, type ResourceType } from "./permissions";
 
@@ -121,5 +121,15 @@ export async function getEmployeeDetail(db: OrgScopedDb, userId: string, id: str
   if (!existing) return undefined;
   await requirePermission(db, userId, existing.orgId, "employee", "read");
   const canViewFull = await hasPermission(db, userId, existing.orgId, "employee", "view_full");
-  return trimEmployeeFields(existing, canViewFull);
+
+  // Reverse lookup: is there a PM `people` row pointing at this employee?
+  // (see db/schema.ts's people.linkedEmployeeId comment). Optional bridge,
+  // not a join every list query needs — only the detail page shows it.
+  const [linkedPerson] = await db
+    .select({ id: people.id, fullName: people.fullName })
+    .from(people)
+    .where(eq(people.linkedEmployeeId, id))
+    .limit(1);
+
+  return { ...trimEmployeeFields(existing, canViewFull), linkedPerson: linkedPerson ?? null };
 }

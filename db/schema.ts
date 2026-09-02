@@ -2200,6 +2200,12 @@ export const people = pgTable(
     skills: jsonb("skills").notNull().default([]),
     isActive: boolean("is_active").notNull().default(true),
     userId: uuid("user_id"),
+    // Optional bridge to the employees table (HR's separate person
+    // directory) — see CLAUDE.md's "employees vs people dual-directory"
+    // note. Deliberately not a merge: the two tables stay separate shapes
+    // for separate flows, this just points at the same human's HR record
+    // when one is known (auto-linked by matching user_id, migration 0115).
+    linkedEmployeeId: uuid("linked_employee_id").references(() => employees.id, { onDelete: "set null" }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
     createdByUserId: uuid("created_by_user_id"),

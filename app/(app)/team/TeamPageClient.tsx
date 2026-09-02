@@ -26,6 +26,7 @@ export type Person = {
   isActive: boolean;
   createdAt: string;
   updatedAt: string;
+  linkedEmployee?: { id: string; fullName: string } | null;
 };
 
 const ROLE_OPTIONS = ["Developer", "Designer", "Project Manager", "QA", "DevOps", "Marketing", "Sales", "Other"];

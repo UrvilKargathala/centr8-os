@@ -1,6 +1,6 @@
 import { and, desc, eq, inArray, ne, sql } from "drizzle-orm";
 import type { OrgScopedDb } from "@/db/withOrgContext";
-import { people, tasks } from "@/db/schema";
+import { employees, people, tasks } from "@/db/schema";
 import { ApiError } from "./helpers";
 
 // Shared by app/api/team/route.ts (client-side filtered refetch) and
@@ -60,7 +60,15 @@ export function listCapacityData(db: OrgScopedDb, orgId: string) {
 export async function getPerson(db: OrgScopedDb, id: string) {
   const [row] = await db.select().from(people).where(eq(people.id, id)).limit(1);
   if (!row) throw new ApiError(404, "Person not found");
-  return row;
+
+  // Optional bridge to the employees table (see db/schema.ts's
+  // people.linkedEmployeeId comment) — resolve the name here so the detail
+  // page can show "also see: HR record" without a second round trip.
+  const linkedEmployee = row.linkedEmployeeId
+    ? (await db.select({ id: employees.id, fullName: employees.fullName }).from(employees).where(eq(employees.id, row.linkedEmployeeId)).limit(1))[0]
+    : null;
+
+  return { ...row, linkedEmployee: linkedEmployee ?? null };
 }
 
 // Shared by app/api/team/[id]/stats/route.ts and

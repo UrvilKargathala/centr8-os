@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, use } from "react";
+import Link from "next/link";
 import { useOrg } from "@/lib/context/OrgContext";
 import { PageSkeleton, SectionSkeleton } from "@/components/ui/skeleton";
 import { createClient } from "@/lib/supabase/client";
@@ -48,6 +49,7 @@ export type Employee = {
   costRateHourly?: number | null;
   currency?: string | null;
   notes?: string | null;
+  linkedPerson?: { id: string; fullName: string } | null;
 };
 
 type Step = {
@@ -165,7 +167,17 @@ export default function EmployeeDetailPageClient({
             </p>
           </div>
         </div>
-        <EmploymentStatusBadge status={employee.employmentStatus} />
+        <div className="flex items-center gap-3">
+          {employee.linkedPerson && (
+            <Link
+              href={`/team/${employee.linkedPerson.id}`}
+              className="text-small text-neutral-600 hover:text-neutral-950 hover:underline"
+            >
+              Also see PM profile →
+            </Link>
+          )}
+          <EmploymentStatusBadge status={employee.employmentStatus} />
+        </div>
       </Card>
 
       <div className="flex gap-1 overflow-x-auto border-b border-neutral-200">
